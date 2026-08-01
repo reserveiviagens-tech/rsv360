@@ -19,18 +19,18 @@
   "dependencies": {
     "@rsv360/shared": "1.0.0",
     "@tanstack/react-query": "^5.90.5",
-    "lucide-react": "^0.542.0",
-    "next": "16.2.11",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
+    "lucide-react": "^0.577.0",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "sharp": "0.35.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.10.0",
-    "eslint": "^9.39.0",
-    "eslint-config-next": "16.2.11",
+    "eslint": "^10.8.0",
+    "eslint-config-next": "16.2.12",
     "postcss": "^8.5.18",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3"
