@@ -34,7 +34,7 @@ jobs:
         lfs: false
 
     - name: Setup Node.js
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v7
       with:
         node-version: '24'
         cache: 'npm'
@@ -117,7 +117,7 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v4.37.4
       continue-on-error: true
       if: always() && hashFiles('trivy-results.sarif') != ''
       with:
