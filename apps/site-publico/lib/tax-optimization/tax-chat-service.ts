@@ -1,19 +1,19 @@
 /**
  * Serviço de chat tributário com IA
  * Simulador conversacional para Perse, Goyazes, deduções
- * PR-13b: sanitize message + allowlisted context before LLM
+ * PR-13b: sanitize message + allowlisted context
+ * PR-13e: OpenAI via shared llmChatCompletion gateway
  */
 
 import { simulateTax } from './tax-optimization-service';
 import { checkPerseEligibility } from './perse-enrollment-service';
 import {
   LLM_MAX_MESSAGE_CHARS,
+  llmChatCompletion,
   sanitizeLlmText,
   sanitizeTaxChatContext,
   type SanitizedTaxChatContext,
 } from '@rsv360/shared';
-
-const apiKey = process.env.OPENAI_API_KEY;
 
 export async function processTaxChat(
   userMessage: string,
@@ -24,45 +24,29 @@ export async function processTaxChat(
     return 'Envie uma pergunta válida sobre tributação (texto não vazio).';
   }
   const safeContext = sanitizeTaxChatContext(context);
-
-  if (!apiKey) {
-    return getFallbackResponse(safeMessage, safeContext);
-  }
-
   const systemContext = await buildContext(safeContext);
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `Você é um assistente fiscal para plataforma de aluguéis por temporada e ingressos em Caldas Novas/Rio Quente (GO), com sede em Cuiabá (MT).
+  const result = await llmChatCompletion({
+    surface: 'tax-chat',
+    model: 'gpt-4o-mini',
+    temperature: 0.5,
+    maxTokens: 400,
+    messages: [
+      {
+        role: 'system',
+        content: `Você é um assistente fiscal para plataforma de aluguéis por temporada e ingressos em Caldas Novas/Rio Quente (GO), com sede em Cuiabá (MT).
 Responda de forma clara e objetiva sobre: Perse (0% federais até dez/2026), Goyazes (crédito ICMS), deduções, split de pagamento, Simples Nacional.
 ${systemContext}
 Não dê consultoria jurídica. Recomende sempre um contador para validação.`,
-          },
-          { role: 'user', content: safeMessage },
-        ],
-        temperature: 0.5,
-        max_tokens: 400,
-      }),
-    });
+      },
+      { role: 'user', content: safeMessage },
+    ],
+  });
 
-    if (!response.ok) return getFallbackResponse(safeMessage, safeContext);
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || getFallbackResponse(safeMessage, safeContext);
-  } catch (err) {
-    console.warn('[tax-chat] OpenAI error:', err);
+  if (!result.ok) {
     return getFallbackResponse(safeMessage, safeContext);
   }
+  return result.content || getFallbackResponse(safeMessage, safeContext);
 }
 
 async function buildContext(ctx?: SanitizedTaxChatContext): Promise<string> {

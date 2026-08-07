@@ -35,6 +35,8 @@ __exportStar(require("./utils/index.js"), exports);
 __exportStar(require("./payments/mp-webhook-signature.js"), exports);
 // PR-13b — LLM prompt sanitization / field allowlist
 __exportStar(require("./llm/prompt-sanitize.js"), exports);
+// PR-13e — shared LLM chat gateway
+__exportStar(require("./llm/chat-gateway.js"), exports);
 // Drizzle schemas (Fase 1 migração)
 __exportStar(require("./schema.js"), exports);
 // Fase 1 API types & paths

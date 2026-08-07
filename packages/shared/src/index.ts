@@ -26,6 +26,9 @@ export * from './payments/mp-webhook-signature.js';
 // PR-13b — LLM prompt sanitization / field allowlist
 export * from './llm/prompt-sanitize.js';
 
+// PR-13e — shared LLM chat gateway
+export * from './llm/chat-gateway.js';
+
 // Drizzle schemas (Fase 1 migração)
 export * from './schema.js';
 

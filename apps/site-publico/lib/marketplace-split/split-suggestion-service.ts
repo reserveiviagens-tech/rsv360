@@ -7,7 +7,7 @@
 
 import { queryDatabase } from '../db';
 import type { ServiceType } from './types';
-import { sanitizeSplitAiContext } from '@rsv360/shared';
+import { llmChatCompletion, sanitizeSplitAiContext } from '@rsv360/shared';
 
 const DEFAULT_PCT: Record<ServiceType, number> = {
   rent: 20,
@@ -96,6 +96,7 @@ export async function suggestSplit(
 
 /**
  * Sugestão via OpenAI (opcional, para contexto adicional)
+ * PR-13e: via shared llmChatCompletion gateway
  */
 export async function suggestSplitWithAI(
   receiverId?: number,
@@ -104,14 +105,12 @@ export async function suggestSplitWithAI(
 ): Promise<SplitSuggestion> {
   const base = await suggestSplit(receiverId, serviceType);
 
-  const apiKey = process.env.OPENAI_API_KEY;
   const safeContext = sanitizeSplitAiContext(context);
-  if (!apiKey || !safeContext) {
+  if (!safeContext) {
     return base;
   }
 
-  try {
-    const prompt = `Você é um assistente fiscal para plataforma de aluguéis por temporada e ingressos.
+  const prompt = `Você é um assistente fiscal para plataforma de aluguéis por temporada e ingressos.
 Analise o contexto e sugira um percentual de comissão (platform_pct) para a plataforma.
 - Tipo de serviço: ${serviceType}
 - Sugestão baseada em histórico: ${base.platform_pct}%
@@ -120,39 +119,28 @@ Analise o contexto e sugira um percentual de comissão (platform_pct) para a pla
 Responda APENAS com um JSON válido: {"platform_pct": number, "reason": "string curta"}
 O platform_pct deve estar entre 5 e 35.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 150,
-      }),
-    });
+  const result = await llmChatCompletion({
+    surface: 'split-suggest',
+    model: 'gpt-4o-mini',
+    temperature: 0.3,
+    maxTokens: 150,
+    messages: [{ role: 'user', content: prompt }],
+  });
 
-    if (!response.ok) return base;
+  if (!result.ok) return base;
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    const match = content.match(/\{"platform_pct":\s*(\d+(?:\.\d+)?)/);
-    if (match) {
-      const aiPct = parseFloat(match[1]);
-      if (aiPct >= 5 && aiPct <= 35) {
-        return {
-          platform_pct: aiPct,
-          partner_pct: 100 - aiPct,
-          confidence: 0.85,
-          source: 'ai',
-          message: base.message,
-        };
-      }
+  const match = result.content.match(/\{"platform_pct":\s*(\d+(?:\.\d+)?)/);
+  if (match) {
+    const aiPct = parseFloat(match[1]);
+    if (aiPct >= 5 && aiPct <= 35) {
+      return {
+        platform_pct: aiPct,
+        partner_pct: 100 - aiPct,
+        confidence: 0.85,
+        source: 'ai',
+        message: base.message,
+      };
     }
-  } catch (err) {
-    console.warn('[split-suggestion] OpenAI fallback:', err);
   }
 
   return base;

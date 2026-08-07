@@ -2,7 +2,7 @@ import {
   COMISSOES_OFICIAL_RESERVEI,
   type ComissoesSugestaoIaInput,
 } from '../schema';
-import { sanitizeComissoesIaPromptFields } from '@rsv360/shared';
+import { llmChatCompletion, sanitizeComissoesIaPromptFields } from '@rsv360/shared';
 
 export interface ComissoesSugestaoIaResult {
   taxaPlataformaPct: number;
@@ -65,11 +65,8 @@ function heuristica(input: ComissoesSugestaoIaInput): ComissoesSugestaoIaResult 
 }
 
 async function openAiSuggest(input: ComissoesSugestaoIaInput): Promise<ComissoesSugestaoIaResult | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-
-  const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
   // PR-13b: allowlisted lines — never JSON.stringify(user input object)
+  // PR-13e: shared llm gateway
   const userContent = sanitizeComissoesIaPromptFields({
     objetivo: input.objetivo ?? 'padrao',
     contexto: input.contexto,
@@ -77,43 +74,32 @@ async function openAiSuggest(input: ComissoesSugestaoIaInput): Promise<Comissoes
     oficialCorretorPct: COMISSOES_OFICIAL_RESERVEI.taxaCorretorPct,
   });
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Você é consultor financeiro da Reservei Viagens / RSV360 (marketplace turismo Caldas Novas). ' +
-            'Sugira taxa_plataforma_pct e taxa_corretor_pct (0-100, soma <= 100). ' +
-            'Padrão oficial: plataforma 20%, corretor 5%, anfitrião residual. ' +
-            'Retorne JSON: {"taxa_plataforma_pct":number,"taxa_corretor_pct":number,"motivo":string,"confianca":number}.',
-        },
-        {
-          role: 'user',
-          content: userContent,
-        },
-      ],
-    }),
+  const result = await llmChatCompletion({
+    surface: 'comissoes-ia',
+    model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+    temperature: 0.2,
+    maxTokens: 300,
+    jsonObject: true,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'Você é consultor financeiro da Reservei Viagens / RSV360 (marketplace turismo Caldas Novas). ' +
+          'Sugira taxa_plataforma_pct e taxa_corretor_pct (0-100, soma <= 100). ' +
+          'Padrão oficial: plataforma 20%, corretor 5%, anfitrião residual. ' +
+          'Retorne JSON: {"taxa_plataforma_pct":number,"taxa_corretor_pct":number,"motivo":string,"confianca":number}.',
+      },
+      {
+        role: 'user',
+        content: userContent,
+      },
+    ],
   });
 
-  if (!response.ok) return null;
-
-  const payload = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const content = payload.choices?.[0]?.message?.content;
-  if (!content) return null;
+  if (!result.ok) return null;
 
   try {
-    const parsed = JSON.parse(content) as {
+    const parsed = JSON.parse(result.content) as {
       taxa_plataforma_pct?: number;
       taxa_corretor_pct?: number;
       motivo?: string;
