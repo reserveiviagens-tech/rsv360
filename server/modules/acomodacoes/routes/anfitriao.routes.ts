@@ -119,9 +119,12 @@ router.post('/unidades/:id/ical-import/sync', ...masterAuth, async (req, res) =>
       if (result.error === 'forbidden') {
         return res.status(403).json({ success: false, error: 'Acesso negado' });
       }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
       return res.status(502).json({
         success: false,
-        error: result.message || 'Falha ao sincronizar calendário externo',
+        error: 'message' in result ? result.message : 'Falha ao sincronizar calendário externo',
       });
     }
     res.json({ success: true, data: result.data });
