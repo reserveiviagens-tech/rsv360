@@ -35,6 +35,10 @@ import {
   isValidListingSlug,
   normalizeListingSlug,
 } from './listing-slug.util';
+import {
+  sanitizeTituloPublico,
+  validateListingTitles,
+} from './listing-titulo.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -159,6 +163,35 @@ export const anfitriaoService = {
       metadata: metadataPatch,
       ...patchPermitido
     } = patch;
+
+    const updatingTitulo = Object.prototype.hasOwnProperty.call(patch, 'titulo');
+    const updatingNomeInterno =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'nomeInterno');
+
+    if (updatingTitulo || updatingNomeInterno) {
+      const titles = validateListingTitles({
+        titulo: patch.titulo,
+        nomeInterno: updatingNomeInterno
+          ? (metadataPatch as Record<string, unknown>).nomeInterno
+          : undefined,
+        updatingTitulo,
+        updatingNomeInterno,
+      });
+      if (!titles.ok) {
+        return { error: titles.error };
+      }
+      if (updatingTitulo) {
+        patchPermitido.titulo = titles.titulo;
+      }
+      if (updatingNomeInterno && metadataPatch && typeof metadataPatch === 'object') {
+        (metadataPatch as Record<string, unknown>).nomeInterno = titles.nomeInterno || undefined;
+      }
+    } else if (typeof patchPermitido.titulo === 'string') {
+      patchPermitido.titulo = sanitizeTituloPublico(patchPermitido.titulo) || patchPermitido.titulo;
+    }
 
     const status = patchPermitido.statusPublicacao ?? row.statusPublicacao;
     const dadosCompletos =

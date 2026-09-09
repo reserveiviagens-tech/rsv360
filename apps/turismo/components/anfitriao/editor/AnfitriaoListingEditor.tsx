@@ -9,6 +9,7 @@ import {
   type AcessibilidadeItem,
 } from './AcessibilidadeEditor';
 import { FotosTourEditor } from './FotosTourEditor';
+import { TituloEditor } from './TituloEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import {
@@ -237,8 +238,12 @@ export function AnfitriaoListingEditor({
           : verificacaoLocal.status === 'enviado'
             ? 'Enviada para revisão'
             : 'Adicionar informações';
-      case 'titulo':
-        return titulo || 'Adicionar título';
+      case 'titulo': {
+        if (!titulo.trim()) return 'Adicionar título';
+        return nomeInterno.trim()
+          ? `${titulo.trim()} · ${nomeInterno.trim()}`
+          : titulo.trim();
+      }
       case 'precos':
         return preco ? `R$ ${preco}/noite` : 'Definir preço';
       case 'descontos':
@@ -813,28 +818,12 @@ function SeuEspacoPanel(props: {
 
   if (s === 'titulo') {
     return (
-      <div>
-        <PanelTitle title="Título" />
-        <label className="block text-sm">
-          <span className="font-medium">Título do anúncio</span>
-          <input
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-            maxLength={50}
-            value={props.titulo}
-            onChange={(e) => props.setTitulo(e.target.value)}
-          />
-          <span className="text-xs text-slate-500">{props.titulo.length}/50</span>
-        </label>
-        <label className="mt-4 block text-sm">
-          <span className="font-medium">Nome interno</span>
-          <input
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-            value={props.nomeInterno}
-            onChange={(e) => props.setNomeInterno(e.target.value)}
-            placeholder="Só você vê"
-          />
-        </label>
-      </div>
+      <TituloEditor
+        titulo={props.titulo}
+        setTitulo={props.setTitulo}
+        nomeInterno={props.nomeInterno}
+        setNomeInterno={props.setNomeInterno}
+      />
     );
   }
 

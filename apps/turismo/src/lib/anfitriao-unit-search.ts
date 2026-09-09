@@ -6,6 +6,7 @@
 export type SearchableUnit = {
   id: number;
   titulo?: string | null;
+  nomeInterno?: string | null;
   hotelId?: string | null;
   statusPublicacao?: string | null;
   quartos?: number | null;
@@ -17,6 +18,7 @@ export type SearchableUnit = {
   utensilios?: unknown;
   eletrodomesticos?: unknown;
   precoDiaria?: string | number | null;
+  metadata?: unknown;
 };
 
 /** Synonym → canonical tokens used when matching amenity bags / free text. */
@@ -70,9 +72,19 @@ function flattenUnknown(value: unknown): string {
 }
 
 function unitHaystack(unit: SearchableUnit): string {
+  const metaNome =
+    typeof unit.nomeInterno === 'string'
+      ? unit.nomeInterno
+      : unit.metadata &&
+          typeof unit.metadata === 'object' &&
+          !Array.isArray(unit.metadata) &&
+          typeof (unit.metadata as Record<string, unknown>).nomeInterno === 'string'
+        ? String((unit.metadata as Record<string, unknown>).nomeInterno)
+        : '';
   return normalizeSearchText(
     [
       unit.titulo,
+      metaNome,
       unit.hotelId,
       unit.statusPublicacao,
       unit.configBanheiro,

@@ -205,6 +205,24 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
     if (result.error === 'slug_taken') {
       return res.status(409).json({ success: false, error: 'Slug já em uso' });
     }
+    if (result.error === 'titulo_obrigatorio') {
+      return res.status(400).json({
+        success: false,
+        error: 'Informe um título público com até 50 caracteres',
+      });
+    }
+    if (result.error === 'titulo_muito_longo') {
+      return res.status(400).json({
+        success: false,
+        error: 'Título público deve ter no máximo 50 caracteres',
+      });
+    }
+    if (result.error === 'nome_interno_muito_longo') {
+      return res.status(400).json({
+        success: false,
+        error: 'Nome interno deve ter no máximo 80 caracteres',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
