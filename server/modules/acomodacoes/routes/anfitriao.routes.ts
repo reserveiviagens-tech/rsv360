@@ -2,10 +2,23 @@ import { Router, type Request } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import { normalizarListaDatas } from '../services/anfitriao-bulk.util';
 import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
+import { rateCalendarService } from '../services/rate-calendar.service';
+import { desempenhoService } from '../services/desempenho.service';
+import {
+  publicTrilhoUrl,
+  trilhoThumbUpload,
+  trilhoThumbUploadErrorHandler,
+  writeGaleriaWebp,
+  writeTrilhoWebp,
+} from '../services/anfitriao-trilho-upload';
 
 const router = Router();
 
-const parceiroAuth = [authenticateJwt, requireRole('anfitriao', 'corretor', 'admin', 'manager')];
+const parceiroAuth = [
+  authenticateJwt,
+  requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
+];
+const masterAuth = [authenticateJwt, requireRole('anfitriao', 'admin', 'manager')];
 const staffAprovacao = [authenticateJwt, requireRole('admin', 'manager')];
 
 function authFromReq(req: Request): AuthContext {
@@ -20,6 +33,125 @@ router.get('/dashboard', ...parceiroAuth, async (req, res) => {
   try {
     const data = await anfitriaoService.dashboardKpis(authFromReq(req));
     res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/desempenho', ...parceiroAuth, async (req, res) => {
+  try {
+    const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
+    const data = await desempenhoService.obterMetricas(authFromReq(req), mes);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
+  try {
+    const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
+    const csv = await desempenhoService.relatorioCsv(authFromReq(req), mes);
+    const safeMes = (mes && /^\d{4}-\d{2}$/.test(mes) ? mes : 'atual').replace(/[^\d-]/g, '');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="desempenho-rsv360-${safeMes}.csv"`,
+    );
+    res.send(csv);
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/ical-token', ...masterAuth, async (req, res) => {
+  try {
+    const regenerate = Boolean(req.body?.regenerate);
+    const result = await rateCalendarService.garantirIcalToken(
+      authFromReq(req),
+      Number(req.params.id),
+      { regenerate },
+    );
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/unidades/:id/ical-import', ...masterAuth, async (req, res) => {
+  try {
+    const url =
+      req.body?.url === null || req.body?.url === ''
+        ? null
+        : typeof req.body?.url === 'string'
+          ? req.body.url
+          : undefined;
+    if (url === undefined) {
+      return res.status(400).json({ success: false, error: 'Informe url (string) ou null' });
+    }
+    const result = await rateCalendarService.salvarIcalImportUrl(
+      authFromReq(req),
+      Number(req.params.id),
+      url,
+    );
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/ical-import/sync', ...masterAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.sincronizarIcalImport(
+      authFromReq(req),
+      Number(req.params.id),
+    );
+    if ('error' in result) {
+      if (result.error === 'no_url') {
+        return res.status(400).json({ success: false, error: 'Salve uma URL de calendário primeiro' });
+      }
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(502).json({
+        success: false,
+        error: result.message || 'Falha ao sincronizar calendário externo',
+      });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/unidades/:id/ical.ics', async (req, res) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token || token.length < 16) {
+      return res.status(401).json({ success: false, error: 'Token inválido' });
+    }
+    const de = String(req.query.de || new Date().toISOString().slice(0, 10));
+    const ateDate = new Date();
+    ateDate.setMonth(ateDate.getMonth() + 6);
+    const ate = String(req.query.ate || ateDate.toISOString().slice(0, 10));
+    const result = await rateCalendarService.gerarIcalFeed(
+      Number(req.params.id),
+      token,
+      de,
+      ate,
+    );
+    if ('error' in result) {
+      return res.status(404).json({ success: false, error: 'Feed não encontrado' });
+    }
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `inline; filename="rsv360-${req.params.id}.ics"`);
+    res.send(result.data);
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -62,6 +194,189 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Acesso negado' });
     }
     if (result.error === 'not_found') {
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    if (result.error === 'invalid_slug') {
+      return res.status(400).json({ success: false, error: 'Slug inválido' });
+    }
+    if (result.error === 'slug_taken') {
+      return res.status(409).json({ success: false, error: 'Slug já em uso' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** Upload + convert (WebP 256) image for listings rail thumbnail. */
+router.post(
+  '/unidades/:id/trilho-thumb',
+  ...parceiroAuth,
+  (req, res, next) => {
+    trilhoThumbUpload(req, res, (err) => {
+      if (err) return trilhoThumbUploadErrorHandler(err, req, res, next);
+      return next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const file = req.file;
+      if (!file?.buffer) {
+        return res.status(400).json({ success: false, error: 'Arquivo obrigatório (campo file)' });
+      }
+      const written = await writeTrilhoWebp(file.buffer, id);
+      const host = req.get('host') || undefined;
+      const absolute = publicTrilhoUrl(written.relativeUrl, host);
+      const result = await anfitriaoService.definirTrilhoThumb(authFromReq(req), id, absolute);
+      if ('error' in result) {
+        if (result.error === 'forbidden') {
+          return res.status(403).json({ success: false, error: 'Acesso negado' });
+        }
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      res.json({
+        success: true,
+        data: {
+          unidade: result.data,
+          trilhoThumb: absolute,
+          bytes: written.bytes,
+        },
+      });
+    } catch (error) {
+      res.status(400).json({ success: false, error: (error as Error).message });
+    }
+  },
+);
+
+/**
+ * Upload accessibility evidence photo — returns URL only (does not change rail thumb).
+ * Host persists URLs in metadata.acessibilidade via PATCH unidade.
+ */
+router.post(
+  '/unidades/:id/acessibilidade-foto',
+  ...parceiroAuth,
+  (req, res, next) => {
+    trilhoThumbUpload(req, res, (err) => {
+      if (err) return trilhoThumbUploadErrorHandler(err, req, res, next);
+      return next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const scoped = await anfitriaoService.obterUnidade(authFromReq(req), id);
+      if ('error' in scoped) {
+        if (scoped.error === 'forbidden') {
+          return res.status(403).json({ success: false, error: 'Acesso negado' });
+        }
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      const file = req.file;
+      if (!file?.buffer) {
+        return res.status(400).json({ success: false, error: 'Arquivo obrigatório (campo file)' });
+      }
+      const written = await writeTrilhoWebp(file.buffer, id);
+      const host = req.get('host') || undefined;
+      const absolute = publicTrilhoUrl(written.relativeUrl, host);
+      res.json({
+        success: true,
+        data: { url: absolute, bytes: written.bytes },
+      });
+    } catch (error) {
+      res.status(400).json({ success: false, error: (error as Error).message });
+    }
+  },
+);
+
+/** Upload photo into listing gallery (does not overwrite trilho thumb). */
+router.post(
+  '/unidades/:id/galeria-foto',
+  ...parceiroAuth,
+  (req, res, next) => {
+    trilhoThumbUpload(req, res, (err) => {
+      if (err) return trilhoThumbUploadErrorHandler(err, req, res, next);
+      return next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const file = req.file;
+      if (!file?.buffer) {
+        return res.status(400).json({ success: false, error: 'Arquivo obrigatório (campo file)' });
+      }
+      const written = await writeGaleriaWebp(file.buffer, id);
+      const host = req.get('host') || undefined;
+      const absolute = publicTrilhoUrl(written.relativeUrl, host);
+      const result = await anfitriaoService.adicionarFotoGaleria(authFromReq(req), id, absolute);
+      if ('error' in result) {
+        if (result.error === 'forbidden') {
+          return res.status(403).json({ success: false, error: 'Acesso negado' });
+        }
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      res.json({
+        success: true,
+        data: { unidade: result.data, url: absolute, bytes: written.bytes },
+      });
+    } catch (error) {
+      res.status(400).json({ success: false, error: (error as Error).message });
+    }
+  },
+);
+
+/** Reorder / remove / set cover on gallery midia. */
+router.patch('/unidades/:id/galeria', ...parceiroAuth, async (req, res) => {
+  try {
+    const removeUrl = typeof req.body?.removeUrl === 'string' ? req.body.removeUrl.trim() : undefined;
+    const moveUrl = typeof req.body?.moveUrl === 'string' ? req.body.moveUrl.trim() : undefined;
+    const setCapaUrl =
+      typeof req.body?.setCapaUrl === 'string' ? req.body.setCapaUrl.trim() : undefined;
+    const direction =
+      req.body?.direction === 'left' || req.body?.direction === 'right'
+        ? (req.body.direction as 'left' | 'right')
+        : undefined;
+    if (!removeUrl && !moveUrl && !setCapaUrl) {
+      return res.status(400).json({ success: false, error: 'Informe removeUrl, moveUrl ou setCapaUrl' });
+    }
+    const result = await anfitriaoService.atualizarMidiaEstrutura(authFromReq(req), Number(req.params.id), {
+      removeUrl,
+      moveUrl,
+      direction,
+      setCapaUrl,
+    });
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** Pick an existing gallery URL as rail cover (no re-encode). */
+router.patch('/unidades/:id/trilho-capa', ...parceiroAuth, async (req, res) => {
+  try {
+    const url = typeof req.body?.url === 'string' ? req.body.url.trim() : '';
+    if (!url || url.length > 2048) {
+      return res.status(400).json({ success: false, error: 'URL inválida' });
+    }
+    if (!(url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/uploads/'))) {
+      return res.status(400).json({ success: false, error: 'URL não permitida' });
+    }
+    const result = await anfitriaoService.definirCapaTrilho(
+      authFromReq(req),
+      Number(req.params.id),
+      url,
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
       return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
     }
     res.json({ success: true, data: result.data });
@@ -118,6 +433,69 @@ router.post('/admin/unidades/:id/rejeitar', ...staffAprovacao, async (req, res) 
   }
 });
 
+router.get('/admin/verificacoes-local', ...staffAprovacao, async (req, res) => {
+  try {
+    const raw = String(req.query.status ?? 'enviado');
+    const status =
+      raw === 'aprovado' || raw === 'rejeitado' || raw === 'all' || raw === 'enviado'
+        ? raw
+        : 'enviado';
+    const result = await anfitriaoService.listarVerificacoesLocal(req.user!.role ?? '', status);
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/admin/unidades/:id/verificacao-local/aprovar', ...staffAprovacao, async (req, res) => {
+  try {
+    const result = await anfitriaoService.decidirVerificacaoLocal(
+      req.user!.role ?? '',
+      Number(req.params.id),
+      'aprovar',
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'invalid_status') {
+        return res.status(409).json({ success: false, error: 'Verificação não está aguardando revisão' });
+      }
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/admin/unidades/:id/verificacao-local/rejeitar', ...staffAprovacao, async (req, res) => {
+  try {
+    const motivo = typeof req.body?.motivo === 'string' ? req.body.motivo : undefined;
+    const result = await anfitriaoService.decidirVerificacaoLocal(
+      req.user!.role ?? '',
+      Number(req.params.id),
+      'rejeitar',
+      motivo,
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'invalid_status') {
+        return res.status(409).json({ success: false, error: 'Verificação não está aguardando revisão' });
+      }
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.get('/calendario', ...parceiroAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
@@ -150,6 +528,141 @@ router.get('/reservas', ...parceiroAuth, async (req, res) => {
         return res.status(403).json({ success: false, error: 'Acesso negado' });
       }
       return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/hoje', ...parceiroAuth, async (req, res) => {
+  try {
+    const hoje = typeof req.query.hoje === 'string' ? req.query.hoje : undefined;
+    const result = await anfitriaoService.obterAgendaHoje(authFromReq(req), hoje);
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/mensagens', ...parceiroAuth, async (req, res) => {
+  try {
+    const de = String(req.query.de ?? '');
+    const ate = String(req.query.ate ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate)) {
+      return res.status(400).json({ success: false, error: 'de e ate (YYYY-MM-DD) obrigatórios' });
+    }
+    const result = await anfitriaoService.listarInboxMensagens(authFromReq(req), { de, ate });
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res) => {
+  try {
+    const propostaId = Number(req.params.propostaId);
+    if (!Number.isFinite(propostaId)) {
+      return res.status(400).json({ success: false, error: 'propostaId inválido' });
+    }
+    const result = await anfitriaoService.listarMensagensReserva(authFromReq(req), propostaId);
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(404).json({ success: false, error: 'Reserva não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res) => {
+  try {
+    const propostaId = Number(req.params.propostaId);
+    if (!Number.isFinite(propostaId)) {
+      return res.status(400).json({ success: false, error: 'propostaId inválido' });
+    }
+    const message = typeof req.body?.message === 'string' ? req.body.message : '';
+    const senderName =
+      typeof req.body?.senderName === 'string' ? req.body.senderName : undefined;
+    const result = await anfitriaoService.enviarMensagemReserva(
+      authFromReq(req),
+      propostaId,
+      message,
+      senderName,
+    );
+    if ('error' in result) {
+      if (result.error === 'invalid') {
+        return res.status(400).json({ success: false, error: 'Mensagem obrigatória (máx. 2000)' });
+      }
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(404).json({ success: false, error: 'Reserva não encontrada' });
+    }
+    res.status(201).json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/reservas/:propostaId/aprovar', ...parceiroAuth, async (req, res) => {
+  try {
+    const propostaId = Number(req.params.propostaId);
+    if (!Number.isFinite(propostaId)) {
+      return res.status(400).json({ success: false, error: 'propostaId inválido' });
+    }
+    const result = await anfitriaoService.decidirPedidoReserva(
+      authFromReq(req),
+      propostaId,
+      'aprovar',
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'invalid_status') {
+        return res.status(409).json({ success: false, error: 'Pedido não está aguardando aprovação' });
+      }
+      return res.status(404).json({ success: false, error: 'Reserva não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    const msg = (error as Error).message;
+    if (msg.includes('indispon') || msg.includes('capacidade') || msg.includes('Hold')) {
+      return res.status(409).json({ success: false, error: msg });
+    }
+    res.status(500).json({ success: false, error: msg });
+  }
+});
+
+router.post('/reservas/:propostaId/rejeitar', ...parceiroAuth, async (req, res) => {
+  try {
+    const propostaId = Number(req.params.propostaId);
+    if (!Number.isFinite(propostaId)) {
+      return res.status(400).json({ success: false, error: 'propostaId inválido' });
+    }
+    const result = await anfitriaoService.decidirPedidoReserva(
+      authFromReq(req),
+      propostaId,
+      'rejeitar',
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'invalid_status') {
+        return res.status(409).json({ success: false, error: 'Pedido não está aguardando aprovação' });
+      }
+      return res.status(404).json({ success: false, error: 'Reserva não encontrada' });
     }
     res.json({ success: true, data: result.data });
   } catch (error) {
@@ -301,7 +814,7 @@ router.post('/unidades/:id/disponibilidade/desbloquear', ...parceiroAuth, async 
   }
 });
 
-router.post('/unidades/:id/disponibilidade/preco', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/disponibilidade/preco', ...masterAuth, async (req, res) => {
   try {
     const parsed = normalizarListaDatas(req.body?.datas);
     if ('error' in parsed) {
@@ -340,6 +853,138 @@ router.post('/unidades/:id/disponibilidade/preco', ...parceiroAuth, async (req, 
       });
     }
     res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/unidades/:id/rate-calendar', ...parceiroAuth, async (req, res) => {
+  try {
+    const de = String(req.query.de ?? '');
+    const ate = String(req.query.ate ?? '');
+    if (!de || !ate) {
+      return res.status(400).json({ success: false, error: 'de e ate são obrigatórios' });
+    }
+    const result = await rateCalendarService.obterRateCalendar(
+      authFromReq(req),
+      Number(req.params.id),
+      de,
+      ate,
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/unidades/:id/rate-calendar/day', ...masterAuth, async (req, res) => {
+  try {
+    const data = String(req.body?.data ?? '');
+    if (!data) {
+      return res.status(400).json({ success: false, error: 'data é obrigatória' });
+    }
+    const result = await rateCalendarService.atualizarDia(authFromReq(req), Number(req.params.id), {
+      data,
+      preco: req.body?.preco === undefined ? undefined : req.body.preco === null || req.body.preco === ''
+        ? null
+        : Number(req.body.preco),
+      disponivel: typeof req.body?.disponivel === 'boolean' ? req.body.disponivel : undefined,
+      observacao: typeof req.body?.observacao === 'string' ? req.body.observacao : undefined,
+    });
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/unidades/:id/pricing-defaults', ...masterAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.atualizarPricingDefaults(
+      authFromReq(req),
+      Number(req.params.id),
+      req.body ?? {},
+    );
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/aplicar-desconto', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.aplicarDesconto(
+      authFromReq(req),
+      Number(req.params.id),
+      {
+        datas: Array.isArray(req.body?.datas) ? req.body.datas.map(String) : [],
+        percentual: Number(req.body?.percentual),
+        enforceAsRole:
+          typeof req.body?.enforceAsRole === 'string' ? req.body.enforceAsRole : undefined,
+      },
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'discount_cap') {
+        return res.status(403).json({
+          success: false,
+          error: result.message,
+          teto: result.teto,
+        });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(400).json({
+        success: false,
+        error: 'message' in result ? result.message : result.error,
+      });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/validar-desconto', ...parceiroAuth, async (req, res) => {
+  try {
+    const percentual = Number(req.body?.percentual);
+    const result = await rateCalendarService.validarDescontoProposto(
+      authFromReq(req),
+      Number(req.params.id),
+      percentual,
+      {
+        enforceAsRole:
+          typeof req.body?.enforceAsRole === 'string' ? req.body.enforceAsRole : undefined,
+      },
+    );
+    if (!result.ok) {
+      return res.status(403).json({
+        success: false,
+        error: result.message,
+        teto: result.teto,
+      });
+    }
+    res.json({ success: true, data: { teto: result.teto } });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }

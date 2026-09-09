@@ -15,6 +15,7 @@ import { ConfigService } from '../../configuracoes/config.service';
 import { recordPropostaAceita, recordPropostaGerada } from '../metrics';
 import { detectarObjecaoPreco, revelarComparativo } from '../objecao';
 import { comHoldReservaAtomico } from '../../acomodacoes/services/disponibilidade-reserva.hook';
+import { acomodacoesService } from '../../acomodacoes/services/acomodacoes.service';
 
 type HitlMode = 'ai' | 'waiting' | 'human';
 
@@ -383,7 +384,7 @@ export class PropostasService {
     const [row] = await db.select().from(propostas).where(eq(propostas.id, propostaId));
     if (!row) throw new Error('Proposta não encontrada');
     if (!row.isPublica) throw new Error('Proposta não disponível publicamente');
-    if (['accepted', 'rejected', 'cancelled'].includes(row.status)) {
+    if (['accepted', 'rejected', 'cancelled', 'pending_host'].includes(row.status)) {
       throw new Error('Proposta já foi respondida');
     }
 
@@ -397,6 +398,42 @@ export class PropostasService {
           : null;
       const checkIn = typeof meta.checkIn === 'string' ? meta.checkIn : null;
       const checkOut = typeof meta.checkOut === 'string' ? meta.checkOut : null;
+
+      let modoReserva = meta.modoReserva === 'aprovar' ? 'aprovar' : 'instantanea';
+      if (acomodacaoId && meta.modoReserva == null) {
+        const listing = await acomodacoesService.findById(acomodacaoId);
+        const listingMeta =
+          listing?.metadata &&
+          typeof listing.metadata === 'object' &&
+          !Array.isArray(listing.metadata)
+            ? (listing.metadata as Record<string, unknown>)
+            : {};
+        modoReserva = listingMeta.modoReserva === 'aprovar' ? 'aprovar' : 'instantanea';
+      }
+
+      if (acomodacaoId && checkIn && checkOut && modoReserva === 'aprovar') {
+        const [pending] = await db
+          .update(propostas)
+          .set({
+            status: 'pending_host',
+            metadata: { ...meta, modoReserva: 'aprovar' },
+            updatedAt: new Date(),
+          })
+          .where(and(eq(propostas.id, propostaId), eq(propostas.status, row.status)))
+          .returning();
+        if (!pending) throw new Error('Proposta já foi respondida');
+        updated = pending;
+        await this.logEvent(propostaId, 'pending_host', 'Aguardando aprovação do anfitrião', {
+          modoReserva: 'aprovar',
+        });
+        await this.addChatMessage(propostaId, {
+          senderType: 'system',
+          senderName: 'Sistema',
+          message: `${clientName ?? 'Cliente'} enviou o pedido. Aguardando aprovação do anfitrião.`,
+        });
+        return updated;
+      }
+
       if (acomodacaoId && checkIn && checkOut) {
         updated = await comHoldReservaAtomico(
           acomodacaoId,
@@ -435,6 +472,49 @@ export class PropostasService {
       { clientName },
     );
 
+    return updated;
+  }
+
+  /** Host approves a client request (pending_host → hold + accepted). */
+  async aprovarPedidoHost(propostaId: number, actorId?: number) {
+    const [row] = await db.select().from(propostas).where(eq(propostas.id, propostaId));
+    if (!row) throw new Error('Proposta não encontrada');
+    if (row.status !== 'pending_host') throw new Error('Pedido já foi decidido');
+
+    const meta = parseMetadata(row.metadata);
+    const acomodacaoId =
+      meta.acomodacaoId != null && Number.isFinite(Number(meta.acomodacaoId))
+        ? Number(meta.acomodacaoId)
+        : null;
+    const checkIn = typeof meta.checkIn === 'string' ? meta.checkIn : null;
+    const checkOut = typeof meta.checkOut === 'string' ? meta.checkOut : null;
+    if (!acomodacaoId || !checkIn || !checkOut) {
+      throw new Error('Pedido sem datas de estadia');
+    }
+
+    const updated = await comHoldReservaAtomico(acomodacaoId, checkIn, checkOut, async (tx) => {
+      const [accepted] = await tx
+        .update(propostas)
+        .set({ status: 'accepted', updatedAt: new Date() })
+        .where(and(eq(propostas.id, propostaId), eq(propostas.status, 'pending_host')))
+        .returning();
+      if (!accepted) throw new Error('Pedido já foi decidido');
+      return accepted;
+    });
+
+    await this.logEvent(
+      propostaId,
+      'host_approved',
+      'Anfitrião aprovou o pedido de reserva',
+      {},
+      actorId,
+    );
+    await this.addChatMessage(propostaId, {
+      senderType: 'anfitriao',
+      senderName: 'Anfitrião',
+      message: 'Pedido de reserva aprovado. Boas-vindas!',
+    });
+    await this.afterAcceptedStatus(propostaId, actorId);
     return updated;
   }
 }

@@ -1,0 +1,1809 @@
+'use client';
+
+import Link from 'next/link';
+import { useCallback, useMemo, useState } from 'react';
+import { resolveUnitThumbUrl, compactThumbUrl, unitThumbPlaceholder } from '../unit-thumb';
+import {
+  AcessibilidadeEditor,
+  normalizeAcessibilidadeItems,
+  type AcessibilidadeItem,
+} from './AcessibilidadeEditor';
+import { FotosTourEditor } from './FotosTourEditor';
+import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
+import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
+import {
+  AMENITY_CATALOG,
+  CAMA_TIPOS,
+  GUIA_CARDS,
+  PREF_CARDS,
+  SEU_ESPACO_CARDS,
+  isEditorSection,
+  readMeta,
+  tabForSection,
+  type EditorMeta,
+  type EditorSection,
+  type EditorTab,
+  type GuiaSection,
+  type ListingEditorUnidade,
+  type PreferenciasSection,
+  type SeuEspacoSection,
+} from './editor-types';
+
+type PricingDefaults = {
+  precoDiaria?: number | null;
+  precoFimSemana?: number | null;
+  minNoites?: number;
+  maxNoites?: number;
+  descontoSemanalPct?: number;
+  descontoMensalPct?: number;
+  politicaCancelamentoCurta?: string;
+  politicaCancelamentoLonga?: string;
+  opcaoNaoReembolsavel?: boolean;
+  precoInteligenteAtivo?: boolean;
+  antecedenciaDias?: number;
+  avisoPrevioMesmoDia?: string | null;
+};
+
+type Props = {
+  unitId: number;
+  unidade: ListingEditorUnidade;
+  pricing?: PricingDefaults | null;
+  saving?: boolean;
+  message?: string | null;
+  /** Deep-link from Desempenho (?secao=). */
+  initialSection?: string | null;
+  onSaveUnit: (body: Record<string, unknown>) => Promise<void>;
+  onSavePricing: (body: Record<string, unknown>) => Promise<void>;
+  onEnviarAprovacao?: () => Promise<void>;
+};
+
+function asAmenitySet(raw: unknown): Set<string> {
+  const set = new Set<string>();
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item === 'string') set.add(item.toLowerCase());
+      else if (item && typeof item === 'object' && 'id' in item) {
+        set.add(String((item as { id: string }).id).toLowerCase());
+      }
+    }
+  }
+  return set;
+}
+
+function FooterSave({
+  dirty,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  dirty: boolean;
+  saving?: boolean;
+  onSave: () => void;
+  onCancel?: () => void;
+}) {
+  return (
+    <div className="sticky bottom-0 mt-8 flex items-center justify-end gap-3 border-t border-slate-200 bg-white py-4">
+      {onCancel && (
+        <button type="button" onClick={onCancel} className="text-sm font-medium text-slate-700">
+          Cancelar
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={!dirty || saving}
+        onClick={onSave}
+        className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white ${
+          dirty && !saving ? 'bg-slate-900' : 'cursor-not-allowed bg-slate-300'
+        }`}
+      >
+        {saving ? 'Salvando…' : 'Salvar'}
+      </button>
+    </div>
+  );
+}
+
+export function AnfitriaoListingEditor({
+  unitId,
+  unidade,
+  pricing,
+  saving,
+  message,
+  initialSection,
+  onSaveUnit,
+  onSavePricing,
+  onEnviarAprovacao,
+}: Props) {
+  const meta0 = useMemo(() => readMeta(unidade), [unidade]);
+  const bootSection: EditorSection =
+    initialSection && isEditorSection(initialSection) ? initialSection : 'fotos';
+  const [tab, setTab] = useState<EditorTab>(() => tabForSection(bootSection));
+  const [section, setSection] = useState<EditorSection>(bootSection);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  const [titulo, setTitulo] = useState(unidade.titulo ?? '');
+  const [nomeInterno, setNomeInterno] = useState(meta0.nomeInterno ?? '');
+  const [preco, setPreco] = useState(
+    String(pricing?.precoDiaria ?? unidade.precoDiaria ?? ''),
+  );
+  const [precoFds, setPrecoFds] = useState(
+    pricing?.precoFimSemana != null ? String(pricing.precoFimSemana) : '',
+  );
+  const [precoInteligente, setPrecoInteligente] = useState(
+    Boolean(pricing?.precoInteligenteAtivo ?? unidade.precoInteligenteAtivo),
+  );
+  const [capacidade, setCapacidade] = useState(Number(unidade.capacidadeMax ?? 2));
+  const [descAnuncio, setDescAnuncio] = useState(meta0.descricaoDetalhada?.anuncio ?? '');
+  const [descProp, setDescProp] = useState(meta0.descricaoDetalhada?.suaPropriedade ?? '');
+  const [descAcesso, setDescAcesso] = useState(meta0.descricaoDetalhada?.acessoHospede ?? '');
+  const [descInteracao, setDescInteracao] = useState(
+    meta0.descricaoDetalhada?.interacaoHospedes ?? '',
+  );
+  const [descOutras, setDescOutras] = useState(meta0.descricaoDetalhada?.outrasInformacoes ?? '');
+  const [descSub, setDescSub] = useState<
+    'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null
+  >(null);
+  const [amenities, setAmenities] = useState(() => asAmenitySet(unidade.amenidades));
+  const [camas, setCamas] = useState<Record<string, number>>(() => meta0.tiposCama ?? {});
+  const [minNoites, setMinNoites] = useState(Number(pricing?.minNoites ?? unidade.minNoites ?? 1));
+  const [maxNoites, setMaxNoites] = useState(Number(pricing?.maxNoites ?? unidade.maxNoites ?? 30));
+  const [descSemanal, setDescSemanal] = useState(
+    Number(pricing?.descontoSemanalPct ?? unidade.descontoSemanalPct ?? 0),
+  );
+  const [descMensal, setDescMensal] = useState(
+    Number(pricing?.descontoMensalPct ?? unidade.descontoMensalPct ?? 0),
+  );
+  const [modoReserva, setModoReserva] = useState(meta0.modoReserva ?? 'aprovar');
+  const [exigirHistorico, setExigirHistorico] = useState(Boolean(meta0.exigirBomHistorico));
+  const [msgPre, setMsgPre] = useState(meta0.mensagemPreReserva ?? '');
+  const [regras, setRegras] = useState(meta0.regrasCasa ?? {});
+  const [guia, setGuia] = useState(meta0.guiaChegada ?? {});
+  const [slug, setSlug] = useState(meta0.slugPersonalizado ?? '');
+  const [statusAnuncio, setStatusAnuncio] = useState(meta0.statusAnuncio ?? 'anunciado');
+  const [exigirFoto, setExigirFoto] = useState(Boolean(meta0.exigirFotoPerfil));
+  const [solidaria, setSolidaria] = useState(Boolean(meta0.hospedagemSolidaria));
+  const [polCurta, setPolCurta] = useState(
+    pricing?.politicaCancelamentoCurta ?? unidade.politicaCancelamentoCurta ?? 'limitada',
+  );
+  const [polLonga, setPolLonga] = useState(
+    pricing?.politicaCancelamentoLonga ?? unidade.politicaCancelamentoLonga ?? 'restrita_longa',
+  );
+  const [naoReemb, setNaoReemb] = useState(
+    Boolean(pricing?.opcaoNaoReembolsavel ?? unidade.opcaoNaoReembolsavel),
+  );
+  const [tipoProp, setTipoProp] = useState(meta0.tipoPropriedade ?? {});
+  const [localizacao, setLocalizacao] = useState(meta0.localizacao ?? {});
+  const [acessibilidade, setAcessibilidade] = useState<AcessibilidadeItem[]>(() =>
+    normalizeAcessibilidadeItems(meta0.acessibilidade),
+  );
+  const [seguranca, setSeguranca] = useState<SegurancaMeta>(() => meta0.seguranca ?? {});
+  const [verificacaoLocal, setVerificacaoLocal] = useState<VerificacaoLocalMeta>(
+    () => meta0.verificacaoLocal ?? {},
+  );
+  const [midiaJson, setMidiaJson] = useState(() => {
+    try {
+      return JSON.stringify(unidade.midia ?? { capa: null, trilhoThumb: null, fotos: [] }, null, 2);
+    } catch {
+      return '{}';
+    }
+  });
+
+  const markDirty = useCallback(() => setDirty(true), []);
+
+  const cards = tab === 'seu-espaco' ? SEU_ESPACO_CARDS : tab === 'guia-chegada' ? GUIA_CARDS : PREF_CARDS;
+
+  function selectTab(next: EditorTab) {
+    setTab(next);
+    if (next === 'seu-espaco') setSection('fotos');
+    else if (next === 'guia-chegada') setSection('checkin-checkout');
+    else setSection('status');
+  }
+
+  function cardSummary(id: EditorSection): string {
+    switch (id) {
+      case 'fotos': {
+        try {
+          const m = JSON.parse(midiaJson || '{}') as { fotos?: unknown[]; capa?: string | null };
+          const n = Array.isArray(m.fotos) ? m.fotos.length : 0;
+          if (n > 0) return `${n} foto(s)${m.capa ? ' · capa definida' : ''}`;
+        } catch {
+          /* ignore */
+        }
+        const thumb = resolveUnitThumbUrl(unidade.midia);
+        return thumb ? 'Capa do trilho definida' : 'Adicionar fotos';
+      }
+      case 'seguranca': {
+        const c = Object.values(seguranca.consideracoes ?? {}).filter(Boolean).length;
+        const d = Object.values(seguranca.dispositivos ?? {}).filter((x) => x?.ativo).length;
+        if (c + d === 0) return 'Adicionar informações';
+        return `${c} consideração(ões) · ${d} dispositivo(s)`;
+      }
+      case 'verificacao':
+        return verificacaoLocal.status === 'aprovado'
+          ? 'Verificada'
+          : verificacaoLocal.status === 'enviado'
+            ? 'Enviada para revisão'
+            : 'Adicionar informações';
+      case 'titulo':
+        return titulo || 'Adicionar título';
+      case 'precos':
+        return preco ? `R$ ${preco}/noite` : 'Definir preço';
+      case 'descontos':
+        return `Semanal ${descSemanal}% · Mensal ${descMensal}%`;
+      case 'disponibilidade':
+        return `${minNoites}–${maxNoites} noites`;
+      case 'hospedes':
+        return `Máximo de ${capacidade} hóspedes`;
+      case 'descricao':
+        return descAnuncio ? descAnuncio.slice(0, 80) : 'Adicionar informações';
+      case 'comodidades':
+        return `${amenities.size} comodidades`;
+      case 'config-reserva':
+        return modoReserva === 'instantanea'
+          ? 'Reserva Instantânea'
+          : 'Pedidos a serem aprovados';
+      case 'regras':
+      case 'regras-guia':
+        return `Check-in ${regras.checkInDe ?? '14:00'} · Checkout ${regras.checkOutAte ?? '11:00'}`;
+      case 'cancelamento':
+        return `${polCurta} · ${polLonga}`;
+      case 'link-personalizado':
+        return slug || 'Adicionar informações';
+      case 'wifi':
+        return guia.wifiRede ? `Rede: ${guia.wifiRede}` : 'Adicionar informações';
+      case 'metodo-checkin':
+        return guia.metodoCheckIn || 'Adicionar informações';
+      case 'interacao':
+        return guia.preferenciaInteracao || 'Adicionar informações';
+      case 'status':
+        return statusAnuncio === 'anunciado' ? 'Anunciado' : 'Não anunciado';
+      case 'acessibilidade': {
+        const informed = acessibilidade.filter((i) => i.possui != null).length;
+        const pub = acessibilidade.reduce(
+          (n, i) => n + i.fotos.filter((f) => f.status === 'publicado').length,
+          0,
+        );
+        const waiting = acessibilidade.reduce(
+          (n, i) =>
+            n + i.fotos.filter((f) => f.status === 'pendente' || f.status === 'em_revisao').length,
+          0,
+        );
+        if (waiting > 0) return `${waiting} foto(s) em revisão`;
+        if (pub > 0) return `${pub} foto(s) publicadas`;
+        return informed > 0 ? `${informed} recurso(s) informados` : 'Adicionar informações';
+      }
+      default:
+        return 'Adicionar informações';
+    }
+  }
+
+  async function persist() {
+    let midia: unknown = unidade.midia;
+    try {
+      midia = JSON.parse(midiaJson || '{}');
+    } catch {
+      throw new Error('Mídia: JSON inválido');
+    }
+
+    const metadata: EditorMeta = {
+      ...meta0,
+      nomeInterno: nomeInterno || undefined,
+      descricaoDetalhada: {
+        anuncio: descAnuncio,
+        suaPropriedade: descProp,
+        acessoHospede: descAcesso,
+        interacaoHospedes: descInteracao,
+        outrasInformacoes: descOutras,
+      },
+      tiposCama: camas,
+      tipoPropriedade: tipoProp,
+      modoReserva,
+      exigirBomHistorico: exigirHistorico,
+      mensagemPreReserva: msgPre.slice(0, 400),
+      regrasCasa: regras,
+      guiaChegada: guia,
+      slugPersonalizado: slug.slice(0, 116),
+      statusAnuncio,
+      exigirFotoPerfil: exigirFoto,
+      hospedagemSolidaria: solidaria,
+      localizacao,
+      acessibilidade,
+      seguranca,
+      verificacaoLocal,
+      idiomas: meta0.idiomas ?? ['Português'],
+    };
+
+    await onSaveUnit({
+      titulo,
+      precoDiaria: preco,
+      capacidadeMax: capacidade,
+      amenidades: Array.from(amenities),
+      midia,
+      metadata,
+      statusPublicacao: 'completo',
+    });
+
+    await onSavePricing({
+      precoDiaria: preco === '' ? null : Number(preco),
+      precoFimSemana: precoFds === '' ? null : Number(precoFds),
+      precoInteligenteAtivo: precoInteligente,
+      minNoites,
+      maxNoites,
+      descontoSemanalPct: descSemanal,
+      descontoMensalPct: descMensal,
+      politicaCancelamentoCurta: polCurta,
+      politicaCancelamentoLonga: polLonga,
+      opcaoNaoReembolsavel: naoReemb,
+    });
+
+    setDirty(false);
+  }
+
+  const thumb = resolveUnitThumbUrl(unidade.midia);
+  const previewSrc = thumb ? compactThumbUrl(thumb, 640) : unitThumbPlaceholder();
+
+  return (
+    <div className="relative flex min-h-[70vh] flex-col lg:flex-row">
+      {/* Left rail */}
+      <aside className="flex w-full flex-col border-b border-slate-200 bg-slate-50 lg:w-[360px] lg:border-b-0 lg:border-r">
+        <div className="flex items-center gap-2 px-4 pb-2 pt-4">
+          <Link
+            href="/anfitriao/unidades"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700"
+            aria-label="Voltar para anúncios"
+            prefetch={false}
+          >
+            ←
+          </Link>
+          <h1 className="text-lg font-bold text-slate-900">Editor de anúncios</h1>
+        </div>
+
+        <div className="flex items-center gap-2 px-4 pb-3">
+          {(
+            [
+              ['seu-espaco', 'Seu espaço'],
+              ['guia-chegada', 'Guia de chegada'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => selectTab(id)}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                tab === id ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' : 'bg-slate-200/70 text-slate-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => selectTab('preferencias')}
+            className={`ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full ${
+              tab === 'preferencias' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 ring-1 ring-slate-200'
+            }`}
+            aria-label="Edite suas preferências"
+            title="Preferências"
+          >
+            ⚙
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-20">
+          {cards.map((c) => {
+            const active = section === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSection(c.id as EditorSection)}
+                className={`w-full rounded-2xl border bg-white p-3 text-left transition ${
+                  active ? 'border-slate-900 shadow-sm' : 'border-slate-200 hover:border-slate-400'
+                }`}
+              >
+                <p className="text-sm font-semibold text-slate-900">{c.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-slate-500">{cardSummary(c.id)}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pointer-events-none absolute bottom-6 left-0 right-0 flex justify-center lg:w-[360px]">
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg"
+          >
+            👁 Visualizar
+          </button>
+        </div>
+      </aside>
+
+      {/* Right panel */}
+      <main className="min-w-0 flex-1 bg-white px-4 py-6 md:px-8">
+        {message && (
+          <p className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            {message}
+          </p>
+        )}
+
+        {tab === 'seu-espaco' && (
+          <SeuEspacoPanel
+            section={section as SeuEspacoSection}
+            unitId={unitId}
+            titulo={titulo}
+            setTitulo={(v) => {
+              setTitulo(v);
+              markDirty();
+            }}
+            nomeInterno={nomeInterno}
+            setNomeInterno={(v) => {
+              setNomeInterno(v);
+              markDirty();
+            }}
+            preco={preco}
+            setPreco={(v) => {
+              setPreco(v);
+              markDirty();
+            }}
+            precoFds={precoFds}
+            setPrecoFds={(v) => {
+              setPrecoFds(v);
+              markDirty();
+            }}
+            precoInteligente={precoInteligente}
+            setPrecoInteligente={(v) => {
+              setPrecoInteligente(v);
+              markDirty();
+            }}
+            capacidade={capacidade}
+            setCapacidade={(v) => {
+              setCapacidade(v);
+              markDirty();
+            }}
+            minNoites={minNoites}
+            setMinNoites={(v) => {
+              setMinNoites(v);
+              markDirty();
+            }}
+            maxNoites={maxNoites}
+            setMaxNoites={(v) => {
+              setMaxNoites(v);
+              markDirty();
+            }}
+            descSemanal={descSemanal}
+            setDescSemanal={(v) => {
+              setDescSemanal(v);
+              markDirty();
+            }}
+            descMensal={descMensal}
+            setDescMensal={(v) => {
+              setDescMensal(v);
+              markDirty();
+            }}
+            descAnuncio={descAnuncio}
+            descProp={descProp}
+            descAcesso={descAcesso}
+            descInteracao={descInteracao}
+            descOutras={descOutras}
+            descSub={descSub}
+            setDescSub={setDescSub}
+            setDescField={(key, v) => {
+              markDirty();
+              if (key === 'anuncio') setDescAnuncio(v);
+              if (key === 'propriedade') setDescProp(v);
+              if (key === 'acesso') setDescAcesso(v);
+              if (key === 'interacao') setDescInteracao(v);
+              if (key === 'outras') setDescOutras(v);
+            }}
+            amenities={amenities}
+            toggleAmenity={(id) => {
+              markDirty();
+              setAmenities((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              });
+            }}
+            camas={camas}
+            setCama={(tipo, n) => {
+              markDirty();
+              setCamas((prev) => ({ ...prev, [tipo]: Math.max(0, n) }));
+            }}
+            modoReserva={modoReserva}
+            setModoReserva={(v) => {
+              setModoReserva(v);
+              markDirty();
+            }}
+            exigirHistorico={exigirHistorico}
+            setExigirHistorico={(v) => {
+              setExigirHistorico(v);
+              markDirty();
+            }}
+            msgPre={msgPre}
+            setMsgPre={(v) => {
+              setMsgPre(v.slice(0, 400));
+              markDirty();
+            }}
+            regras={regras}
+            setRegras={(v) => {
+              setRegras(v);
+              markDirty();
+            }}
+            polCurta={polCurta}
+            setPolCurta={(v) => {
+              setPolCurta(v);
+              markDirty();
+            }}
+            polLonga={polLonga}
+            setPolLonga={(v) => {
+              setPolLonga(v);
+              markDirty();
+            }}
+            naoReemb={naoReemb}
+            setNaoReemb={(v) => {
+              setNaoReemb(v);
+              markDirty();
+            }}
+            slug={slug}
+            setSlug={(v) => {
+              setSlug(v.slice(0, 116));
+              markDirty();
+            }}
+            tipoProp={tipoProp}
+            setTipoProp={(v) => {
+              setTipoProp(v);
+              markDirty();
+            }}
+            localizacao={localizacao}
+            setLocalizacao={(v) => {
+              setLocalizacao(v);
+              markDirty();
+            }}
+            acessibilidade={acessibilidade}
+            setAcessibilidade={(v) => {
+              setAcessibilidade(v);
+              markDirty();
+            }}
+            seguranca={seguranca}
+            setSeguranca={(v) => {
+              setSeguranca(v);
+              markDirty();
+            }}
+            verificacaoLocal={verificacaoLocal}
+            setVerificacaoLocal={(v) => {
+              setVerificacaoLocal(v);
+              markDirty();
+            }}
+            midia={unidade.midia}
+            midiaJson={midiaJson}
+            setMidiaJson={(v) => {
+              setMidiaJson(v);
+              markDirty();
+            }}
+            onMidiaChange={(next) => {
+              if (next != null) {
+                setMidiaJson(JSON.stringify(next, null, 2));
+                markDirty();
+              }
+            }}
+          />
+        )}
+
+        {tab === 'guia-chegada' && (
+          <GuiaPanel
+            section={section as GuiaSection}
+            regras={regras}
+            setRegras={(v) => {
+              setRegras(v);
+              markDirty();
+            }}
+            guia={guia}
+            setGuia={(v) => {
+              setGuia(v);
+              markDirty();
+            }}
+            capacidade={capacidade}
+            setCapacidade={(v) => {
+              setCapacidade(v);
+              markDirty();
+            }}
+          />
+        )}
+
+        {tab === 'preferencias' && (
+          <PreferenciasPanel
+            section={section as PreferenciasSection}
+            statusAnuncio={statusAnuncio}
+            setStatusAnuncio={(v) => {
+              setStatusAnuncio(v);
+              markDirty();
+            }}
+            exigirFoto={exigirFoto}
+            setExigirFoto={(v) => {
+              setExigirFoto(v);
+              markDirty();
+            }}
+            solidaria={solidaria}
+            setSolidaria={(v) => {
+              setSolidaria(v);
+              markDirty();
+            }}
+            onEnviarAprovacao={onEnviarAprovacao}
+          />
+        )}
+
+        <FooterSave
+          dirty={dirty}
+          saving={saving}
+          onSave={() => {
+            void persist().catch(() => undefined);
+          }}
+        />
+
+        <div className="mt-2 flex flex-wrap gap-3 text-sm">
+          <Link
+            href={`/anfitriao/unidades/${unitId}/disponibilidade`}
+            className="text-slate-700 underline"
+            prefetch={false}
+          >
+            Calendário de tarifas →
+          </Link>
+        </div>
+      </main>
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/40">
+          <div className="flex h-full w-full max-w-md flex-col bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <p className="font-semibold">Sua estadia</p>
+              <button type="button" onClick={() => setPreviewOpen(false)} aria-label="Fechar">
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewSrc} alt="" className="h-48 w-full rounded-2xl object-cover" />
+              <h2 className="mt-4 text-xl font-bold">{titulo || 'Anúncio'}</h2>
+              <div className="mt-4 grid grid-cols-2 gap-3 border-y border-slate-100 py-3 text-sm">
+                <div>
+                  <p className="text-slate-500">Check-in</p>
+                  <p className="font-semibold">{regras.checkInDe ?? '14:00'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Checkout</p>
+                  <p className="font-semibold">{regras.checkOutAte ?? '11:00'}</p>
+                </div>
+              </div>
+              <ul className="mt-4 space-y-3 text-sm">
+                <li>
+                  <strong>Como chegar</strong>
+                  <p className="text-slate-500">{localizacao.endereco || guia.comoChegar || '—'}</p>
+                </li>
+                <li>
+                  <strong>Como entrar</strong>
+                  <p className="text-slate-500">{guia.metodoCheckIn || 'Informações de check-in'}</p>
+                </li>
+                <li>
+                  <strong>Guia da Casa</strong>
+                  <p className="text-slate-500">Instruções e Regras da Casa</p>
+                </li>
+                <li>
+                  <strong>Informações de checkout</strong>
+                  <p className="text-slate-500">Como fazer o checkout</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelTitle({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-6">
+      <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+      {hint && <p className="mt-1 text-sm text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
+function SeuEspacoPanel(props: {
+  section: SeuEspacoSection;
+  unitId: number;
+  titulo: string;
+  setTitulo: (v: string) => void;
+  nomeInterno: string;
+  setNomeInterno: (v: string) => void;
+  preco: string;
+  setPreco: (v: string) => void;
+  precoFds: string;
+  setPrecoFds: (v: string) => void;
+  precoInteligente: boolean;
+  setPrecoInteligente: (v: boolean) => void;
+  capacidade: number;
+  setCapacidade: (v: number) => void;
+  minNoites: number;
+  setMinNoites: (v: number) => void;
+  maxNoites: number;
+  setMaxNoites: (v: number) => void;
+  descSemanal: number;
+  setDescSemanal: (v: number) => void;
+  descMensal: number;
+  setDescMensal: (v: number) => void;
+  descAnuncio: string;
+  descProp: string;
+  descAcesso: string;
+  descInteracao: string;
+  descOutras: string;
+  descSub: 'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null;
+  setDescSub: (v: 'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null) => void;
+  setDescField: (key: 'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras', v: string) => void;
+  amenities: Set<string>;
+  toggleAmenity: (id: string) => void;
+  camas: Record<string, number>;
+  setCama: (tipo: string, n: number) => void;
+  modoReserva: 'instantanea' | 'aprovar';
+  setModoReserva: (v: 'instantanea' | 'aprovar') => void;
+  exigirHistorico: boolean;
+  setExigirHistorico: (v: boolean) => void;
+  msgPre: string;
+  setMsgPre: (v: string) => void;
+  regras: NonNullable<EditorMeta['regrasCasa']>;
+  setRegras: (v: NonNullable<EditorMeta['regrasCasa']>) => void;
+  polCurta: string;
+  setPolCurta: (v: string) => void;
+  polLonga: string;
+  setPolLonga: (v: string) => void;
+  naoReemb: boolean;
+  setNaoReemb: (v: boolean) => void;
+  slug: string;
+  setSlug: (v: string) => void;
+  tipoProp: NonNullable<EditorMeta['tipoPropriedade']>;
+  setTipoProp: (v: NonNullable<EditorMeta['tipoPropriedade']>) => void;
+  localizacao: NonNullable<EditorMeta['localizacao']>;
+  setLocalizacao: (v: NonNullable<EditorMeta['localizacao']>) => void;
+  acessibilidade: AcessibilidadeItem[];
+  setAcessibilidade: (v: AcessibilidadeItem[]) => void;
+  seguranca: SegurancaMeta;
+  setSeguranca: (v: SegurancaMeta) => void;
+  verificacaoLocal: VerificacaoLocalMeta;
+  setVerificacaoLocal: (v: VerificacaoLocalMeta) => void;
+  midia: unknown;
+  midiaJson: string;
+  setMidiaJson: (v: string) => void;
+  onMidiaChange: (next: unknown) => void;
+}) {
+  const s = props.section;
+
+  if (s === 'fotos') {
+    let midiaParsed: unknown = props.midia;
+    try {
+      midiaParsed = JSON.parse(props.midiaJson || '{}');
+    } catch {
+      midiaParsed = props.midia;
+    }
+    return (
+      <FotosTourEditor
+        unitId={props.unitId}
+        titulo={props.titulo}
+        midia={midiaParsed}
+        onMidiaChange={(next) => {
+          props.onMidiaChange(next);
+        }}
+      />
+    );
+  }
+
+  if (s === 'titulo') {
+    return (
+      <div>
+        <PanelTitle title="Título" />
+        <label className="block text-sm">
+          <span className="font-medium">Título do anúncio</span>
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            maxLength={50}
+            value={props.titulo}
+            onChange={(e) => props.setTitulo(e.target.value)}
+          />
+          <span className="text-xs text-slate-500">{props.titulo.length}/50</span>
+        </label>
+        <label className="mt-4 block text-sm">
+          <span className="font-medium">Nome interno</span>
+          <input
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            value={props.nomeInterno}
+            onChange={(e) => props.setNomeInterno(e.target.value)}
+            placeholder="Só você vê"
+          />
+        </label>
+      </div>
+    );
+  }
+
+  if (s === 'precos') {
+    return (
+      <div>
+        <PanelTitle title="Preços" hint="Preço base e fim de semana. Preço Inteligente no calendário." />
+        <label className="block text-sm">
+          <span className="font-medium">Preço básico (R$)</span>
+          <input
+            type="number"
+            min={0}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            value={props.preco}
+            onChange={(e) => props.setPreco(e.target.value)}
+          />
+        </label>
+        <label className="mt-4 block text-sm">
+          <span className="font-medium">Preço fim de semana (R$)</span>
+          <input
+            type="number"
+            min={0}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            value={props.precoFds}
+            onChange={(e) => props.setPrecoFds(e.target.value)}
+            placeholder="Opcional"
+          />
+        </label>
+        <label className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm">
+          <span className="font-medium">Preço Inteligente</span>
+          <input
+            type="checkbox"
+            checked={props.precoInteligente}
+            onChange={(e) => props.setPrecoInteligente(e.target.checked)}
+          />
+        </label>
+        <Link
+          href={`/anfitriao/unidades/${props.unitId}/disponibilidade`}
+          className="mt-4 inline-block text-sm text-slate-700 underline"
+          prefetch={false}
+        >
+          Abrir calendário de tarifas →
+        </Link>
+      </div>
+    );
+  }
+
+  if (s === 'descontos') {
+    return (
+      <div>
+        <PanelTitle title="Descontos" />
+        <label className="block text-sm">
+          Semanal (7+ noites): {props.descSemanal}%
+          <input
+            type="range"
+            min={0}
+            max={99}
+            className="mt-2 w-full"
+            value={props.descSemanal}
+            onChange={(e) => props.setDescSemanal(Number(e.target.value))}
+          />
+        </label>
+        <label className="mt-4 block text-sm">
+          Mensal (28+ noites): {props.descMensal}%
+          <input
+            type="range"
+            min={0}
+            max={99}
+            className="mt-2 w-full"
+            value={props.descMensal}
+            onChange={(e) => props.setDescMensal(Number(e.target.value))}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  if (s === 'disponibilidade') {
+    return (
+      <div>
+        <PanelTitle title="Disponibilidade" hint="Mínimo e máximo de noites." />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="text-sm">
+            Mínimo de noites
+            <input
+              type="number"
+              min={1}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              value={props.minNoites}
+              onChange={(e) => props.setMinNoites(Number(e.target.value) || 1)}
+            />
+          </label>
+          <label className="text-sm">
+            Máximo de noites
+            <input
+              type="number"
+              min={1}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              value={props.maxNoites}
+              onChange={(e) => props.setMaxNoites(Number(e.target.value) || 30)}
+            />
+          </label>
+        </div>
+        <Link
+          href={`/anfitriao/unidades/${props.unitId}/disponibilidade`}
+          className="mt-4 inline-block text-sm underline"
+          prefetch={false}
+        >
+          Personalizar no calendário →
+        </Link>
+      </div>
+    );
+  }
+
+  if (s === 'hospedes') {
+    return (
+      <div>
+        <PanelTitle
+          title="Número de hóspedes"
+          hint="Quantos hóspedes seu espaço acomoda com conforto?"
+        />
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            className="h-10 w-10 rounded-full border border-slate-300 text-lg"
+            onClick={() => props.setCapacidade(Math.max(1, props.capacidade - 1))}
+          >
+            −
+          </button>
+          <span className="text-2xl font-bold">{props.capacidade}</span>
+          <button
+            type="button"
+            className="h-10 w-10 rounded-full border border-slate-300 text-lg"
+            onClick={() => props.setCapacidade(props.capacidade + 1)}
+          >
+            +
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (s === 'descricao') {
+    if (props.descSub) {
+      const map = {
+        anuncio: { label: 'Descrição do anúncio', value: props.descAnuncio, max: 500 },
+        propriedade: { label: 'Sua propriedade', value: props.descProp, max: 1000 },
+        acesso: { label: 'Acesso do hóspede', value: props.descAcesso, max: 1000 },
+        interacao: { label: 'Interação com os hóspedes', value: props.descInteracao, max: 1000 },
+        outras: { label: 'Outras informações importantes', value: props.descOutras, max: 1000 },
+      } as const;
+      const cur = map[props.descSub];
+      return (
+        <div>
+          <button type="button" className="mb-3 text-sm text-slate-600" onClick={() => props.setDescSub(null)}>
+            ← Voltar
+          </button>
+          <PanelTitle title={cur.label} />
+          <textarea
+            className="h-56 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            value={cur.value}
+            maxLength={cur.max}
+            onChange={(e) => props.setDescField(props.descSub!, e.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            {cur.value.length}/{cur.max} disponíveis
+          </p>
+        </div>
+      );
+    }
+    const rows = [
+      ['anuncio', 'Descrição do anúncio', props.descAnuncio],
+      ['propriedade', 'Sua propriedade', props.descProp],
+      ['acesso', 'Acesso do hóspede', props.descAcesso],
+      ['interacao', 'Interação com os hóspedes', props.descInteracao],
+      ['outras', 'Outras informações importantes', props.descOutras],
+    ] as const;
+    return (
+      <div>
+        <PanelTitle title="Descrição" />
+        <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
+          {rows.map(([key, label, val]) => (
+            <li key={key}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-4 py-3 text-left"
+                onClick={() => props.setDescSub(key)}
+              >
+                <span>
+                  <span className="block font-medium">{label}</span>
+                  <span className="line-clamp-1 text-xs text-slate-500">{val || 'Adicionar'}</span>
+                </span>
+                <span aria-hidden>›</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (s === 'comodidades') {
+    return (
+      <div>
+        <PanelTitle title="Comodidades" hint="Marque o que o anúncio oferece." />
+        <ul className="space-y-2">
+          {AMENITY_CATALOG.map((a) => (
+            <li key={a.id}>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-3 py-3">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={props.amenities.has(a.id)}
+                  onChange={() => props.toggleAmenity(a.id)}
+                />
+                <span>
+                  <span className="block font-medium">{a.label}</span>
+                  <span className="text-xs text-slate-500">{a.desc}</span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (s === 'camas') {
+    return (
+      <div>
+        <PanelTitle title="Tipos de cama" />
+        <ul className="space-y-2">
+          {CAMA_TIPOS.map((tipo) => (
+            <li key={tipo} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+              <span className="text-sm font-medium">{tipo}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-full border"
+                  onClick={() => props.setCama(tipo, (props.camas[tipo] ?? 0) - 1)}
+                >
+                  −
+                </button>
+                <span className="w-6 text-center text-sm">{props.camas[tipo] ?? 0}</span>
+                <button
+                  type="button"
+                  className="h-8 w-8 rounded-full border"
+                  onClick={() => props.setCama(tipo, (props.camas[tipo] ?? 0) + 1)}
+                >
+                  +
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (s === 'tipo') {
+    return (
+      <div>
+        <PanelTitle title="Tipo de propriedade" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ['tipo', 'Tipo', 'Apartamento'],
+              ['acomodacao', 'Acomodação', 'Espaço inteiro'],
+              ['representacao', 'Representação', 'Espaço inteiro'],
+            ] as const
+          ).map(([key, label, ph]) => (
+            <label key={key} className="text-sm">
+              {label}
+              <input
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+                value={props.tipoProp[key] ?? ''}
+                placeholder={ph}
+                onChange={(e) => props.setTipoProp({ ...props.tipoProp, [key]: e.target.value })}
+              />
+            </label>
+          ))}
+          <label className="text-sm">
+            Tamanho (m²)
+            <input
+              type="number"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+              value={props.tipoProp.tamanhoM2 ?? ''}
+              onChange={(e) =>
+                props.setTipoProp({ ...props.tipoProp, tamanhoM2: Number(e.target.value) || undefined })
+              }
+            />
+          </label>
+        </div>
+      </div>
+    );
+  }
+
+  if (s === 'config-reserva') {
+    return (
+      <div>
+        <PanelTitle title="Configurações de reserva" />
+        <div className="space-y-3">
+          {(
+            [
+              ['instantanea', 'Usar Reserva Instantânea', 'Hóspedes reservam automaticamente.'],
+              ['aprovar', 'Aprovar todas as reservas', 'Analise todos os pedidos de reserva.'],
+            ] as const
+          ).map(([id, title, desc]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => props.setModoReserva(id)}
+              className={`w-full rounded-2xl border p-4 text-left ${
+                props.modoReserva === id ? 'border-slate-900' : 'border-slate-200'
+              }`}
+            >
+              <p className="font-semibold">{title}</p>
+              <p className="mt-1 text-sm text-slate-500">{desc}</p>
+            </button>
+          ))}
+        </div>
+        {props.modoReserva === 'instantanea' && (
+          <>
+            <label className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+              <span>Exigir bom histórico</span>
+              <input
+                type="checkbox"
+                checked={props.exigirHistorico}
+                onChange={(e) => props.setExigirHistorico(e.target.checked)}
+              />
+            </label>
+            <label className="mt-4 block text-sm">
+              Mensagem pré-reserva
+              <textarea
+                className="mt-1 h-28 w-full rounded-xl border px-3 py-2"
+                value={props.msgPre}
+                maxLength={400}
+                onChange={(e) => props.setMsgPre(e.target.value)}
+                placeholder="Ex.: Olá! Conte um pouco sobre sua viagem…"
+              />
+              <span className="text-xs text-slate-500">{props.msgPre.length}/400</span>
+            </label>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (s === 'regras') {
+    return <RegrasPanel regras={props.regras} setRegras={props.setRegras} capacidade={props.capacidade} setCapacidade={props.setCapacidade} />;
+  }
+
+  if (s === 'cancelamento') {
+    return (
+      <div>
+        <PanelTitle title="Política de cancelamento" />
+        <label className="block text-sm">
+          Estadias de curta duração (menos de 28 noites)
+          <select
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={props.polCurta}
+            onChange={(e) => props.setPolCurta(e.target.value)}
+          >
+            <option value="flexivel">Flexível</option>
+            <option value="moderada">Moderada</option>
+            <option value="limitada">Limitada</option>
+            <option value="restrita">Restrita</option>
+          </select>
+        </label>
+        <label className="mt-4 block text-sm">
+          Estadias de longa duração (28+ noites)
+          <select
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={props.polLonga}
+            onChange={(e) => props.setPolLonga(e.target.value)}
+          >
+            <option value="restrita_longa">Restrita para estadias de longa duração</option>
+            <option value="flexivel_longa">Flexível longa duração</option>
+          </select>
+        </label>
+        <label className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+          <span>Opção não reembolsável (~10% desconto)</span>
+          <input
+            type="checkbox"
+            checked={props.naoReemb}
+            onChange={(e) => props.setNaoReemb(e.target.checked)}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  if (s === 'link-personalizado') {
+    return (
+      <div>
+        <PanelTitle title="Link personalizado" hint="Slug único para compartilhar o anúncio." />
+        <p className="text-sm text-slate-500">{props.slug.length}/116 disponíveis</p>
+        <div className="mt-2 flex items-center gap-1 text-lg font-semibold">
+          <span className="text-slate-400">reserveiviagens.com.br/h/</span>
+          <input
+            className="min-w-0 flex-1 border-b border-slate-300 bg-transparent outline-none"
+            value={props.slug}
+            onChange={(e) => props.setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
+          />
+        </div>
+        {props.slug ? (
+          <a
+            className="mt-3 inline-block text-sm text-teal-800 underline"
+            href={`${typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') : 'http://localhost:3000'}/h/${props.slug}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Abrir anúncio público
+          </a>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500">Defina um slug único e salve para publicar o link.</p>
+        )}
+      </div>
+    );
+  }
+
+  if (s === 'localizacao') {
+    return (
+      <div>
+        <PanelTitle title="Localização" />
+        {(
+          [
+            ['endereco', 'Endereço'],
+            ['apto', 'Apto / unidade'],
+            ['bairro', 'Bairro'],
+            ['cidade', 'Cidade'],
+            ['uf', 'UF'],
+            ['cep', 'CEP'],
+          ] as const
+        ).map(([key, label]) => (
+          <label key={key} className="mt-3 block text-sm">
+            {label}
+            <input
+              className="mt-1 w-full rounded-xl border px-3 py-2"
+              value={props.localizacao[key] ?? ''}
+              onChange={(e) => props.setLocalizacao({ ...props.localizacao, [key]: e.target.value })}
+            />
+          </label>
+        ))}
+        <label className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+          <span>Mostrar localização exata</span>
+          <input
+            type="checkbox"
+            checked={Boolean(props.localizacao.mostrarExata)}
+            onChange={(e) =>
+              props.setLocalizacao({ ...props.localizacao, mostrarExata: e.target.checked })
+            }
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Descrição do bairro
+          <textarea
+            className="mt-1 h-24 w-full rounded-xl border px-3 py-2"
+            value={props.localizacao.descricaoBairro ?? ''}
+            onChange={(e) =>
+              props.setLocalizacao({ ...props.localizacao, descricaoBairro: e.target.value })
+            }
+          />
+        </label>
+      </div>
+    );
+  }
+
+  if (s === 'acessibilidade') {
+    return (
+      <AcessibilidadeEditor
+        unitId={props.unitId}
+        items={props.acessibilidade}
+        onChange={props.setAcessibilidade}
+      />
+    );
+  }
+
+  if (s === 'seguranca') {
+    return <SegurancaEditor value={props.seguranca} onChange={props.setSeguranca} />;
+  }
+
+  if (s === 'verificacao') {
+    return (
+      <VerificacaoLocalEditor
+        unitId={props.unitId}
+        value={props.verificacaoLocal}
+        onChange={props.setVerificacaoLocal}
+      />
+    );
+  }
+
+  if (s === 'sobre-anfitriao' || s === 'coanfitrioes') {
+    const copy: Record<string, { title: string; body: string }> = {
+      'sobre-anfitriao': {
+        title: 'Sobre o anfitrião',
+        body: 'Perfil do anfitrião (foto, bio, interesses) é gerenciado na área de perfil. Acesse Perfil no menu Hoje.',
+      },
+      coanfitrioes: {
+        title: 'Coanfitriões',
+        body: 'Convite por SMS/e-mail com níveis de permissão. RBAC completo na fase 2 — salve preferências no metadata por enquanto.',
+      },
+    };
+    const c = copy[s];
+    return (
+      <div>
+        <PanelTitle title={c.title} />
+        <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">{c.body}</p>
+      </div>
+    );
+  }
+
+  return <PanelTitle title="Seção" hint="Em construção." />;
+}
+
+function RegrasPanel({
+  regras,
+  setRegras,
+  capacidade,
+  setCapacidade,
+}: {
+  regras: NonNullable<EditorMeta['regrasCasa']>;
+  setRegras: (v: NonNullable<EditorMeta['regrasCasa']>) => void;
+  capacidade: number;
+  setCapacidade: (v: number) => void;
+}) {
+  const toggles: Array<[keyof NonNullable<EditorMeta['regrasCasa']>, string]> = [
+    ['pets', 'Permitido animais de estimação'],
+    ['eventos', 'Permitido eventos'],
+    ['fumar', 'Permitido fumar e cigarros eletrônicos'],
+    ['silencio', 'Horários de silêncio'],
+    ['filmagem', 'Permitido fotografia comercial e filmagem'],
+  ];
+  return (
+    <div>
+      <PanelTitle title="Regras da Casa" hint="Os hóspedes devem respeitar estas regras." />
+      <ul className="space-y-3">
+        {toggles.map(([key, label]) => (
+          <li key={key} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
+            <span className="text-sm font-medium">{label}</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`h-9 w-9 rounded-full border ${!regras[key] ? 'bg-slate-900 text-white' : ''}`}
+                onClick={() => setRegras({ ...regras, [key]: false })}
+              >
+                ✕
+              </button>
+              <button
+                type="button"
+                className={`h-9 w-9 rounded-full border ${regras[key] ? 'bg-slate-900 text-white' : ''}`}
+                onClick={() => setRegras({ ...regras, [key]: true })}
+              >
+                ✓
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {regras.silencio && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="text-sm">
+            Início
+            <input
+              className="mt-1 w-full rounded-xl border px-3 py-2"
+              value={regras.silencioInicio ?? '22:00'}
+              onChange={(e) => setRegras({ ...regras, silencioInicio: e.target.value })}
+            />
+          </label>
+          <label className="text-sm">
+            Término
+            <input
+              className="mt-1 w-full rounded-xl border px-3 py-2"
+              value={regras.silencioFim ?? '07:00'}
+              onChange={(e) => setRegras({ ...regras, silencioFim: e.target.value })}
+            />
+          </label>
+        </div>
+      )}
+      <div className="mt-4 flex items-center gap-3">
+        <span className="text-sm font-medium">Número de hóspedes</span>
+        <button type="button" className="h-8 w-8 rounded-full border" onClick={() => setCapacidade(Math.max(1, capacidade - 1))}>
+          −
+        </button>
+        <span className="font-bold">{capacidade}</span>
+        <button type="button" className="h-8 w-8 rounded-full border" onClick={() => setCapacidade(capacidade + 1)}>
+          +
+        </button>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <label className="text-xs">
+          Check-in de
+          <input
+            className="mt-1 w-full rounded-lg border px-2 py-1.5"
+            value={regras.checkInDe ?? '14:00'}
+            onChange={(e) => setRegras({ ...regras, checkInDe: e.target.value })}
+          />
+        </label>
+        <label className="text-xs">
+          Check-in até
+          <input
+            className="mt-1 w-full rounded-lg border px-2 py-1.5"
+            value={regras.checkInAte ?? 'Flexível'}
+            onChange={(e) => setRegras({ ...regras, checkInAte: e.target.value })}
+          />
+        </label>
+        <label className="text-xs">
+          Checkout
+          <input
+            className="mt-1 w-full rounded-lg border px-2 py-1.5"
+            value={regras.checkOutAte ?? '11:00'}
+            onChange={(e) => setRegras({ ...regras, checkOutAte: e.target.value })}
+          />
+        </label>
+      </div>
+      <label className="mt-4 block text-sm">
+        Regras adicionais
+        <textarea
+          className="mt-1 h-32 w-full rounded-xl border px-3 py-2"
+          value={regras.regrasAdicionais ?? ''}
+          onChange={(e) => setRegras({ ...regras, regrasAdicionais: e.target.value })}
+        />
+      </label>
+    </div>
+  );
+}
+
+function GuiaPanel({
+  section,
+  regras,
+  setRegras,
+  guia,
+  setGuia,
+  capacidade,
+  setCapacidade,
+}: {
+  section: GuiaSection;
+  regras: NonNullable<EditorMeta['regrasCasa']>;
+  setRegras: (v: NonNullable<EditorMeta['regrasCasa']>) => void;
+  guia: NonNullable<EditorMeta['guiaChegada']>;
+  setGuia: (v: NonNullable<EditorMeta['guiaChegada']>) => void;
+  capacidade: number;
+  setCapacidade: (v: number) => void;
+}) {
+  if (section === 'regras-guia') {
+    return <RegrasPanel regras={regras} setRegras={setRegras} capacidade={capacidade} setCapacidade={setCapacidade} />;
+  }
+  if (section === 'checkin-checkout') {
+    return (
+      <div>
+        <PanelTitle title="Check-in e checkout" />
+        <label className="block text-sm">
+          Início do check-in
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={regras.checkInDe ?? '14:00'}
+            onChange={(e) => setRegras({ ...regras, checkInDe: e.target.value })}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Término do check-in
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={regras.checkInAte ?? 'Flexível'}
+            onChange={(e) => setRegras({ ...regras, checkInAte: e.target.value })}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Checkout
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={regras.checkOutAte ?? '11:00'}
+            onChange={(e) => setRegras({ ...regras, checkOutAte: e.target.value })}
+          />
+        </label>
+      </div>
+    );
+  }
+  if (section === 'como-chegar') {
+    return (
+      <div>
+        <PanelTitle title="Como chegar" hint="Compartilhado depois que a reserva é confirmada." />
+        <textarea
+          className="h-40 w-full rounded-xl border px-3 py-2 text-sm"
+          value={guia.comoChegar ?? ''}
+          onChange={(e) => setGuia({ ...guia, comoChegar: e.target.value })}
+          placeholder="Link do mapa ou instruções"
+        />
+      </div>
+    );
+  }
+  if (section === 'metodo-checkin') {
+    const metodos = [
+      'Fechadura inteligente',
+      'Teclado numérico',
+      'Cofre de chaves',
+      'Funcionários do prédio',
+      'Recepção presencial',
+      'Outro',
+    ];
+    return (
+      <div>
+        <PanelTitle title="Método de check-in" hint="Compartilhado 24 a 48 horas antes do check-in." />
+        <div className="space-y-2">
+          {metodos.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setGuia({ ...guia, metodoCheckIn: m })}
+              className={`w-full rounded-xl border px-3 py-3 text-left text-sm ${
+                guia.metodoCheckIn === m ? 'border-slate-900' : 'border-slate-200'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        <label className="mt-4 block text-sm">
+          Detalhe (ex. Recepção do Hotel)
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={guia.metodoCheckInDetalhe ?? ''}
+            onChange={(e) => setGuia({ ...guia, metodoCheckInDetalhe: e.target.value })}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Instruções de check-in
+          <textarea
+            className="mt-1 h-28 w-full rounded-xl border px-3 py-2"
+            value={guia.instrucoesCheckIn ?? ''}
+            onChange={(e) => setGuia({ ...guia, instrucoesCheckIn: e.target.value })}
+          />
+        </label>
+      </div>
+    );
+  }
+  if (section === 'wifi') {
+    return (
+      <div>
+        <PanelTitle title="Informações do Wi-Fi" hint="Compartilhado 24 a 48 horas antes do check-in." />
+        <label className="block text-sm">
+          Nome da rede
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={guia.wifiRede ?? ''}
+            onChange={(e) => setGuia({ ...guia, wifiRede: e.target.value })}
+          />
+        </label>
+        <label className="mt-3 block text-sm">
+          Senha
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={guia.wifiSenha ?? ''}
+            onChange={(e) => setGuia({ ...guia, wifiSenha: e.target.value })}
+            autoComplete="off"
+          />
+        </label>
+      </div>
+    );
+  }
+  if (section === 'guia-casa') {
+    return (
+      <div>
+        <PanelTitle title="Guia da Casa" hint="Compartilhado 24 a 48 horas antes do check-in." />
+        <textarea
+          className="h-48 w-full rounded-xl border px-3 py-2"
+          value={guia.guiaCasa ?? ''}
+          onChange={(e) => setGuia({ ...guia, guiaCasa: e.target.value })}
+          placeholder="Dicas sobre internet, TV, equipamentos…"
+        />
+      </div>
+    );
+  }
+  if (section === 'checkout-instrucoes') {
+    const items = guia.instrucoesCheckout ?? [];
+    return (
+      <div>
+        <PanelTitle
+          title="Instruções de checkout"
+          hint="Visíveis antes da reserva. Lembrete às 17h do dia anterior."
+        />
+        <ul className="space-y-2">
+          {items.map((it, idx) => (
+            <li key={it.id} className="rounded-xl border px-3 py-2">
+              <input
+                className="w-full font-medium outline-none"
+                value={it.titulo}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[idx] = { ...it, titulo: e.target.value };
+                  setGuia({ ...guia, instrucoesCheckout: next });
+                }}
+              />
+              <textarea
+                className="mt-1 w-full text-sm outline-none"
+                value={it.texto}
+                maxLength={140}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[idx] = { ...it, texto: e.target.value };
+                  setGuia({ ...guia, instrucoesCheckout: next });
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          className="mt-3 rounded-full border border-slate-300 px-4 py-2 text-sm"
+          onClick={() =>
+            setGuia({
+              ...guia,
+              instrucoesCheckout: [
+                ...items,
+                { id: `c-${Date.now()}`, titulo: 'Nova instrução', texto: '' },
+              ],
+            })
+          }
+        >
+          + Adicionar instrução
+        </button>
+      </div>
+    );
+  }
+  if (section === 'interacao') {
+    const opts = [
+      'Não estarei disponível pessoalmente e prefiro me comunicar pelo aplicativo',
+      'Gosto de cumprimentar pessoalmente, mas fora isso, prefiro ficar mais na minha',
+      'Eu gosto de socializar e passar tempo com os hóspedes',
+      'Não tenho preferência, me adapto às preferências dos hóspedes',
+    ];
+    return (
+      <div>
+        <PanelTitle title="Interação com os hóspedes" />
+        <div className="space-y-2">
+          {opts.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => setGuia({ ...guia, preferenciaInteracao: o })}
+              className={`w-full rounded-2xl border p-4 text-left text-sm ${
+                guia.preferenciaInteracao === o ? 'border-slate-900' : 'border-slate-200'
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <PanelTitle title="Guias" hint="Crie um guia para compartilhar dicas locais com os hóspedes." />
+      <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
+        MVP: estrutura salva no metadata. Editor rico de guias locais na fase 2.
+      </p>
+    </div>
+  );
+}
+
+function PreferenciasPanel({
+  section,
+  statusAnuncio,
+  setStatusAnuncio,
+  exigirFoto,
+  setExigirFoto,
+  solidaria,
+  setSolidaria,
+  onEnviarAprovacao,
+}: {
+  section: PreferenciasSection;
+  statusAnuncio: 'anunciado' | 'nao_anunciado';
+  setStatusAnuncio: (v: 'anunciado' | 'nao_anunciado') => void;
+  exigirFoto: boolean;
+  setExigirFoto: (v: boolean) => void;
+  solidaria: boolean;
+  setSolidaria: (v: boolean) => void;
+  onEnviarAprovacao?: () => Promise<void>;
+}) {
+  if (section === 'status') {
+    return (
+      <div>
+        <PanelTitle title="Status do anúncio" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ['anunciado', 'Anunciado', 'Aparece nas buscas e pode ser reservado.'],
+              ['nao_anunciado', 'Não anunciado', 'Fora da busca; você pode pausar datas.'],
+            ] as const
+          ).map(([id, title, desc]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setStatusAnuncio(id)}
+              className={`rounded-2xl border p-4 text-left ${
+                statusAnuncio === id ? 'border-slate-900' : 'border-slate-200'
+              }`}
+            >
+              <p className="font-semibold">{title}</p>
+              <p className="mt-1 text-sm text-slate-500">{desc}</p>
+            </button>
+          ))}
+        </div>
+        {onEnviarAprovacao && (
+          <button
+            type="button"
+            className="mt-4 rounded-lg border border-slate-300 px-4 py-2 text-sm"
+            onClick={() => void onEnviarAprovacao()}
+          >
+            Enviar para aprovação do staff
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (section === 'requisitos') {
+    return (
+      <div>
+        <PanelTitle title="Requisitos do hóspede" />
+        <label className="flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+          <span>Exigir foto de perfil</span>
+          <input type="checkbox" checked={exigirFoto} onChange={(e) => setExigirFoto(e.target.checked)} />
+        </label>
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-600">
+          <li>E-mail e telefone confirmados</li>
+          <li>Informações de pagamento</li>
+          <li>Concordar com as Regras da Casa</li>
+        </ul>
+      </div>
+    );
+  }
+  if (section === 'solidaria') {
+    return (
+      <div>
+        <PanelTitle title="Hospedagem solidária" />
+        <label className="flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
+          <span>Disponível com desconto ou cortesia para parceiros verificados</span>
+          <input type="checkbox" checked={solidaria} onChange={(e) => setSolidaria(e.target.checked)} />
+        </label>
+      </div>
+    );
+  }
+  if (section === 'remover') {
+    return (
+      <div>
+        <PanelTitle title="Remover anúncio" hint="Ação destrutiva — use Não anunciado para pausar." />
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Para remover permanentemente, altere o status para Não anunciado e contate o suporte Reservei.
+          Soft-delete com auditoria na fase 2.
+        </p>
+      </div>
+    );
+  }
+  if (section === 'idiomas') {
+    return (
+      <div>
+        <PanelTitle title="Idiomas" />
+        <p className="text-sm">Português (padrão)</p>
+        <p className="mt-2 text-xs text-slate-500">
+          Hóspedes podem ver traduções automáticas de outros campos.
+        </p>
+      </div>
+    );
+  }
+  if (section === 'leis') {
+    return (
+      <div>
+        <PanelTitle title="Leis locais" />
+        <p className="text-sm text-slate-600">
+          Revise zoneamento, licenças e impostos aplicáveis à sua acomodação. Ao aceitar os Termos da
+          Reservei Viagens, você declara conformidade com as leis aplicáveis.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <PanelTitle title="Impostos" hint="Adicione impostos que você precisa recolher." />
+      <p className="rounded-2xl border border-dashed p-6 text-sm text-slate-500">
+        Cadastro fiscal completo (alíquota, isenções, registro) na fase 2.
+      </p>
+    </div>
+  );
+}

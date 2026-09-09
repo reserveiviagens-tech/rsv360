@@ -21,6 +21,8 @@ import {
   assertDisponibilidadeReserva,
   DisponibilidadeReservaConflictError,
 } from '../../acomodacoes/services/disponibilidade-reserva.hook';
+import { acomodacoesService } from '../../acomodacoes/services/acomodacoes.service';
+import { resolveModoReserva } from '../../acomodacoes/services/listing-slug.util';
 import { assertHotelMatchProposta } from './assert-hotel-match-proposta';
 
 function resolveAcomodacaoId(payload: GerarPropostaPayload): number | null {
@@ -97,6 +99,21 @@ export class CotacaoPublicaService {
     if (acomodacaoId) {
       await assertHotelMatchProposta(acomodacaoId, payload.hotelId);
       await assertDisponibilidadeReserva(acomodacaoId, payload.checkIn, payload.checkOut);
+
+      const descontoPct = Number(payload.descontoParceiroPercentual ?? 0);
+      if (Number.isFinite(descontoPct) && descontoPct > 0) {
+        const { rateCalendarService } = await import(
+          '../../acomodacoes/services/rate-calendar.service'
+        );
+        const check = await rateCalendarService.assertDescontoParceiroNoFunil(
+          acomodacaoId,
+          descontoPct,
+          payload.descontoParceiroRole || 'corretor',
+        );
+        if (!check.ok) {
+          throw new Error(check.message);
+        }
+      }
     }
 
     const acomodacaoSnapshot = await resolveUpgradeVarandaProposta(payload);
@@ -168,6 +185,18 @@ export class CotacaoPublicaService {
       console.warn('[cotacao-publica] reservarVaga ignorado:', (lockErr as Error).message);
     }
 
+    let modoReservaListing: 'instantanea' | 'aprovar' = 'instantanea';
+    if (acomodacaoId) {
+      const listing = await acomodacoesService.findById(acomodacaoId);
+      const listingMeta =
+        listing?.metadata &&
+        typeof listing.metadata === 'object' &&
+        !Array.isArray(listing.metadata)
+          ? (listing.metadata as Record<string, unknown>)
+          : {};
+      modoReservaListing = resolveModoReserva(listingMeta.modoReserva);
+    }
+
     const token = gerarTokenPublicoProposta();
     const publicBase =
       process.env.COTACAO_PUBLIC_BASE_URL ||
@@ -213,6 +242,7 @@ export class CotacaoPublicaService {
           children: payload.children,
           hotelId: payload.hotelId != null ? String(payload.hotelId) : undefined,
           acomodacaoId: acomodacaoId ?? undefined,
+          modoReserva: modoReservaListing,
           ...acomodacaoSnapshot,
           ...(taxaHospedeResolvida?.snapshot ?? {}),
         },
@@ -267,9 +297,14 @@ export class CotacaoPublicaService {
     if (!row || !row.isPublica) return null;
 
     const updated = await propostasService.respondPublic(row.id, 'accept', clientName);
+    const awaitingHost = updated?.status === 'pending_host';
     return {
       proposta: updated,
-      proximoDestino: `/roteiro/${token}`,
+      awaitingHostApproval: awaitingHost,
+      proximoDestino: awaitingHost ? `/proposta/${token}` : `/roteiro/${token}`,
+      mensagem: awaitingHost
+        ? 'Pedido enviado. Aguarde a aprovação do anfitrião.'
+        : undefined,
     };
   }
 

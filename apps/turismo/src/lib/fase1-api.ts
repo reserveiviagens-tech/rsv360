@@ -119,10 +119,86 @@ export const fase1Api = {
     fetchJson<{ success: boolean; data: { total: number; incompletas: number; emAprovacao: number; publicadas: number } }>(
       '/api/v1/acomodacoes/anfitriao/dashboard',
     ),
-  anfitriaoMinhas: (page = 1) =>
-    fetchJson<{ success: boolean; data: { items: unknown[]; total: number; page: number; pageSize: number } }>(
-      `/api/v1/acomodacoes/anfitriao/minhas?page=${page}`,
+
+  anfitriaoDesempenho: (mes?: string) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        periodo: { de: string; ate: string; mes: string };
+        resumo: {
+          unidadesTotal: number;
+          unidadesPublicadas: number;
+          reservas: number;
+          receitaTotal: number;
+          noitesReservadas: number;
+          noitesDisponiveisEstimadas: number;
+          ocupacaoPct: number | null;
+        };
+        qualidade: {
+          anunciosCompletos: number;
+          anunciosIncompletos: number;
+          scoreMedio: number | null;
+          dicas: string[];
+        };
+        conversao: {
+          reservas: number;
+          unidadesAtivas: number;
+          reservasPorUnidade: number | null;
+          nota: string;
+        };
+        porUnidade: Array<{
+          acomodacaoId: number;
+          titulo: string;
+          statusPublicacao: string;
+          reservas: number;
+          receita: number;
+          noites: number;
+        }>;
+        oportunidades?: Array<{
+          id: string;
+          titulo: string;
+          categoria: string;
+          pct: number;
+          done: boolean;
+          ctaPath?: string;
+          ctaLabel?: string;
+          ctaUnitId?: number;
+          ctaUnitTitulo?: string;
+        }>;
+        oportunidadesResumo?: {
+          pendentes: number;
+          concluidas: number;
+          pctNaoConcluidas: number;
+        };
+      };
+    }>(
+      `/api/v1/acomodacoes/anfitriao/desempenho${mes ? `?mes=${encodeURIComponent(mes)}` : ''}`,
     ),
+  anfitriaoMinhas: (page = 1, pageSize = 20) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        items: Array<{
+          id: number;
+          titulo: string;
+          hotelId?: string;
+          statusPublicacao?: string;
+          precoDiaria?: string | number | null;
+          midia?: unknown;
+          quartos?: number | null;
+          capacidadeMax?: number | null;
+          capacidadeBase?: number | null;
+          configBanheiro?: string | null;
+          configSala?: string | null;
+          amenidades?: unknown;
+          utensilios?: unknown;
+          eletrodomesticos?: unknown;
+        }>;
+        total: number;
+        page: number;
+        pageSize: number;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/minhas?page=${page}&pageSize=${pageSize}`),
   anfitriaoMinhasComissoes: (page = 1) =>
     fetchJson<{
       success: boolean;
@@ -152,6 +228,85 @@ export const fase1Api = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  /** Upload image → server converts to light WebP and sets midia.trilhoThumb. */
+  anfitriaoUploadTrilhoThumb: async (id: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/trilho-thumb`, {
+      method: 'POST',
+      headers: {
+        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      },
+      body: form,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || json.message || res.statusText);
+    return json as {
+      success: boolean;
+      data: { unidade: unknown; trilhoThumb: string; bytes: number };
+    };
+  },
+  anfitriaoUploadAcessibilidadeFoto: async (id: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(
+      `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/acessibilidade-foto`,
+      {
+        method: 'POST',
+        headers: {
+          ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        },
+        body: form,
+      },
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || json.message || res.statusText);
+    return json as { success: boolean; data: { url: string; bytes: number } };
+  },
+  anfitriaoUploadGaleriaFoto: async (id: number, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(
+      `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/galeria-foto`,
+      {
+        method: 'POST',
+        headers: {
+          ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        },
+        body: form,
+      },
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || json.message || res.statusText);
+    return json as {
+      success: boolean;
+      data: { unidade: unknown; url: string; bytes: number };
+    };
+  },
+  anfitriaoPatchGaleria: (
+    id: number,
+    body: {
+      removeUrl?: string;
+      moveUrl?: string;
+      direction?: 'left' | 'right';
+      setCapaUrl?: string;
+    },
+  ) =>
+    fetchJson<{ success: boolean; data: unknown }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/galeria`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    ),
+  anfitriaoDefinirTrilhoCapa: (id: number, url: string) =>
+    fetchJson<{ success: boolean; data: unknown }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/trilho-capa`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ url }),
+      },
+    ),
   enviarAprovacaoUnidade: (id: number) =>
     fetchJson(`/api/v1/acomodacoes/anfitriao/unidades/${id}/enviar-aprovacao`, {
       method: 'POST',
@@ -184,6 +339,107 @@ export const fase1Api = {
     );
   },
 
+  anfitriaoHoje: (hoje?: string) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        hoje: string;
+        proximosAte: string;
+        checkIns: unknown[];
+        checkOuts: unknown[];
+        hospedados: unknown[];
+        proximos: unknown[];
+      };
+    }>(
+      `/api/v1/acomodacoes/anfitriao/hoje${hoje ? `?hoje=${encodeURIComponent(hoje)}` : ''}`,
+    ),
+
+  anfitriaoInboxMensagens: (de: string, ate: string) =>
+    fetchJson<{
+      success: boolean;
+      data: Array<{
+        propostaId: number;
+        codigo: string | null;
+        titulo: string;
+        status: string;
+        acomodacaoId: number;
+        checkIn: string;
+        checkOut: string;
+        valorTotal: string;
+        clienteNome: string;
+        clienteEmail: string | null;
+        clienteTelefone: string | null;
+        unread: boolean;
+        lastMessage: {
+          id: number;
+          senderType: string;
+          preview: string;
+          createdAt: string | null;
+        } | null;
+      }>;
+    }>(
+      `/api/v1/acomodacoes/anfitriao/mensagens?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`,
+    ),
+
+  anfitriaoMensagensThread: (propostaId: number) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        propostaId: number;
+        messages: Array<{
+          id: number;
+          senderType: string;
+          senderName: string | null;
+          message: string;
+          createdAt: string | null;
+        }>;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/reservas/${propostaId}/mensagens`),
+
+  anfitriaoEnviarMensagem: (propostaId: number, message: string, senderName?: string) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        id: number;
+        senderType: string;
+        senderName: string | null;
+        message: string;
+        createdAt: string | null;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/reservas/${propostaId}/mensagens`, {
+      method: 'POST',
+      body: JSON.stringify({ message, senderName }),
+    }),
+
+  anfitriaoAprovarPedido: (propostaId: number) =>
+    fetchJson<{ success: boolean; data: unknown }>(
+      `/api/v1/acomodacoes/anfitriao/reservas/${propostaId}/aprovar`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+
+  anfitriaoRejeitarPedido: (propostaId: number) =>
+    fetchJson<{ success: boolean; data: unknown }>(
+      `/api/v1/acomodacoes/anfitriao/reservas/${propostaId}/rejeitar`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+
+  anfitriaoListarVerificacoesLocal: (status: 'enviado' | 'aprovado' | 'rejeitado' | 'all' = 'enviado') =>
+    fetchJson<{ success: boolean; data: unknown[] }>(
+      `/api/v1/acomodacoes/anfitriao/admin/verificacoes-local?status=${encodeURIComponent(status)}`,
+    ),
+
+  anfitriaoAprovarVerificacaoLocal: (id: number) =>
+    fetchJson<{ success: boolean; data: unknown }>(
+      `/api/v1/acomodacoes/anfitriao/admin/unidades/${id}/verificacao-local/aprovar`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+
+  anfitriaoRejeitarVerificacaoLocal: (id: number, motivo?: string) =>
+    fetchJson<{ success: boolean; data: unknown }>(
+      `/api/v1/acomodacoes/anfitriao/admin/unidades/${id}/verificacao-local/rejeitar`,
+      { method: 'POST', body: JSON.stringify({ motivo }) },
+    ),
+
   salvarAnfitriaoDisponibilidade: (
     id: number,
     dias: Array<{ data: string; disponivel: boolean; precoOverride?: string; observacao?: string }>,
@@ -209,6 +465,161 @@ export const fase1Api = {
     fetchJson(`/api/v1/acomodacoes/anfitriao/unidades/${id}/disponibilidade/preco`, {
       method: 'POST',
       body: JSON.stringify({ datas, preco }),
+    }),
+
+  anfitriaoRateCalendar: (id: number, de: string, ate: string) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        acomodacaoId: number;
+        titulo: string;
+        pricingDefaults: {
+          precoDiaria: number | null;
+          precoFimSemana: number | null;
+          minNoites: number;
+          maxNoites: number;
+          minNoitesPorCheckin?: Record<string, number> | null;
+          antecedenciaDias: number;
+          avisoPrevioMesmoDia: string | null;
+          permitirPedidosMesmoDia?: boolean;
+          descontoSemanalPct: number;
+          descontoMensalPct: number;
+          taxaLimpeza: number | null;
+          taxaPet: number | null;
+          taxaHospedeExtra: number | null;
+          politicaCancelamentoCurta: string;
+          politicaCancelamentoLonga: string;
+          opcaoNaoReembolsavel: boolean;
+          precoInteligenteAtivo?: boolean;
+          precoInteligenteMin?: number | null;
+          precoInteligenteMax?: number | null;
+          descontoUltimaHoraPct?: number;
+          descontoUltimaHoraDias?: number;
+          descontoAntecipadaPct?: number;
+          descontoAntecipadaDias?: number;
+          descontoNovoAnuncioPct?: number;
+          descontoNovoAnuncioLimite?: number;
+          descontoAvaliacaoPct?: number;
+          descontoAvaliacaoMinNota?: number;
+          descontoAvaliacaoMinReviews?: number;
+          tempoPreparacaoNoites?: number;
+          tempoPreparacaoHoras?: number;
+          periodoDisponibilidadeMeses?: number;
+          checkinDiasPermitidos?: number[] | null;
+          checkoutDiasPermitidos?: number[] | null;
+          icalToken?: string | null;
+        };
+        dicas?: {
+          precoSugerido: number;
+          ganhoBuscasPct: number;
+          mensagem: string;
+        };
+        dias: Array<{
+          data: string;
+          estado: 'livre' | 'bloqueado' | 'reservado';
+          disponivel: boolean;
+          readOnly: boolean;
+          precoOverride?: string | null;
+          observacao?: string | null;
+          precoEfetivo: number;
+          precoBase: number;
+          tetoDesconto: number;
+          weekendApplied?: boolean;
+          contexto?: {
+            fimDeSemana: boolean;
+            feriado: {
+              data: string;
+              nome: string;
+              tipo?: 'nacional' | 'estadual' | 'municipal';
+              uf?: string;
+              municipio?: string;
+            } | null;
+            temporada: {
+              id: number;
+              slug: string;
+              nome: string;
+              tipo: 'alta' | 'media' | 'baixa' | 'feriado';
+            } | null;
+            alerta: {
+              nivel: 'ok' | 'abaixo' | 'acima';
+              mensagem: string;
+              faixa: { minSugerido: number; referencia: number; maxSugerido: number };
+              tags: string[];
+            };
+          };
+        }>;
+        canEditPricing: boolean;
+        canApplyDiscount: boolean;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/rate-calendar?de=${de}&ate=${ate}`),
+
+  anfitriaoRateCalendarDay: (
+    id: number,
+    body: { data: string; preco?: number | null; disponivel?: boolean; observacao?: string },
+  ) =>
+    fetchJson(`/api/v1/acomodacoes/anfitriao/unidades/${id}/rate-calendar/day`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  anfitriaoPricingDefaults: (id: number, body: Record<string, unknown>) =>
+    fetchJson(`/api/v1/acomodacoes/anfitriao/unidades/${id}/pricing-defaults`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  anfitriaoIcalToken: (id: number, opts?: { regenerate?: boolean }) =>
+    fetchJson<{ success: boolean; data: { icalToken: string; regenerated?: boolean } }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/ical-token`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ regenerate: Boolean(opts?.regenerate) }),
+      },
+    ),
+
+  anfitriaoIcalImportUrl: (id: number, url: string | null) =>
+    fetchJson<{
+      success: boolean;
+      data: { icalImportUrl: string | null; icalImportLastStatus: string | null };
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/ical-import`, {
+      method: 'PUT',
+      body: JSON.stringify({ url }),
+    }),
+
+  anfitriaoIcalImportSync: (id: number) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        blocked: number;
+        unblocked: number;
+        busyNights: number;
+        syncedAt: string;
+        status: string;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/ical-import/sync`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
+  anfitriaoAplicarDesconto: (id: number, datas: string[], percentual: number) =>
+    fetchJson(`/api/v1/acomodacoes/anfitriao/unidades/${id}/aplicar-desconto`, {
+      method: 'POST',
+      body: JSON.stringify({ datas, percentual }),
+    }),
+
+  tarifasPoliticaDesconto: () =>
+    fetchJson<{ success: boolean; data: Array<{ scope: string; maxDescontoPercentual: string }> }>(
+      '/api/v1/tarifas/politica-desconto',
+    ),
+
+  tarifasSetPoliticaDesconto: (body: {
+    scope: string;
+    scopeId?: string | null;
+    maxDescontoPercentual: number;
+  }) =>
+    fetchJson('/api/v1/tarifas/politica-desconto', {
+      method: 'PUT',
+      body: JSON.stringify(body),
     }),
 
   anfitriaoCalendarioAgregado: (de: string, ate: string) =>
