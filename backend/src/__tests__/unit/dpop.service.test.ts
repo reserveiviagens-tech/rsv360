@@ -16,7 +16,6 @@ const {
   DPOP_SKEW_SECONDS,
 } = require('../../api/v1/auth/dpop.service');
 const { verifyAccessToken, signJwt } = require('../../api/v1/auth/jwt-verify');
-const { getJwtSecret } = require('@rsv360/shared');
 const { trustedProxyAllowlist } = require('../../../app');
 
 function b64urlJson(obj: Record<string, unknown>): string {

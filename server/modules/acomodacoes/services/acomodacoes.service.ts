@@ -11,6 +11,12 @@ import {
   filtrarIdsAcomodacaoCalendarioLivre,
   listarDiariasPeriodoWizard,
 } from './listar-disponiveis-calendario.util';
+import {
+  isValidListingSlug,
+  normalizeListingSlug,
+  resolveModoReserva,
+} from './listing-slug.util';
+import { normalizeMidia } from './anfitriao-midia.util';
 
 export interface ListarAcomodacoesInput {
   hotelId: string;
@@ -229,6 +235,94 @@ export const acomodacoesService = {
   async findById(id: number) {
     const [row] = await db.select().from(acomodacoes).where(eq(acomodacoes.id, id)).limit(1);
     return row ?? null;
+  },
+
+  async slugPersonalizadoEmUso(slug: string, exceptId?: number): Promise<boolean> {
+    const normalized = normalizeListingSlug(slug);
+    if (!normalized || !isValidListingSlug(normalized)) return false;
+    const rows = await db
+      .select({ id: acomodacoes.id })
+      .from(acomodacoes)
+      .where(
+        and(
+          sql`lower(coalesce(${acomodacoes.metadata}->>'slugPersonalizado','')) = ${normalized}`,
+          exceptId != null ? sql`${acomodacoes.id} <> ${exceptId}` : undefined,
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
+  },
+
+  /**
+   * Public listing card by personalized slug (published + active only).
+   * No PII / wifi / internal host fields.
+   */
+  async obterPublicoPorSlug(slugRaw: string) {
+    const slug = normalizeListingSlug(slugRaw);
+    if (!slug || !isValidListingSlug(slug)) return null;
+
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(
+        and(
+          eq(acomodacoes.ativo, true),
+          eq(acomodacoes.statusPublicacao, 'publicado'),
+          sql`lower(coalesce(${acomodacoes.metadata}->>'slugPersonalizado','')) = ${slug}`,
+        ),
+      )
+      .limit(1);
+
+    if (!row) return null;
+
+    const meta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const midia = normalizeMidia(row.midia);
+    const desc =
+      meta.descricaoDetalhada &&
+      typeof meta.descricaoDetalhada === 'object' &&
+      !Array.isArray(meta.descricaoDetalhada)
+        ? (meta.descricaoDetalhada as Record<string, unknown>)
+        : {};
+    const loc =
+      meta.localizacao && typeof meta.localizacao === 'object' && !Array.isArray(meta.localizacao)
+        ? (meta.localizacao as Record<string, unknown>)
+        : {};
+    const ver =
+      meta.verificacaoLocal &&
+      typeof meta.verificacaoLocal === 'object' &&
+      !Array.isArray(meta.verificacaoLocal)
+        ? (meta.verificacaoLocal as Record<string, unknown>)
+        : {};
+
+    return {
+      id: row.id,
+      slug,
+      titulo: row.titulo,
+      hotelId: row.hotelId,
+      precoDiaria: row.precoDiaria != null ? Number(row.precoDiaria) : null,
+      capacidadeMax: row.capacidadeMax,
+      quartos: row.quartos,
+      amenidades: row.amenidades,
+      midia: {
+        capa: midia.capa,
+        fotos: midia.fotos.slice(0, 24),
+      },
+      descricao: typeof desc.anuncio === 'string' ? desc.anuncio : null,
+      localizacao: {
+        bairro: typeof loc.bairro === 'string' ? loc.bairro : null,
+        cidade: typeof loc.cidade === 'string' ? loc.cidade : null,
+        uf: typeof loc.uf === 'string' ? loc.uf : null,
+        mostrarExata: Boolean(loc.mostrarExata),
+        endereco: loc.mostrarExata && typeof loc.endereco === 'string' ? loc.endereco : null,
+      },
+      modoReserva: resolveModoReserva(meta.modoReserva),
+      localVerificado: ver.status === 'aprovado',
+      mensagemPreReserva:
+        typeof meta.mensagemPreReserva === 'string' ? meta.mensagemPreReserva.slice(0, 400) : null,
+    };
   },
 
   async listarAddons(escopo = 'hotel') {

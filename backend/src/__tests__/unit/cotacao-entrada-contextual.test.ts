@@ -30,12 +30,28 @@ describe('entrada contextual — lerEntradaContextual', () => {
     );
     const parsed = lerEntradaContextual(params);
     expect(parsed.hotel).toBe('ht-42');
+    expect(parsed.acomodacaoId).toBeNull();
     expect(parsed.checkin).toBe('2026-07-01');
     expect(parsed.checkout).toBe('2026-07-05');
     expect(parsed.adults).toBe(2);
     expect(parsed.children).toBe(1);
     expect(parsed.ref).toBe('10');
     expect(parsed.canal).toBe('whatsapp');
+  });
+
+  it('aceita alias hotelId e acomodacaoId do anúncio público', () => {
+    const parsed = lerEntradaContextual(
+      new URLSearchParams('hotelId=aguas-da-fonte&acomodacaoId=443'),
+    );
+    expect(parsed.hotel).toBe('aguas-da-fonte');
+    expect(parsed.acomodacaoId).toBe(443);
+    const ctx = montarEntradaContextual(parsed, 'deeplink');
+    const { state } = hidratarWizardState(
+      { ...baseState, selectedAcomodacaoId: null as number | null },
+      ctx,
+    );
+    expect(state.hotelId).toBe('aguas-da-fonte');
+    expect(state.selectedAcomodacaoId).toBe(443);
   });
 
   it('deep-link tem precedência sobre rascunho na hidratação', () => {
@@ -100,5 +116,11 @@ describe('montarUrlCotacaoContextual', () => {
     expect(montarUrlCotacaoContextual('http://localhost:3000', { hotel: '42', ref: 9 })).toBe(
       'http://localhost:3000/cotacao?hotel=42&ref=9',
     );
+  });
+
+  it('inclui acomodacaoId quando informado', () => {
+    expect(
+      montarUrlCotacaoContextual('', { hotel: 'aguas-da-fonte', acomodacaoId: 443 }),
+    ).toBe('/cotacao?hotel=aguas-da-fonte&acomodacaoId=443');
   });
 });

@@ -27,6 +27,8 @@ const LAB_ROUTE_PREFIXES = [
   '/proposta',
   '/cotacao',
   '/roteiro',
+  // Anúncio público por slug personalizado (anfitrião)
+  '/h',
 ] as const;
 
 export function isMarketingLabMode(): boolean {

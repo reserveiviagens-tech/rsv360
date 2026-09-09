@@ -6,7 +6,7 @@ import {
   disponibilidadeAcomodacao,
   type DisponibilidadeAcomodacao,
 } from '../../../../backend/src/db/schema/disponibilidade-acomodacao';
-import { propostas } from '../../../../backend/src/db/schema/propostas';
+import { propostas, propostaChat } from '../../../../backend/src/db/schema/propostas';
 import {
   buildReservedDateSet,
   deriveCalendarioEstado,
@@ -21,9 +21,28 @@ import {
   type CalendarioDiaItem,
   type ReservaAnfitriaoItem,
 } from './anfitriao-reservas.util';
+import {
+  midiaAddFoto,
+  midiaMoveFoto,
+  midiaRemoveFoto,
+  midiaWithCapa,
+  midiaWithTrilhoThumb,
+} from './anfitriao-midia.util';
+import { classificarReservasHoje } from './anfitriao-hoje.util';
+import {
+  isValidListingSlug,
+  normalizeListingSlug,
+} from './listing-slug.util';
+import { acomodacoesService } from './acomodacoes.service';
+import {
+  applyStaffVerificacaoLocalDecision,
+  asVerificacaoLocalRecord,
+  sanitizeVerificacaoLocalHostPatch,
+} from './verificacao-local.util';
 
 const STAFF_ROLES = new Set(['admin', 'manager']);
-const PARCEIRO_ROLES = new Set(['anfitriao', 'corretor']);
+const PARCEIRO_ROLES = new Set(['anfitriao', 'corretor', 'agente', 'promotor']);
+const BROKER_ROLES = new Set(['corretor', 'agente', 'promotor']);
 
 export interface AuthContext {
   userId: number;
@@ -43,7 +62,7 @@ async function proprietariosNaCarteira(corretorId: number): Promise<number[]> {
 export async function podeVerUnidade(auth: AuthContext, row: typeof acomodacoes.$inferSelect) {
   if (STAFF_ROLES.has(auth.role)) return true;
   if (auth.role === 'anfitriao') return row.proprietarioId === auth.userId;
-  if (auth.role === 'corretor') {
+  if (BROKER_ROLES.has(auth.role)) {
     if (row.proprietarioId === auth.userId) return true;
     const carteira = await proprietariosNaCarteira(auth.userId);
     return row.proprietarioId != null && carteira.includes(row.proprietarioId);
@@ -55,7 +74,7 @@ function escopoProprietarios(auth: AuthContext, proprietariosCarteira: number[])
   if (auth.role === 'anfitriao') {
     return eq(acomodacoes.proprietarioId, auth.userId);
   }
-  if (auth.role === 'corretor') {
+  if (BROKER_ROLES.has(auth.role)) {
     const ids = [...new Set([auth.userId, ...proprietariosCarteira])];
     return inArray(acomodacoes.proprietarioId, ids);
   }
@@ -70,7 +89,7 @@ export const anfitriaoService = {
 
     const offset = (Math.max(1, page) - 1) * pageSize;
     const proprietariosCarteira =
-      auth.role === 'corretor' ? await proprietariosNaCarteira(auth.userId) : [];
+      BROKER_ROLES.has(auth.role) ? await proprietariosNaCarteira(auth.userId) : [];
 
     const whereScope = STAFF_ROLES.has(auth.role)
       ? sql`true`
@@ -119,8 +138,11 @@ export const anfitriaoService = {
       amenidades: unknown;
       midia: unknown;
       capacidadeMax: number;
+      capacidadeBase: number;
       statusPublicacao: string;
       dadosCompletos: boolean;
+      /** Shallow-merged into existing metadata jsonb (listing editor extensions). */
+      metadata: Record<string, unknown>;
     }>,
   ) {
     const scoped = await this.obterUnidade(auth, id);
@@ -132,6 +154,7 @@ export const anfitriaoService = {
       proprietarioId: _proprietarioId,
       tipoId: _tipoId,
       codigoExterno: _codigoExterno,
+      metadata: metadataPatch,
       ...patchPermitido
     } = patch;
 
@@ -140,9 +163,51 @@ export const anfitriaoService = {
       patchPermitido.dadosCompletos ??
       ['completo', 'em_aprovacao', 'publicado'].includes(String(status));
 
+    const nextMetadata =
+      metadataPatch && typeof metadataPatch === 'object' && !Array.isArray(metadataPatch)
+        ? {
+            ...((row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+              ? row.metadata
+              : {}) as Record<string, unknown>),
+            ...metadataPatch,
+          }
+        : undefined;
+
+    if (nextMetadata && 'slugPersonalizado' in nextMetadata) {
+      const slug = normalizeListingSlug(nextMetadata.slugPersonalizado);
+      if (slug) {
+        if (!isValidListingSlug(slug)) {
+          return { error: 'invalid_slug' as const };
+        }
+        const taken = await acomodacoesService.slugPersonalizadoEmUso(slug, id);
+        if (taken) {
+          return { error: 'slug_taken' as const };
+        }
+        nextMetadata.slugPersonalizado = slug;
+      } else {
+        nextMetadata.slugPersonalizado = '';
+      }
+    }
+
+    if (nextMetadata && 'verificacaoLocal' in nextMetadata) {
+      const baseMeta =
+        row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+          ? (row.metadata as Record<string, unknown>)
+          : {};
+      nextMetadata.verificacaoLocal = sanitizeVerificacaoLocalHostPatch(
+        baseMeta,
+        nextMetadata.verificacaoLocal,
+      );
+    }
+
     const [updated] = await db
       .update(acomodacoes)
-      .set({ ...patchPermitido, dadosCompletos, atualizadoEm: new Date() })
+      .set({
+        ...patchPermitido,
+        ...(nextMetadata !== undefined ? { metadata: nextMetadata } : {}),
+        dadosCompletos,
+        atualizadoEm: new Date(),
+      })
       .where(eq(acomodacoes.id, id))
       .returning();
 
@@ -168,6 +233,66 @@ export const anfitriaoService = {
       .where(eq(acomodacoes.id, id))
       .returning();
 
+    return { data: updated };
+  },
+
+  async definirTrilhoThumb(
+    auth: AuthContext,
+    id: number,
+    trilhoThumbUrl: string,
+    originalUrl?: string | null,
+  ) {
+    const scoped = await this.obterUnidade(auth, id);
+    if ('error' in scoped) return { error: scoped.error };
+    const nextMidia = midiaWithTrilhoThumb(scoped.data.midia, trilhoThumbUrl, originalUrl ?? null);
+    const [updated] = await db
+      .update(acomodacoes)
+      .set({ midia: nextMidia, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, id))
+      .returning();
+    return { data: updated };
+  },
+
+  async definirCapaTrilho(auth: AuthContext, id: number, capaUrl: string) {
+    const scoped = await this.obterUnidade(auth, id);
+    if ('error' in scoped) return { error: scoped.error };
+    const nextMidia = midiaWithCapa(scoped.data.midia, capaUrl);
+    const [updated] = await db
+      .update(acomodacoes)
+      .set({ midia: nextMidia, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, id))
+      .returning();
+    return { data: updated };
+  },
+
+  async adicionarFotoGaleria(auth: AuthContext, id: number, fotoUrl: string) {
+    const scoped = await this.obterUnidade(auth, id);
+    if ('error' in scoped) return { error: scoped.error };
+    const nextMidia = midiaAddFoto(scoped.data.midia, fotoUrl);
+    const [updated] = await db
+      .update(acomodacoes)
+      .set({ midia: nextMidia, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, id))
+      .returning();
+    return { data: updated };
+  },
+
+  async atualizarMidiaEstrutura(
+    auth: AuthContext,
+    id: number,
+    patch: { removeUrl?: string; moveUrl?: string; direction?: 'left' | 'right'; setCapaUrl?: string },
+  ) {
+    const scoped = await this.obterUnidade(auth, id);
+    if ('error' in scoped) return { error: scoped.error };
+    let next = scoped.data.midia as unknown;
+    if (patch.removeUrl) next = midiaRemoveFoto(next, patch.removeUrl);
+    if (patch.moveUrl && patch.direction) next = midiaMoveFoto(next, patch.moveUrl, patch.direction);
+    if (patch.setCapaUrl) next = midiaWithCapa(next, patch.setCapaUrl);
+    const [updated] = await db
+      .update(acomodacoes)
+      .set({ midia: next, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, id))
+      .returning();
     return { data: updated };
   },
 
@@ -214,6 +339,88 @@ export const anfitriaoService = {
     return { data: updated };
   },
 
+  async listarVerificacoesLocal(
+    staffRole: string,
+    statusFilter: 'enviado' | 'aprovado' | 'rejeitado' | 'all' = 'enviado',
+  ) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+
+    const rows = await db
+      .select({
+        id: acomodacoes.id,
+        titulo: acomodacoes.titulo,
+        hotelId: acomodacoes.hotelId,
+        statusPublicacao: acomodacoes.statusPublicacao,
+        metadata: acomodacoes.metadata,
+        atualizadoEm: acomodacoes.atualizadoEm,
+      })
+      .from(acomodacoes)
+      .where(
+        statusFilter === 'all'
+          ? sql`coalesce(${acomodacoes.metadata}#>>'{verificacaoLocal,status}','') <> ''`
+          : sql`coalesce(${acomodacoes.metadata}#>>'{verificacaoLocal,status}','') = ${statusFilter}`,
+      )
+      .orderBy(desc(acomodacoes.atualizadoEm))
+      .limit(100);
+
+    const data = rows.map((row) => {
+      const meta =
+        row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+          ? (row.metadata as Record<string, unknown>)
+          : {};
+      const ver = asVerificacaoLocalRecord(meta.verificacaoLocal);
+      return {
+        id: row.id,
+        titulo: row.titulo,
+        hotelId: row.hotelId,
+        statusPublicacao: row.statusPublicacao,
+        atualizadoEm: row.atualizadoEm,
+        verificacaoLocal: {
+          status: typeof ver.status === 'string' ? ver.status : 'pendente',
+          metodo: typeof ver.metodo === 'string' ? ver.metodo : null,
+          codigo: typeof ver.codigo === 'string' ? ver.codigo : null,
+          notas: typeof ver.notas === 'string' ? ver.notas : null,
+          enviadoEm: typeof ver.enviadoEm === 'string' ? ver.enviadoEm : null,
+          revisadoEm: typeof ver.revisadoEm === 'string' ? ver.revisadoEm : null,
+          motivoRejeicao: typeof ver.motivoRejeicao === 'string' ? ver.motivoRejeicao : null,
+          evidencias: Array.isArray(ver.evidencias) ? ver.evidencias.slice(0, 6) : [],
+        },
+      };
+    });
+
+    return { data };
+  },
+
+  async decidirVerificacaoLocal(
+    staffRole: string,
+    id: number,
+    action: 'aprovar' | 'rejeitar',
+    motivo?: string,
+  ) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+
+    const [existing] = await db.select().from(acomodacoes).where(eq(acomodacoes.id, id)).limit(1);
+    if (!existing) return { error: 'not_found' as const };
+
+    const meta =
+      existing.metadata && typeof existing.metadata === 'object' && !Array.isArray(existing.metadata)
+        ? (existing.metadata as Record<string, unknown>)
+        : {};
+    const ver = asVerificacaoLocalRecord(meta.verificacaoLocal);
+    if (ver.status !== 'enviado') {
+      return { error: 'invalid_status' as const };
+    }
+
+    const nextMeta = applyStaffVerificacaoLocalDecision(meta, action, motivo);
+    const [updated] = await db
+      .update(acomodacoes)
+      .set({ metadata: nextMeta, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, id))
+      .returning();
+
+    return { data: updated };
+  },
+
   async dashboardKpis(auth: AuthContext) {
     const { items } = await this.listarMinhas(auth, 1, 5000);
     type AcomodacaoRow = typeof acomodacoes.$inferSelect;
@@ -250,7 +457,7 @@ export const anfitriaoService = {
     const rows = await db
       .select()
       .from(propostas)
-      .where(inArray(propostas.status, ['accepted', 'paid']))
+      .where(inArray(propostas.status, ['accepted', 'paid', 'pending_host']))
       .orderBy(desc(propostas.updatedAt));
 
     const data: ReservaAnfitriaoItem[] = [];
@@ -276,6 +483,234 @@ export const anfitriaoService = {
     }
 
     return { data };
+  },
+
+  async decidirPedidoReserva(
+    auth: AuthContext,
+    propostaId: number,
+    action: 'aprovar' | 'rejeitar',
+  ) {
+    const scoped = await this.assertPropostaNoEscopo(auth, propostaId);
+    if ('error' in scoped) return { error: scoped.error };
+    const row = scoped.data.proposta;
+    if (row.status !== 'pending_host') {
+      return { error: 'invalid_status' as const };
+    }
+
+    // require() avoids circular ESM static graph with propostas at boot
+    const { propostasService } = require('../../propostas/services/propostas.service') as {
+      propostasService: {
+        changeStatus: (
+          id: number,
+          status: string,
+          actorId?: number,
+        ) => Promise<unknown>;
+        addChatMessage: (
+          id: number,
+          payload: { senderType: string; senderName: string; message: string },
+        ) => Promise<unknown>;
+        aprovarPedidoHost: (id: number, actorId?: number) => Promise<unknown>;
+      };
+    };
+
+    if (action === 'rejeitar') {
+      const updated = await propostasService.changeStatus(propostaId, 'rejected', auth.userId);
+      await propostasService.addChatMessage(propostaId, {
+        senderType: 'anfitriao',
+        senderName: 'Anfitrião',
+        message: 'Pedido de reserva recusado pelo anfitrião.',
+      });
+      return { data: updated };
+    }
+
+    try {
+      const updated = await propostasService.aprovarPedidoHost(propostaId, auth.userId);
+      return { data: updated };
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (msg.includes('já foi')) return { error: 'invalid_status' as const };
+      throw e;
+    }
+  },
+
+  async assertPropostaNoEscopo(auth: AuthContext, propostaId: number) {
+    const [row] = await db.select().from(propostas).where(eq(propostas.id, propostaId));
+    if (!row) return { error: 'not_found' as const };
+    const estadia = parseEstadiaFromMetadata(row.metadata);
+    if (!estadia) return { error: 'not_found' as const };
+    const scoped = await this.obterUnidade(auth, estadia.acomodacaoId);
+    if ('error' in scoped) return { error: scoped.error };
+    return { data: { proposta: row, estadia } };
+  },
+
+  async listarMensagensReserva(auth: AuthContext, propostaId: number) {
+    const scoped = await this.assertPropostaNoEscopo(auth, propostaId);
+    if ('error' in scoped) return { error: scoped.error };
+
+    const messages = await db
+      .select()
+      .from(propostaChat)
+      .where(eq(propostaChat.propostaId, propostaId))
+      .orderBy(propostaChat.createdAt);
+
+    await this.marcarMensagensLidas(auth, propostaId);
+
+    return {
+      data: {
+        propostaId,
+        messages: messages.map((m) => ({
+          id: m.id,
+          senderType: m.senderType,
+          senderName: m.senderName,
+          message: m.message,
+          createdAt: m.createdAt ? m.createdAt.toISOString() : null,
+        })),
+      },
+    };
+  },
+
+  async enviarMensagemReserva(
+    auth: AuthContext,
+    propostaId: number,
+    message: string,
+    senderName?: string,
+  ) {
+    const text = String(message || '').trim().slice(0, 2000);
+    if (!text) return { error: 'invalid' as const };
+    const scoped = await this.assertPropostaNoEscopo(auth, propostaId);
+    if ('error' in scoped) return { error: scoped.error };
+
+    const [msg] = await db
+      .insert(propostaChat)
+      .values({
+        propostaId,
+        senderType: 'anfitriao',
+        senderName: (senderName || 'Anfitrião').slice(0, 255),
+        message: text,
+      })
+      .returning();
+
+    await this.marcarMensagensLidas(auth, propostaId);
+
+    return {
+      data: {
+        id: msg.id,
+        senderType: msg.senderType,
+        senderName: msg.senderName,
+        message: msg.message,
+        createdAt: msg.createdAt ? msg.createdAt.toISOString() : null,
+      },
+    };
+  },
+
+  async marcarMensagensLidas(auth: AuthContext, propostaId: number) {
+    const scoped = await this.assertPropostaNoEscopo(auth, propostaId);
+    if ('error' in scoped) return { error: scoped.error };
+    const meta =
+      scoped.data.proposta.metadata &&
+      typeof scoped.data.proposta.metadata === 'object' &&
+      !Array.isArray(scoped.data.proposta.metadata)
+        ? { ...(scoped.data.proposta.metadata as Record<string, unknown>) }
+        : {};
+    meta.anfitriaoChatLastReadAt = new Date().toISOString();
+    await db
+      .update(propostas)
+      .set({ metadata: meta, updatedAt: new Date() })
+      .where(eq(propostas.id, propostaId));
+    return { data: { ok: true } };
+  },
+
+  async listarInboxMensagens(auth: AuthContext, opts: { de: string; ate: string }) {
+    const reservasResult = await this.listarReservas(auth, opts);
+    if ('error' in reservasResult) return { error: reservasResult.error };
+    const reservas = reservasResult.data;
+    if (reservas.length === 0) return { data: [] };
+
+    const ids = reservas.map((r) => r.propostaId);
+    const chats = await db
+      .select()
+      .from(propostaChat)
+      .where(inArray(propostaChat.propostaId, ids))
+      .orderBy(desc(propostaChat.createdAt));
+
+    const lastByProposta = new Map<number, (typeof chats)[number]>();
+    for (const c of chats) {
+      if (!lastByProposta.has(c.propostaId)) lastByProposta.set(c.propostaId, c);
+    }
+
+    const propostaRows = await db.select().from(propostas).where(inArray(propostas.id, ids));
+    const metaById = new Map(propostaRows.map((p) => [p.id, p.metadata]));
+
+    const data = reservas.map((r) => {
+      const last = lastByProposta.get(r.propostaId) ?? null;
+      const meta = metaById.get(r.propostaId);
+      const metaObj =
+        meta && typeof meta === 'object' && !Array.isArray(meta)
+          ? (meta as Record<string, unknown>)
+          : {};
+      const lastReadAt =
+        typeof metaObj.anfitriaoChatLastReadAt === 'string'
+          ? metaObj.anfitriaoChatLastReadAt
+          : null;
+      const lastAt = last?.createdAt ? last.createdAt.toISOString() : null;
+      const fromGuest =
+        last != null &&
+        (last.senderType === 'client' ||
+          last.senderType === 'guest' ||
+          last.senderType === 'cliente');
+      const unread =
+        fromGuest &&
+        (!lastReadAt || (lastAt != null && lastAt > lastReadAt));
+
+      return {
+        ...r,
+        lastMessage: last
+          ? {
+              id: last.id,
+              senderType: last.senderType,
+              preview: String(last.message).slice(0, 120),
+              createdAt: lastAt,
+            }
+          : null,
+        unread,
+      };
+    });
+
+    data.sort((a, b) => {
+      if (a.unread !== b.unread) return a.unread ? -1 : 1;
+      const ta = a.lastMessage?.createdAt ?? a.aceitoEm ?? '';
+      const tb = b.lastMessage?.createdAt ?? b.aceitoEm ?? '';
+      return tb.localeCompare(ta);
+    });
+
+    return { data };
+  },
+
+  async obterAgendaHoje(auth: AuthContext, hoje?: string) {
+    const day = hoje && /^\d{4}-\d{2}-\d{2}$/.test(hoje) ? hoje : new Date().toISOString().slice(0, 10);
+    const de = day;
+    const proximosLim = (() => {
+      const d = new Date(`${day}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + 14);
+      return d.toISOString().slice(0, 10);
+    })();
+    // Window: include stays that started before today but checkout later, and próximos.
+    const windowDe = (() => {
+      const d = new Date(`${day}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - 30);
+      return d.toISOString().slice(0, 10);
+    })();
+
+    const reservasResult = await this.listarReservas(auth, { de: windowDe, ate: proximosLim });
+    if ('error' in reservasResult) return { error: reservasResult.error };
+    const buckets = classificarReservasHoje(reservasResult.data, day, proximosLim);
+    return {
+      data: {
+        hoje: day,
+        proximosAte: proximosLim,
+        ...buckets,
+      },
+    };
   },
 
   async obterCalendarioUnidade(

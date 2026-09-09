@@ -3,6 +3,8 @@ export type EntradaVariant = 'contextual' | 'frio';
 
 export interface EntradaContextualParams {
   hotel: string | null;
+  /** Listing unit id for deep-link preselection (optional). */
+  acomodacaoId: number | null;
   checkin: string | null;
   checkout: string | null;
   adults: number | null;
@@ -23,6 +25,8 @@ export interface WizardEntradaState {
   adults: number;
   children: number;
   hotelId: number | string | null;
+  /** Optional — present on full WizardState when deep-linking a unit. */
+  selectedAcomodacaoId?: number | null;
   hotelOnlyFlow: boolean;
   ref?: string | null;
   canal?: string | null;
@@ -66,7 +70,11 @@ export function inferProfileFromGuests(adults: number, children: number): Wizard
 export function lerEntradaContextual(
   searchParams: URLSearchParams | Record<string, string | string[] | undefined>,
 ): EntradaContextualParams {
-  const hotel = readParam(searchParams, 'hotel');
+  const hotel =
+    readParam(searchParams, 'hotel') ?? readParam(searchParams, 'hotelId');
+  const acomodacaoId =
+    parsePositiveInt(readParam(searchParams, 'acomodacaoId')) ??
+    parsePositiveInt(readParam(searchParams, 'selectedAcomodacaoId'));
   const checkin =
     parseIsoDate(readParam(searchParams, 'checkin')) ??
     parseIsoDate(readParam(searchParams, 'checkIn'));
@@ -82,6 +90,7 @@ export function lerEntradaContextual(
 
   return {
     hotel,
+    acomodacaoId,
     checkin,
     checkout,
     adults,
@@ -95,6 +104,7 @@ export function lerEntradaContextual(
 export function temParamsContextuais(params: EntradaContextualParams): boolean {
   return Boolean(
     params.hotel ||
+      params.acomodacaoId != null ||
       params.checkin ||
       params.checkout ||
       params.adults != null ||
@@ -138,6 +148,9 @@ export function hidratarWizardState<T extends WizardEntradaState>(
     if (ctx.adults != null) state.adults = Math.max(1, ctx.adults);
     if (ctx.children != null) state.children = Math.max(0, ctx.children);
     if (ctx.hotel) state.hotelId = ctx.hotel;
+    if (ctx.acomodacaoId != null && ctx.acomodacaoId > 0) {
+      state.selectedAcomodacaoId = ctx.acomodacaoId;
+    }
     if (ctx.apenasHotel) state.hotelOnlyFlow = true;
     if (ctx.ref) state.ref = ctx.ref;
     if (ctx.canal) state.canal = ctx.canal;
@@ -199,6 +212,7 @@ export function montarUrlCotacaoContextual(
   siteUrl: string,
   input: {
     hotel: string | number;
+    acomodacaoId?: number | null;
     ref?: string | number | null;
     canal?: string | null;
     checkin?: string | null;
@@ -210,6 +224,9 @@ export function montarUrlCotacaoContextual(
 ): string {
   const params = new URLSearchParams();
   params.set('hotel', String(input.hotel));
+  if (input.acomodacaoId != null && Number(input.acomodacaoId) > 0) {
+    params.set('acomodacaoId', String(input.acomodacaoId));
+  }
   if (input.checkin) params.set('checkin', input.checkin);
   if (input.checkout) params.set('checkout', input.checkout);
   if (input.adults != null) params.set('adults', String(input.adults));

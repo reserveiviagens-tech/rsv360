@@ -19,6 +19,19 @@ router.get('/health', (_req, res) => {
   res.json({ module: 'acomodacoes', status: 'ok' });
 });
 
+/** Público — anúncio por slug personalizado (/h/[slug]). */
+router.get('/publico/by-slug/:slug', publicLimiter, async (req, res) => {
+  try {
+    const data = await acomodacoesService.obterPublicoPorSlug(String(req.params.slug ?? ''));
+    if (!data) {
+      return res.status(404).json({ success: false, error: 'Anúncio não encontrado' });
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 /** Público — listagem paginada para wizard Passo 2 (filtro no banco). */
 router.get('/disponiveis', publicLimiter, async (req, res) => {
   try {
