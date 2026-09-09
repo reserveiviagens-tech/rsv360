@@ -10,6 +10,7 @@ const {
   listBids,
   placeBid,
   createAuction,
+  updateAuction,
 } = require('./service');
 
 const router = express.Router();
@@ -182,6 +183,107 @@ router.get('/:id', async (req, res) => {
     return res.json(auction);
   } catch (error) {
     console.error('[AUCTIONS] get error:', error.message);
+    return res.status(503).json({ success: false, error: 'Serviço temporariamente indisponível' });
+  }
+});
+
+/** POST /api/v1/auctions/:id/finalize — enfileira fechamento (hold + booking) */
+router.post('/:id/finalize', async (req, res) => {
+  if (!requireDb(res)) return;
+
+  const auctionId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(auctionId)) {
+    return res.status(400).json({ success: false, error: 'ID inválido' });
+  }
+
+  const bearer = resolveBearerUser(req);
+  if (!bearer) {
+    return res.status(401).json({ success: false, error: 'Token ausente ou inválido' });
+  }
+
+  try {
+    const { enfileirarFinalizeAuction } = require('../../../../../server/modules/auctions/auctions.queue');
+    const { queryDatabase } = require('../auth/refresh-token.service');
+    const jobId = await enfileirarFinalizeAuction(auctionId);
+    await queryDatabase(`UPDATE auctions SET finalize_job_id = $1 WHERE id = $2`, [
+      jobId,
+      auctionId,
+    ]);
+    return res.status(202).json({
+      success: true,
+      message: 'Fechamento enfileirado',
+      data: { jobId, auctionId },
+    });
+  } catch (error) {
+    console.error('[AUCTIONS] finalize enqueue error:', error.message);
+    return res.status(503).json({
+      success: false,
+      error: 'Fila indisponível. Verifique REDIS_URL.',
+    });
+  }
+});
+
+/** POST /api/v1/auctions/:id/settle — enfileira settle de pagamento (paid|cancelled|expired) */
+router.post('/:id/settle', async (req, res) => {
+  if (!requireDb(res)) return;
+
+  const auctionId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(auctionId)) {
+    return res.status(400).json({ success: false, error: 'ID inválido' });
+  }
+
+  const bearer = resolveBearerUser(req);
+  if (!bearer) {
+    return res.status(401).json({ success: false, error: 'Token ausente ou inválido' });
+  }
+
+  const outcome = String(req.body?.outcome || '').toLowerCase();
+  if (!['paid', 'cancelled', 'expired'].includes(outcome)) {
+    return res.status(400).json({
+      success: false,
+      error: 'outcome deve ser paid|cancelled|expired',
+    });
+  }
+
+  try {
+    const { enfileirarSettlePayment } = require('../../../../../server/modules/auctions/auctions.queue');
+    const jobId = await enfileirarSettlePayment(auctionId, outcome);
+    return res.status(202).json({
+      success: true,
+      message: 'Settlement enfileirado',
+      data: { jobId, auctionId, outcome },
+    });
+  } catch (error) {
+    console.error('[AUCTIONS] settle enqueue error:', error.message);
+    return res.status(503).json({
+      success: false,
+      error: 'Fila indisponível. Verifique REDIS_URL.',
+    });
+  }
+});
+
+/** PUT /api/v1/auctions/:id — atualizar leilão (admin/staff) */
+router.put('/:id', async (req, res) => {
+  if (!requireDb(res)) return;
+
+  const auctionId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(auctionId)) {
+    return res.status(400).json({ success: false, error: 'ID inválido' });
+  }
+
+  const bearer = resolveBearerUser(req);
+  if (!bearer) {
+    return res.status(401).json({ success: false, error: 'Token ausente ou inválido' });
+  }
+
+  try {
+    const result = await updateAuction(auctionId, req.body || {});
+    if (result?.error) {
+      return res.status(result.status).json({ success: false, error: result.message });
+    }
+    return res.json({ success: true, data: result.auction });
+  } catch (error) {
+    console.error('[AUCTIONS] update error:', error.message);
     return res.status(503).json({ success: false, error: 'Serviço temporariamente indisponível' });
   }
 });

@@ -5,6 +5,7 @@ function isAuctionsDbEnabled() {
 }
 
 function parsePositiveInt(value, fallback) {
+  if (value === null || value === undefined || value === '') return fallback;
   const n = parseInt(String(value), 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
@@ -33,6 +34,13 @@ function mapAuctionRow(row) {
     status: row.status,
     winner_id: row.winner_id,
     winner_bid_id: row.winner_bid_id,
+    acomodacao_id: row.acomodacao_id != null ? Number(row.acomodacao_id) : undefined,
+    stay_check_in: row.stay_check_in,
+    stay_check_out: row.stay_check_out,
+    booking_id: row.booking_id != null ? Number(row.booking_id) : undefined,
+    settlement_status: row.settlement_status || 'none',
+    payment_due_at: row.payment_due_at,
+    finalize_job_id: row.finalize_job_id,
     latitude: row.latitude != null ? Number(row.latitude) : undefined,
     longitude: row.longitude != null ? Number(row.longitude) : undefined,
     image_url: row.image_url,
@@ -59,17 +67,14 @@ function mapBidRow(row) {
 }
 
 async function syncAuctionStatuses() {
+  // Lightweight status flip only — settlement is owned by BullMQ workers (no hold/booking here).
   const now = new Date().toISOString();
   await queryDatabase(
     `UPDATE auctions SET status = 'active', updated_at = CURRENT_TIMESTAMP
      WHERE status = 'scheduled' AND start_date <= $1 AND end_date > $1`,
     [now]
   );
-  await queryDatabase(
-    `UPDATE auctions SET status = 'finished', updated_at = CURRENT_TIMESTAMP
-     WHERE status IN ('scheduled', 'active') AND end_date <= $1`,
-    [now]
-  );
+  // Do NOT mark finished here; scanner enqueues finalize which sets finished + settlement.
 }
 
 async function listAuctions(filters = {}) {
@@ -307,7 +312,21 @@ async function placeBid(auctionId, user, amount) {
     [bid.id]
   );
 
-  return { bid: mapBidRow(rows?.[0]) };
+  const mappedBid = mapBidRow(rows?.[0]);
+  try {
+    const { notifyAuctionBidPlaced } = require('../../../../server/modules/notifications/notification-hooks');
+    notifyAuctionBidPlaced({
+      auction,
+      bid: mappedBid,
+      user,
+      customerEmail: mappedBid?.customer_email || user?.email,
+      customerName: mappedBid?.customer_name || user?.name,
+    });
+  } catch {
+    /* hub optional */
+  }
+
+  return { bid: mappedBid };
 }
 
 async function createAuction(payload) {
@@ -315,6 +334,9 @@ async function createAuction(payload) {
   const startPrice = parseDecimal(payload.start_price ?? payload.starting_price);
   const startDate = payload.start_date;
   const endDate = payload.end_date;
+  const acomodacaoId = parsePositiveInt(payload.acomodacao_id, null);
+  const stayCheckIn = payload.stay_check_in ? String(payload.stay_check_in).slice(0, 10) : null;
+  const stayCheckOut = payload.stay_check_out ? String(payload.stay_check_out).slice(0, 10) : null;
 
   if (!title || startPrice == null || !startDate || !endDate) {
     return {
@@ -324,20 +346,49 @@ async function createAuction(payload) {
     };
   }
 
+  if (!acomodacaoId || !stayCheckIn || !stayCheckOut) {
+    return {
+      error: 'validation',
+      status: 400,
+      message: 'acomodacao_id, stay_check_in e stay_check_out são obrigatórios',
+    };
+  }
+
+  if (new Date(stayCheckOut) <= new Date(stayCheckIn)) {
+    return {
+      error: 'validation',
+      status: 400,
+      message: 'stay_check_out deve ser posterior a stay_check_in',
+    };
+  }
+
+  try {
+    const { assertStayAvailable } = require('../../../../../server/modules/auctions/auction-settlement.service');
+    const avail = await assertStayAvailable(acomodacaoId, stayCheckIn, stayCheckOut);
+    if (!avail.ok) {
+      return { error: 'conflict', status: 409, message: avail.message };
+    }
+  } catch (err) {
+    console.warn('[AUCTIONS] assertStayAvailable:', err.message);
+  }
+
   const minIncrement = parseDecimal(payload.min_increment) ?? 10;
   const currentPrice = parseDecimal(payload.current_price) ?? startPrice;
 
   const rows = await queryDatabase(
     `INSERT INTO auctions (
-       enterprise_id, property_id, accommodation_id, title, description,
+       enterprise_id, property_id, accommodation_id, acomodacao_id,
+       title, description,
        start_price, current_price, min_increment, reserve_price,
-       start_date, end_date, status, latitude, longitude, image_url
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       start_date, end_date, stay_check_in, stay_check_out,
+       status, settlement_status, latitude, longitude, image_url
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'none', $16, $17, $18)
      RETURNING *`,
     [
       payload.enterprise_id ?? null,
       payload.property_id ?? null,
       payload.accommodation_id ?? null,
+      acomodacaoId,
       title,
       payload.description ?? null,
       startPrice,
@@ -346,6 +397,8 @@ async function createAuction(payload) {
       payload.reserve_price ?? null,
       startDate,
       endDate,
+      stayCheckIn,
+      stayCheckOut,
       payload.status ?? 'scheduled',
       payload.latitude ?? null,
       payload.longitude ?? null,
@@ -354,6 +407,160 @@ async function createAuction(payload) {
   );
 
   return { auction: mapAuctionRow(rows?.[0]) };
+}
+
+function normalizeAuctionStatus(status) {
+  if (status == null || status === '') return undefined;
+  const raw = String(status).toLowerCase();
+  if (raw === 'ended') return 'finished';
+  return raw;
+}
+
+async function updateAuction(auctionId, payload = {}) {
+  const existing = await getAuctionById(auctionId);
+  if (!existing) {
+    return { error: 'not_found', status: 404, message: 'Leilão não encontrado' };
+  }
+
+  const title =
+    payload.title !== undefined
+      ? typeof payload.title === 'string'
+        ? payload.title.trim()
+        : ''
+      : undefined;
+  if (title !== undefined && !title) {
+    return { error: 'validation', status: 400, message: 'title não pode ser vazio' };
+  }
+
+  const startPrice =
+    payload.start_price !== undefined || payload.starting_price !== undefined
+      ? parseDecimal(payload.start_price ?? payload.starting_price)
+      : undefined;
+  if (startPrice !== undefined && (startPrice == null || startPrice <= 0)) {
+    return { error: 'validation', status: 400, message: 'start_price inválido' };
+  }
+
+  const startDate = payload.start_date !== undefined ? payload.start_date : undefined;
+  const endDate = payload.end_date !== undefined ? payload.end_date : undefined;
+  if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+    return {
+      error: 'validation',
+      status: 400,
+      message: 'end_date deve ser posterior a start_date',
+    };
+  }
+
+  const status = normalizeAuctionStatus(payload.status);
+  const allowedStatus = new Set(['scheduled', 'active', 'finished', 'cancelled']);
+  if (status !== undefined && !allowedStatus.has(status)) {
+    return { error: 'validation', status: 400, message: 'status inválido' };
+  }
+
+  const sets = [];
+  const params = [];
+  let idx = 1;
+  const assign = (column, value) => {
+    if (value === undefined) return;
+    sets.push(`${column} = $${idx++}`);
+    params.push(value);
+  };
+
+  assign('title', title);
+  if (payload.description !== undefined) {
+    assign('description', payload.description);
+  }
+  assign('start_price', startPrice);
+  if (payload.reserve_price !== undefined) {
+    assign('reserve_price', parseDecimal(payload.reserve_price));
+  }
+  if (payload.min_increment !== undefined) {
+    assign('min_increment', parseDecimal(payload.min_increment) ?? 10);
+  }
+  assign('start_date', startDate);
+  assign('end_date', endDate);
+  assign('status', status);
+  if (payload.property_id !== undefined) {
+    assign('property_id', payload.property_id);
+  }
+  if (payload.accommodation_id !== undefined) {
+    assign('accommodation_id', payload.accommodation_id);
+  }
+  if (payload.acomodacao_id !== undefined) {
+    assign('acomodacao_id', parsePositiveInt(payload.acomodacao_id, null));
+  }
+  if (payload.stay_check_in !== undefined) {
+    assign('stay_check_in', payload.stay_check_in ? String(payload.stay_check_in).slice(0, 10) : null);
+  }
+  if (payload.stay_check_out !== undefined) {
+    assign('stay_check_out', payload.stay_check_out ? String(payload.stay_check_out).slice(0, 10) : null);
+  }
+  if (payload.image_url !== undefined) {
+    assign('image_url', payload.image_url);
+  }
+
+  const nextAcomodacao =
+    payload.acomodacao_id !== undefined
+      ? parsePositiveInt(payload.acomodacao_id, null)
+      : existing.acomodacao_id;
+  const nextIn =
+    payload.stay_check_in !== undefined
+      ? String(payload.stay_check_in).slice(0, 10)
+      : existing.stay_check_in
+        ? String(existing.stay_check_in).slice(0, 10)
+        : null;
+  const nextOut =
+    payload.stay_check_out !== undefined
+      ? String(payload.stay_check_out).slice(0, 10)
+      : existing.stay_check_out
+        ? String(existing.stay_check_out).slice(0, 10)
+        : null;
+
+  if (
+    nextAcomodacao &&
+    nextIn &&
+    nextOut &&
+    (payload.acomodacao_id !== undefined ||
+      payload.stay_check_in !== undefined ||
+      payload.stay_check_out !== undefined)
+  ) {
+    try {
+      const { assertStayAvailable } = require('../../../../../server/modules/auctions/auction-settlement.service');
+      const avail = await assertStayAvailable(nextAcomodacao, nextIn, nextOut);
+      if (!avail.ok) {
+        return { error: 'conflict', status: 409, message: avail.message };
+      }
+    } catch (err) {
+      console.warn('[AUCTIONS] assertStayAvailable update:', err.message);
+    }
+  }
+
+  if (sets.length === 0) {
+    return { auction: existing };
+  }
+
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  params.push(auctionId);
+
+  const rows = await queryDatabase(
+    `UPDATE auctions SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+    params
+  );
+
+  const updated = mapAuctionRow(rows?.[0]);
+
+  // Admin "Finalizar" → enqueue settlement (non-blocking)
+  if (status === 'finished' && existing.settlement_status === 'none') {
+    try {
+      const { enfileirarFinalizeAuction } = require('../../../../../server/modules/auctions/auctions.queue');
+      const jobId = await enfileirarFinalizeAuction(auctionId);
+      await queryDatabase(`UPDATE auctions SET finalize_job_id = $1 WHERE id = $2`, [jobId, auctionId]);
+      if (updated) updated.finalize_job_id = jobId;
+    } catch (err) {
+      console.warn('[AUCTIONS] enqueue finalize on update:', err.message);
+    }
+  }
+
+  return { auction: updated };
 }
 
 module.exports = {
@@ -365,4 +572,5 @@ module.exports = {
   listBids,
   placeBid,
   createAuction,
+  updateAuction,
 };

@@ -337,6 +337,20 @@
       "when": 1788556000000,
       "tag": "0047_tempo_preparacao_horas",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1788557000000,
+      "tag": "0048_auctions_settlement",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1788558000000,
+      "tag": "0049_notifications_hub",
+      "breakpoints": true
     }
   ]
 }

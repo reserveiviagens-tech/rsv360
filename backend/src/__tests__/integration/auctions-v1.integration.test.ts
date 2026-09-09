@@ -39,4 +39,32 @@ describe('auctions v1', () => {
     const response = await request(app).get('/api/v1/auctions/not-a-number');
     expect(response.status).toBe(400);
   });
+
+  it('returns 401 for update without token when DB enabled', async () => {
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    const response = await request(app)
+      .put('/api/v1/auctions/1')
+      .send({ title: 'Atualizado', status: 'active' });
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 400 for invalid auction id on update', async () => {
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    const response = await request(app)
+      .put('/api/v1/auctions/not-a-number')
+      .send({ title: 'Atualizado' });
+    expect(response.status).toBe(400);
+  });
+
+  it('returns 401 for finalize without token when DB enabled', async () => {
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    const response = await request(app).post('/api/v1/auctions/1/finalize');
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 400 for invalid auction id on finalize', async () => {
+    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
+    const response = await request(app).post('/api/v1/auctions/abc/finalize');
+    expect(response.status).toBe(400);
+  });
 });

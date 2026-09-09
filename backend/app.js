@@ -117,6 +117,13 @@ async function createApp() {
     console.warn('[BOOT] CRM module failed:', err.message);
   }
 
+  try {
+    const { registerNotificationsModule } = require('../server/modules/notifications');
+    await registerNotificationsModule(app);
+  } catch (err) {
+    console.warn('[BOOT] Notifications hub failed:', err.message);
+  }
+
   // PR-06a: publicLimiter boot is fail-closed (model getJwtSecret) — never warn+continue.
   const { initPublicLimiter } = require('../server/middleware/public-limiter');
   await initPublicLimiter();
