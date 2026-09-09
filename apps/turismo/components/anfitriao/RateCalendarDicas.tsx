@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { moneyBr } from './date-range-utils';
 
-const STORAGE_KEY = 'rsv360.anfitriao.dicas.ocultas';
-const TIP_DISMISS_KEY = 'rsv360.anfitriao.dicas.tip-dismissed';
+const DICAS_OCULTAS_LS = 'rsv360.anfitriao.dicas.ocultas';
+const TIP_DISMISS_LS = 'rsv360.anfitriao.dicas.tip-dismissed';
 
 type Props = {
   precoSugerido?: number;
@@ -27,8 +27,8 @@ export function RateCalendarDicas({
 
   useEffect(() => {
     try {
-      setOcultas(localStorage.getItem(STORAGE_KEY) !== '0');
-      setTipDismissed(localStorage.getItem(TIP_DISMISS_KEY) === '1');
+      setOcultas(localStorage.getItem(DICAS_OCULTAS_LS) !== '0');
+      setTipDismissed(localStorage.getItem(TIP_DISMISS_LS) === '1');
     } catch {
       /* ignore */
     }
@@ -40,7 +40,7 @@ export function RateCalendarDicas({
   function setOcultasPersist(next: boolean) {
     setOcultas(next);
     try {
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
+      localStorage.setItem(DICAS_OCULTAS_LS, next ? '1' : '0');
     } catch {
       /* ignore */
     }
@@ -49,7 +49,7 @@ export function RateCalendarDicas({
   function dismissTip() {
     setTipDismissed(true);
     try {
-      localStorage.setItem(TIP_DISMISS_KEY, '1');
+      localStorage.setItem(TIP_DISMISS_LS, '1');
     } catch {
       /* ignore */
     }
