@@ -24,6 +24,8 @@ import {
 import {
   midiaAddFoto,
   midiaMoveFoto,
+  midiaSetCategoria,
+  midiaSetCaption,
   midiaRemoveFoto,
   midiaWithCapa,
   midiaWithTrilhoThumb,
@@ -280,7 +282,16 @@ export const anfitriaoService = {
   async atualizarMidiaEstrutura(
     auth: AuthContext,
     id: number,
-    patch: { removeUrl?: string; moveUrl?: string; direction?: 'left' | 'right'; setCapaUrl?: string },
+    patch: {
+      removeUrl?: string;
+      moveUrl?: string;
+      direction?: 'left' | 'right';
+      setCapaUrl?: string;
+      setCategoriaUrl?: string;
+      categoria?: string | null;
+      setCaptionUrl?: string;
+      caption?: string | null;
+    },
   ) {
     const scoped = await this.obterUnidade(auth, id);
     if ('error' in scoped) return { error: scoped.error };
@@ -288,6 +299,12 @@ export const anfitriaoService = {
     if (patch.removeUrl) next = midiaRemoveFoto(next, patch.removeUrl);
     if (patch.moveUrl && patch.direction) next = midiaMoveFoto(next, patch.moveUrl, patch.direction);
     if (patch.setCapaUrl) next = midiaWithCapa(next, patch.setCapaUrl);
+    if (patch.setCategoriaUrl) {
+      next = midiaSetCategoria(next, patch.setCategoriaUrl, patch.categoria ?? null);
+    }
+    if (patch.setCaptionUrl) {
+      next = midiaSetCaption(next, patch.setCaptionUrl, patch.caption ?? null);
+    }
     const [updated] = await db
       .update(acomodacoes)
       .set({ midia: next, atualizadoEm: new Date() })

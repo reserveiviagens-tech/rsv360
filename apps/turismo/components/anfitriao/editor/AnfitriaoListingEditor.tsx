@@ -203,9 +203,22 @@ export function AnfitriaoListingEditor({
     switch (id) {
       case 'fotos': {
         try {
-          const m = JSON.parse(midiaJson || '{}') as { fotos?: unknown[]; capa?: string | null };
-          const n = Array.isArray(m.fotos) ? m.fotos.length : 0;
-          if (n > 0) return `${n} foto(s)${m.capa ? ' · capa definida' : ''}`;
+          const m = JSON.parse(midiaJson || '{}') as {
+            fotos?: unknown[];
+            itens?: Array<{ categoria?: string | null }>;
+            capa?: string | null;
+          };
+          const n = Array.isArray(m.itens)
+            ? m.itens.length
+            : Array.isArray(m.fotos)
+              ? m.fotos.length
+              : 0;
+          const cats = Array.isArray(m.itens)
+            ? new Set(m.itens.map((i) => i.categoria).filter(Boolean)).size
+            : 0;
+          if (n > 0) {
+            return `${n} foto(s)${m.capa ? ' · capa' : ''}${cats > 0 ? ` · ${cats} categ.` : ''}`;
+          }
         } catch {
           /* ignore */
         }
