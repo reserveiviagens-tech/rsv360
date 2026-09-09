@@ -1,7 +1,19 @@
+'use client';
+
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
 import AnfitriaoRoleGuard from '../../../components/AnfitriaoRoleGuard';
+import { AnfitriaoHostNav } from '../../../components/anfitriao/AnfitriaoHostNav';
+import { AnfitriaoUnitSearchField } from '../../../components/anfitriao/AnfitriaoUnitSearchField';
 import { useAnfitriaoMinhas } from '@/hooks/useAnfitriao';
+import { filterUnitsBySearch } from '@/lib/anfitriao-unit-search';
+import {
+  compactThumbUrl,
+  resolveUnitThumbUrl,
+  statusPublicacaoLabel,
+  unitThumbPlaceholder,
+} from '../../../components/anfitriao/unit-thumb';
 
 type Unidade = {
   id: number;
@@ -9,66 +21,90 @@ type Unidade = {
   hotelId: string;
   statusPublicacao: string;
   precoDiaria?: string | number | null;
+  midia?: unknown;
+  quartos?: number | null;
+  capacidadeMax?: number | null;
+  amenidades?: unknown;
+  utensilios?: unknown;
+  eletrodomesticos?: unknown;
 };
 
 export default function AnfitriaoUnidadesPage() {
-  const { data, isLoading } = useAnfitriaoMinhas();
+  const { data, isLoading } = useAnfitriaoMinhas(1, 100);
+  const [query, setQuery] = useState('');
   const items = (data?.data?.items ?? []) as Unidade[];
+  const filtered = useMemo(() => filterUnitsBySearch(items, query), [items, query]);
 
   return (
     <AnfitriaoRoleGuard>
       <Head>
         <title>Minhas unidades | Anfitrião</title>
       </Head>
-      <div className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Minhas unidades</h1>
-              <p className="text-sm text-slate-600">Escopo por proprietário ou carteira do corretor</p>
-            </div>
-            <Link href="/anfitriao" className="rounded-lg border border-slate-300 px-4 py-2 text-sm">
-              Voltar ao painel
-            </Link>
+      <div className="min-h-screen bg-slate-50">
+        <AnfitriaoHostNav />
+        <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold text-slate-900">Anúncios</h1>
+            <p className="text-sm text-slate-600">
+              Busque por nome, quartos, hóspedes ou características (piscina, wifi, pet…)
+            </p>
           </div>
+
+          <AnfitriaoUnitSearchField
+            value={query}
+            onChange={setQuery}
+            resultCount={query ? filtered.length : undefined}
+            totalCount={query ? items.length : undefined}
+            className="mb-6 max-w-xl"
+          />
 
           {isLoading && <p className="text-slate-600">Carregando...</p>}
 
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-4 py-3">ID</th>
-                  <th className="px-4 py-3">Título</th>
-                  <th className="px-4 py-3">Hotel</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((u) => (
-                  <tr key={u.id} className="border-t border-slate-100">
-                    <td className="px-4 py-3">{u.id}</td>
-                    <td className="px-4 py-3">{u.titulo}</td>
-                    <td className="px-4 py-3">{u.hotelId}</td>
-                    <td className="px-4 py-3">{u.statusPublicacao}</td>
-                    <td className="px-4 py-3">
-                      <Link href={`/anfitriao/unidades/${u.id}`} className="text-blue-600 hover:underline">
-                        Editar
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {!isLoading && items.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                      Nenhuma unidade no seu escopo.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((u) => {
+              const thumb = resolveUnitThumbUrl(u.midia);
+              const src = thumb ? compactThumbUrl(thumb, 320) : unitThumbPlaceholder();
+              return (
+                <Link
+                  key={u.id}
+                  href={`/anfitriao/unidades/${u.id}`}
+                  prefetch={false}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-slate-400"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt=""
+                    width={320}
+                    height={180}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-36 w-full object-cover"
+                  />
+                  <div className="p-3">
+                    <p className="truncate font-semibold text-slate-900">{u.titulo}</p>
+                    <p className="text-xs text-slate-500">
+                      {statusPublicacaoLabel(u.statusPublicacao)} · #{u.id}
+                      {u.quartos != null ? ` · ${u.quartos} qto` : ''}
+                      {u.capacidadeMax != null ? ` · ${u.capacidadeMax} hósp.` : ''}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-slate-700">Editar anúncio →</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
+
+          {!isLoading && items.length === 0 && (
+            <p className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-slate-500">
+              Nenhuma unidade no seu escopo.
+            </p>
+          )}
+          {!isLoading && items.length > 0 && filtered.length === 0 && (
+            <p className="rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-slate-500">
+              Nenhuma acomodação bate com essa busca.
+            </p>
+          )}
         </div>
       </div>
     </AnfitriaoRoleGuard>

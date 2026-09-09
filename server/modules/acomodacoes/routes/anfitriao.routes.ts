@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import { normalizarListaDatas } from '../services/anfitriao-bulk.util';
 import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
+import { rateCalendarService } from '../services/rate-calendar.service';
 import { desempenhoService } from '../services/desempenho.service';
 import {
   publicTrilhoUrl,
@@ -58,6 +59,102 @@ router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
       `attachment; filename="desempenho-rsv360-${safeMes}.csv"`,
     );
     res.send(csv);
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/ical-token', ...masterAuth, async (req, res) => {
+  try {
+    const regenerate = Boolean(req.body?.regenerate);
+    const result = await rateCalendarService.garantirIcalToken(
+      authFromReq(req),
+      Number(req.params.id),
+      { regenerate },
+    );
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/unidades/:id/ical-import', ...masterAuth, async (req, res) => {
+  try {
+    const url =
+      req.body?.url === null || req.body?.url === ''
+        ? null
+        : typeof req.body?.url === 'string'
+          ? req.body.url
+          : undefined;
+    if (url === undefined) {
+      return res.status(400).json({ success: false, error: 'Informe url (string) ou null' });
+    }
+    const result = await rateCalendarService.salvarIcalImportUrl(
+      authFromReq(req),
+      Number(req.params.id),
+      url,
+    );
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/ical-import/sync', ...masterAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.sincronizarIcalImport(
+      authFromReq(req),
+      Number(req.params.id),
+    );
+    if ('error' in result) {
+      if (result.error === 'no_url') {
+        return res.status(400).json({ success: false, error: 'Salve uma URL de calendário primeiro' });
+      }
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(502).json({
+        success: false,
+        error: 'message' in result ? result.message : 'Falha ao sincronizar calendário externo',
+      });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/unidades/:id/ical.ics', async (req, res) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token || token.length < 16) {
+      return res.status(401).json({ success: false, error: 'Token inválido' });
+    }
+    const de = String(req.query.de || new Date().toISOString().slice(0, 10));
+    const ateDate = new Date();
+    ateDate.setMonth(ateDate.getMonth() + 6);
+    const ate = String(req.query.ate || ateDate.toISOString().slice(0, 10));
+    const result = await rateCalendarService.gerarIcalFeed(
+      Number(req.params.id),
+      token,
+      de,
+      ate,
+    );
+    if ('error' in result) {
+      return res.status(404).json({ success: false, error: 'Feed não encontrado' });
+    }
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `inline; filename="rsv360-${req.params.id}.ics"`);
+    res.send(result.data);
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -759,6 +856,138 @@ router.post('/unidades/:id/disponibilidade/preco', ...masterAuth, async (req, re
       });
     }
     res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/unidades/:id/rate-calendar', ...parceiroAuth, async (req, res) => {
+  try {
+    const de = String(req.query.de ?? '');
+    const ate = String(req.query.ate ?? '');
+    if (!de || !ate) {
+      return res.status(400).json({ success: false, error: 'de e ate são obrigatórios' });
+    }
+    const result = await rateCalendarService.obterRateCalendar(
+      authFromReq(req),
+      Number(req.params.id),
+      de,
+      ate,
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/unidades/:id/rate-calendar/day', ...masterAuth, async (req, res) => {
+  try {
+    const data = String(req.body?.data ?? '');
+    if (!data) {
+      return res.status(400).json({ success: false, error: 'data é obrigatória' });
+    }
+    const result = await rateCalendarService.atualizarDia(authFromReq(req), Number(req.params.id), {
+      data,
+      preco: req.body?.preco === undefined ? undefined : req.body.preco === null || req.body.preco === ''
+        ? null
+        : Number(req.body.preco),
+      disponivel: typeof req.body?.disponivel === 'boolean' ? req.body.disponivel : undefined,
+      observacao: typeof req.body?.observacao === 'string' ? req.body.observacao : undefined,
+    });
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/unidades/:id/pricing-defaults', ...masterAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.atualizarPricingDefaults(
+      authFromReq(req),
+      Number(req.params.id),
+      req.body ?? {},
+    );
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/aplicar-desconto', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.aplicarDesconto(
+      authFromReq(req),
+      Number(req.params.id),
+      {
+        datas: Array.isArray(req.body?.datas) ? req.body.datas.map(String) : [],
+        percentual: Number(req.body?.percentual),
+        enforceAsRole:
+          typeof req.body?.enforceAsRole === 'string' ? req.body.enforceAsRole : undefined,
+      },
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'discount_cap') {
+        return res.status(403).json({
+          success: false,
+          error: result.message,
+          teto: result.teto,
+        });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(400).json({
+        success: false,
+        error: 'message' in result ? result.message : result.error,
+      });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/validar-desconto', ...parceiroAuth, async (req, res) => {
+  try {
+    const percentual = Number(req.body?.percentual);
+    const result = await rateCalendarService.validarDescontoProposto(
+      authFromReq(req),
+      Number(req.params.id),
+      percentual,
+      {
+        enforceAsRole:
+          typeof req.body?.enforceAsRole === 'string' ? req.body.enforceAsRole : undefined,
+      },
+    );
+    if (!result.ok) {
+      return res.status(403).json({
+        success: false,
+        error: result.message,
+        teto: result.teto,
+      });
+    }
+    res.json({ success: true, data: { teto: result.teto } });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }

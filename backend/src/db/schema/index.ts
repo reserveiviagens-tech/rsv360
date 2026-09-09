@@ -36,6 +36,8 @@ export * from './roteiro-pontos';
 export * from './tarifa-categoria';
 export * from './tarifa-temporada';
 export * from './tarifa-regra';
+export * from './politica-desconto';
+export * from './feriado-municipio';
 export * from './comissoes-lancamento';
 export * from './agentes';
 export * from './agentes-cache-semantico';

@@ -16,9 +16,18 @@ export default function AnfitriaoTarifasPage() {
   const [simData, setSimData] = useState(() => new Date().toISOString().slice(0, 10));
   const [simResult, setSimResult] = useState<unknown>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [tetoPct, setTetoPct] = useState('10');
+  const [politicaMsg, setPoliticaMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fase1Api.tarifasConfig().then((r) => setMotorOn(r.data?.tarifarioDinamicoAtivo === true)).catch(() => {});
+    fase1Api
+      .tarifasPoliticaDesconto()
+      .then((r) => {
+        const global = (r.data || []).find((p) => p.scope === 'global');
+        if (global?.maxDescontoPercentual) setTetoPct(String(global.maxDescontoPercentual));
+      })
+      .catch(() => {});
     if (isStaff) {
       Promise.all([fase1Api.tarifasCategorias(), fase1Api.tarifasTemporadas(), fase1Api.tarifasRegras()])
         .then(([c, t, rg]) => {
@@ -29,6 +38,19 @@ export default function AnfitriaoTarifasPage() {
         .catch(() => {});
     }
   }, [isStaff]);
+
+  async function salvarPolitica() {
+    const pct = Number(tetoPct);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      setPoliticaMsg('Percentual inválido');
+      return;
+    }
+    await fase1Api.tarifasSetPoliticaDesconto({
+      scope: 'global',
+      maxDescontoPercentual: pct,
+    });
+    setPoliticaMsg(`Teto global salvo: ${pct}%`);
+  }
 
   async function toggleMotor() {
     if (!isStaff) return;
@@ -73,6 +95,35 @@ export default function AnfitriaoTarifasPage() {
               {msg && <p className="mt-2 text-sm">{msg}</p>}
             </div>
           )}
+
+          <div className="mt-6 rounded-xl border bg-white p-6 space-y-3">
+            <h2 className="font-semibold">Política de desconto (parceiros CRM)</h2>
+            <p className="text-sm text-slate-600">
+              Teto máximo que corretores/agentes/promotores podem aplicar. Enforcement no servidor.
+            </p>
+            <label className="block text-sm max-w-xs">
+              Máx. desconto (%)
+              <input
+                type="number"
+                min={0}
+                max={100}
+                className="mt-1 w-full rounded border px-3 py-2"
+                value={tetoPct}
+                disabled={!isStaff && user?.role !== 'anfitriao'}
+                onChange={(e) => setTetoPct(e.target.value)}
+              />
+            </label>
+            {(isStaff || user?.role === 'anfitriao') && (
+              <button
+                type="button"
+                onClick={() => void salvarPolitica()}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Salvar política
+              </button>
+            )}
+            {politicaMsg && <p className="text-sm text-emerald-700">{politicaMsg}</p>}
+          </div>
 
           {isStaff && (
             <div className="mt-6 grid gap-4 md:grid-cols-3">

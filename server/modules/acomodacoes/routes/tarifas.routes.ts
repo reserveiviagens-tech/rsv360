@@ -3,14 +3,19 @@ import { ZodError } from 'zod';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import { tarifaService } from '../services/tarifa.service';
 import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
+import { rateCalendarService } from '../services/rate-calendar.service';
 import {
   TarifaCategoriaCreateSchema,
   TarifaRegraCreateSchema,
 } from '../schemas/write-allowlist.schema';
 
 const router = Router();
+const parceiroAuth = [
+  authenticateJwt,
+  requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
+];
+const masterAuth = [authenticateJwt, requireRole('anfitriao', 'admin', 'manager')];
 const staffAuth = [authenticateJwt, requireRole('admin', 'manager')];
-const parceiroAuth = [authenticateJwt, requireRole('anfitriao', 'corretor', 'admin', 'manager')];
 
 function authFromReq(req: Request): AuthContext {
   const userId = req.user?.id;
@@ -200,6 +205,45 @@ router.get('/simular', ...parceiroAuth, async (req, res) => {
       preview: previewRequested && isStaff,
     });
     res.json({ success: true, data: resultado });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/politica-desconto', ...parceiroAuth, async (req, res) => {
+  try {
+    const scope = req.query.scope ? String(req.query.scope) : undefined;
+    const scopeId = req.query.scopeId != null ? String(req.query.scopeId) : undefined;
+    const data = await rateCalendarService.getPoliticaDesconto(scope, scopeId);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.put('/politica-desconto', ...masterAuth, async (req, res) => {
+  try {
+    const result = await rateCalendarService.upsertPoliticaDesconto(authFromReq(req), {
+      scope: req.body?.scope || 'global',
+      scopeId: req.body?.scopeId ?? null,
+      maxDescontoPercentual: Number(req.body?.maxDescontoPercentual),
+      maxDescontoAbsoluto:
+        req.body?.maxDescontoAbsoluto != null ? Number(req.body.maxDescontoAbsoluto) : null,
+      rolesPermitidos: Array.isArray(req.body?.rolesPermitidos)
+        ? req.body.rolesPermitidos.map(String)
+        : undefined,
+      ativo: req.body?.ativo,
+    });
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      return res.status(400).json({
+        success: false,
+        error: 'message' in result ? result.message : result.error,
+      });
+    }
+    res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }

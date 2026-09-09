@@ -73,6 +73,10 @@ export interface GerarPropostaPayload {
   travelInsurance?: boolean;
   hotelOnlyFlow?: boolean;
   selectedAcomodacaoId?: number | null;
+  /** Desconto proposto por parceiro (CRM) — validado server-side pelo teto. */
+  descontoParceiroPercentual?: number;
+  /** Role efetiva para teto (corretor|agente|promotor). */
+  descontoParceiroRole?: string;
   /** Intenção client: upgrade varanda (sem valor monetário). */
   upgradeVaranda?: boolean;
   arquetipoId?: string;

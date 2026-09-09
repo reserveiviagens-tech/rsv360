@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { meetsWizardMinNights, WIZARD_MIN_NIGHTS } from '@rsv360/shared';
 import { cotacaoPublicaService } from '../services/cotacao-publica.service';
-import { DisponibilidadeReservaConflictError } from '../../acomodacoes/services/disponibilidade-reserva.hook';
+import {
+  DisponibilidadeReservaConflictError,
+  RegrasEstadiaAcomodacaoError,
+} from '../../acomodacoes/services/disponibilidade-reserva.hook';
 import { registrarLeadAbandono } from '../services/lead-abandono.service';
 import { isPropostaExpiradaError } from '../../propostas/proposta-validade';
 import { publicLimiter } from '../../../middleware/public-limiter';
@@ -107,6 +110,13 @@ router.post('/gerar-proposta', publicLimiter, requireTurnstile, async (req, res)
         datasIndisponiveis: error.datasIndisponiveis,
       });
     }
+    if (error instanceof RegrasEstadiaAcomodacaoError) {
+      return res.status(400).json({
+        success: false,
+        error: err.message,
+        code: error.code,
+      });
+    }
     if (error instanceof HotelMismatchError) {
       return res.status(422).json({
         success: false,
@@ -176,6 +186,13 @@ router.post('/proposta/:token/aceitar', publicLimiter, requireTurnstile, async (
         error: error.message,
         acomodacaoId: error.acomodacaoId,
         datasIndisponiveis: error.datasIndisponiveis,
+      });
+    }
+    if (error instanceof RegrasEstadiaAcomodacaoError) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        code: error.code,
       });
     }
     res.status(400).json({ success: false, error: (error as Error).message });

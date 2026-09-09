@@ -288,6 +288,55 @@
       "when": 1783700000000,
       "tag": "0040_pr06c_login_protection_mfa",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788550000000,
+      "tag": "0041_rate_calendar_politica_desconto",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788551000000,
+      "tag": "0042_rate_calendar_host_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788552000000,
+      "tag": "0043_rate_calendar_fase_c",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1788553000000,
+      "tag": "0044_feriado_municipio",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1788554000000,
+      "tag": "0045_ical_import",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788555000000,
+      "tag": "0046_min_noites_por_checkin",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1788556000000,
+      "tag": "0047_tempo_preparacao_horas",
+      "breakpoints": true
     }
   ]
 }

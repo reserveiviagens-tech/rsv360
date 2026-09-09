@@ -34,6 +34,19 @@ function buildGerarPropostaBody(
   total: number,
   turnstileToken?: string,
 ) {
+  const params =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const descontoRaw = params?.get('descontoParceiro') ?? params?.get('desconto');
+  const descontoParceiroPercentual =
+    descontoRaw != null && descontoRaw !== '' ? Number(descontoRaw) : undefined;
+  const roleRaw = params?.get('descontoParceiroRole') ?? params?.get('parceiroRole');
+  const descontoParceiroRole =
+    roleRaw === 'agente' || roleRaw === 'promotor' || roleRaw === 'corretor'
+      ? roleRaw
+      : descontoParceiroPercentual != null
+        ? 'corretor'
+        : undefined;
+
   return {
     checkIn: state.checkIn,
     checkOut: state.checkOut,
@@ -57,6 +70,12 @@ function buildGerarPropostaBody(
     selectedAcomodacaoId: state.selectedAcomodacaoId,
     wizardAddonIds: state.wizardAddonIds,
     upgradeVaranda: state.upgradeVaranda,
+    ...(Number.isFinite(descontoParceiroPercentual) && (descontoParceiroPercentual as number) > 0
+      ? {
+          descontoParceiroPercentual,
+          descontoParceiroRole,
+        }
+      : {}),
     total,
     turnstileToken: turnstileToken || undefined,
     catalog: {

@@ -99,6 +99,21 @@ export class CotacaoPublicaService {
     if (acomodacaoId) {
       await assertHotelMatchProposta(acomodacaoId, payload.hotelId);
       await assertDisponibilidadeReserva(acomodacaoId, payload.checkIn, payload.checkOut);
+
+      const descontoPct = Number(payload.descontoParceiroPercentual ?? 0);
+      if (Number.isFinite(descontoPct) && descontoPct > 0) {
+        const { rateCalendarService } = await import(
+          '../../acomodacoes/services/rate-calendar.service'
+        );
+        const check = await rateCalendarService.assertDescontoParceiroNoFunil(
+          acomodacaoId,
+          descontoPct,
+          payload.descontoParceiroRole || 'corretor',
+        );
+        if (!check.ok) {
+          throw new Error(check.message);
+        }
+      }
     }
 
     const acomodacaoSnapshot = await resolveUpgradeVarandaProposta(payload);
