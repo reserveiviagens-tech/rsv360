@@ -53,6 +53,25 @@ function assertImageMagic(buf: Buffer): void {
   }
 }
 
+type SharpPipeline = {
+  rotate: () => SharpPipeline;
+  resize: (...args: unknown[]) => SharpPipeline;
+  webp: (opts: { quality: number }) => SharpPipeline;
+  toBuffer: () => Promise<Buffer>;
+};
+
+type SharpFn = (input: Buffer) => SharpPipeline;
+
+async function loadSharp(): Promise<SharpFn | null> {
+  try {
+    const mod = await import('sharp');
+    const candidate = (mod as { default?: unknown }).default ?? mod;
+    return typeof candidate === 'function' ? (candidate as SharpFn) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Convert upload to a small square WebP for the listings rail.
  * Falls back to writing original bytes as .bin-safe webp rename if sharp is unavailable.
@@ -66,24 +85,7 @@ export async function writeTrilhoWebp(
   const filename = `trilho-${acomodacaoId}-${randomUUID()}.webp`;
   const outPath = path.join(dir, filename);
 
-  let sharpFn: ((input: Buffer) => {
-    rotate: () => {
-      resize: (
-        w: number,
-        h: number,
-        opts: { fit: string; position: string },
-      ) => {
-        webp: (opts: { quality: number }) => { toBuffer: () => Promise<Buffer> };
-      };
-    };
-  }) | null = null;
-  try {
-    const mod = await import('sharp');
-    sharpFn = ((mod as { default?: unknown }).default ?? mod) as typeof sharpFn;
-  } catch {
-    sharpFn = null;
-  }
-
+  const sharpFn = await loadSharp();
   if (sharpFn) {
     const out = await sharpFn(buffer)
       .rotate()
@@ -118,23 +120,7 @@ export async function writeGaleriaWebp(
   const filename = `galeria-${acomodacaoId}-${randomUUID()}.webp`;
   const outPath = path.join(dir, filename);
 
-  let sharpFn: ((input: Buffer) => {
-    rotate: () => {
-      resize: (
-        w: number,
-        opts: { fit: string; withoutEnlargement: boolean },
-      ) => {
-        webp: (opts: { quality: number }) => { toBuffer: () => Promise<Buffer> };
-      };
-    };
-  }) | null = null;
-  try {
-    const mod = await import('sharp');
-    sharpFn = ((mod as { default?: unknown }).default ?? mod) as typeof sharpFn;
-  } catch {
-    sharpFn = null;
-  }
-
+  const sharpFn = await loadSharp();
   if (sharpFn) {
     const out = await sharpFn(buffer)
       .rotate()
