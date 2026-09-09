@@ -61,6 +61,13 @@ async function startServer() {
       console.warn('[importacoes] Worker importações não disponível:', err.message);
     }
 
+    try {
+      const { startAuctionsWorker } = require('../server/modules/auctions/auctions.worker');
+      void startAuctionsWorker();
+    } catch (err) {
+      console.warn('[auctions] Worker settlement não disponível:', err.message);
+    }
+
     server.listen(PORT, () => {
       console.log(`[SERVER] RSV360 Backend API Server running on port ${PORT}`);
       console.log(`[SERVER] Health check: http://localhost:${PORT}/health`);
