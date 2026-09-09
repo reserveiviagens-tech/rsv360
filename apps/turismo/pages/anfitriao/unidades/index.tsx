@@ -22,12 +22,19 @@ type Unidade = {
   statusPublicacao: string;
   precoDiaria?: string | number | null;
   midia?: unknown;
+  metadata?: unknown;
   quartos?: number | null;
   capacidadeMax?: number | null;
   amenidades?: unknown;
   utensilios?: unknown;
   eletrodomesticos?: unknown;
 };
+
+function nomeInternoOf(u: Unidade): string {
+  if (!u.metadata || typeof u.metadata !== 'object' || Array.isArray(u.metadata)) return '';
+  const v = (u.metadata as Record<string, unknown>).nomeInterno;
+  return typeof v === 'string' ? v.trim() : '';
+}
 
 export default function AnfitriaoUnidadesPage() {
   const { data, isLoading } = useAnfitriaoMinhas(1, 100);
@@ -64,6 +71,7 @@ export default function AnfitriaoUnidadesPage() {
             {filtered.map((u) => {
               const thumb = resolveUnitThumbUrl(u.midia);
               const src = thumb ? compactThumbUrl(thumb, 320) : unitThumbPlaceholder();
+              const interno = nomeInternoOf(u);
               return (
                 <Link
                   key={u.id}
@@ -83,6 +91,9 @@ export default function AnfitriaoUnidadesPage() {
                   />
                   <div className="p-3">
                     <p className="truncate font-semibold text-slate-900">{u.titulo}</p>
+                    {interno ? (
+                      <p className="truncate text-xs text-slate-500">Interno: {interno}</p>
+                    ) : null}
                     <p className="text-xs text-slate-500">
                       {statusPublicacaoLabel(u.statusPublicacao)} · #{u.id}
                       {u.quartos != null ? ` · ${u.quartos} qto` : ''}
