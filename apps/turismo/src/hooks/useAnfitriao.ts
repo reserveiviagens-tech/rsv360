@@ -162,6 +162,10 @@ export function usePatchGaleria(id: number) {
       moveUrl?: string;
       direction?: 'left' | 'right';
       setCapaUrl?: string;
+      setCategoriaUrl?: string;
+      categoria?: string | null;
+      setCaptionUrl?: string;
+      caption?: string | null;
     }) => fase1Api.anfitriaoPatchGaleria(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['anfitriao'] });

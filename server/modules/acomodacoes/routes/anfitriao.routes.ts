@@ -329,25 +329,48 @@ router.post(
   },
 );
 
-/** Reorder / remove / set cover on gallery midia. */
+/** Reorder / remove / set cover / category / caption on gallery midia. */
 router.patch('/unidades/:id/galeria', ...parceiroAuth, async (req, res) => {
   try {
     const removeUrl = typeof req.body?.removeUrl === 'string' ? req.body.removeUrl.trim() : undefined;
     const moveUrl = typeof req.body?.moveUrl === 'string' ? req.body.moveUrl.trim() : undefined;
     const setCapaUrl =
       typeof req.body?.setCapaUrl === 'string' ? req.body.setCapaUrl.trim() : undefined;
+    const setCategoriaUrl =
+      typeof req.body?.setCategoriaUrl === 'string' ? req.body.setCategoriaUrl.trim() : undefined;
+    const setCaptionUrl =
+      typeof req.body?.setCaptionUrl === 'string' ? req.body.setCaptionUrl.trim() : undefined;
     const direction =
       req.body?.direction === 'left' || req.body?.direction === 'right'
         ? (req.body.direction as 'left' | 'right')
         : undefined;
-    if (!removeUrl && !moveUrl && !setCapaUrl) {
-      return res.status(400).json({ success: false, error: 'Informe removeUrl, moveUrl ou setCapaUrl' });
+    const categoria =
+      req.body?.categoria === null || req.body?.categoria === ''
+        ? null
+        : typeof req.body?.categoria === 'string'
+          ? req.body.categoria.trim()
+          : undefined;
+    const caption =
+      req.body?.caption === null || req.body?.caption === ''
+        ? null
+        : typeof req.body?.caption === 'string'
+          ? req.body.caption.trim()
+          : undefined;
+    if (!removeUrl && !moveUrl && !setCapaUrl && !setCategoriaUrl && !setCaptionUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Informe removeUrl, moveUrl, setCapaUrl, setCategoriaUrl ou setCaptionUrl',
+      });
     }
     const result = await anfitriaoService.atualizarMidiaEstrutura(authFromReq(req), Number(req.params.id), {
       removeUrl,
       moveUrl,
       direction,
       setCapaUrl,
+      setCategoriaUrl,
+      categoria: setCategoriaUrl ? (categoria ?? null) : undefined,
+      setCaptionUrl,
+      caption: setCaptionUrl ? (caption ?? null) : undefined,
     });
     if ('error' in result) {
       if (result.error === 'forbidden') {

@@ -290,6 +290,10 @@ export const fase1Api = {
       moveUrl?: string;
       direction?: 'left' | 'right';
       setCapaUrl?: string;
+      setCategoriaUrl?: string;
+      categoria?: string | null;
+      setCaptionUrl?: string;
+      caption?: string | null;
     },
   ) =>
     fetchJson<{ success: boolean; data: unknown }>(
