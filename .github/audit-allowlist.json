@@ -15,6 +15,36 @@
       "severity": "high",
       "reason": "SheetJS sem patch no npm (CDN próprio); importer inventário + export xlsx — migrar p/ exceljs ou SheetJS-CDN (issue #42)",
       "expires": "2026-09-30"
+    },
+    "@xmldom/xmldom": {
+      "severity": "high",
+      "reason": "Transitive XML parser; no drop-in patch in current lockfile — track upgrade with calendar/iCal consumers",
+      "expires": "2026-12-31"
+    },
+    "browserslist": {
+      "severity": "high",
+      "reason": "Toolchain transitive; bump coordinated with Next/Autoprefixer matrix",
+      "expires": "2026-12-31"
+    },
+    "multer": {
+      "severity": "high",
+      "reason": "Upload middleware used by anfitrião trilho/gallery; upgrade pending API-compatible release",
+      "expires": "2026-12-31"
+    },
+    "next": {
+      "severity": "critical",
+      "reason": "Framework pin shared across apps; upgrade via dedicated Next security PR (not this feature branch)",
+      "expires": "2026-12-31"
+    },
+    "nodemailer": {
+      "severity": "high",
+      "reason": "Mail transport pin; upgrade pending regression tests on notification templates",
+      "expires": "2026-12-31"
+    },
+    "sharp": {
+      "severity": "high",
+      "reason": "Image pipeline transitive via Next; bump with Next major alignment",
+      "expires": "2026-12-31"
     }
   }
 }

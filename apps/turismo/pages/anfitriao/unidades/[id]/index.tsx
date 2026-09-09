@@ -13,7 +13,7 @@ import {
   useEnviarAprovacaoUnidade,
 } from '@/hooks/useAnfitriao';
 import { fase1Api } from '@/lib/fase1-api';
-import { parseRouteId } from '@/src/lib/parse-route-id';
+import { parseRouteId } from '@/lib/parse-route-id';
 
 type PageProps = { unitId: number; secao: string | null };
 
