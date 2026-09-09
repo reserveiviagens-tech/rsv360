@@ -75,7 +75,7 @@
     "@sendgrid/mail": "^8.1.6",
     "handlebars": "^4.7.9",
     "ioredis": "5.10.1",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^9.1.1",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "twilio": "^5.13.1"
