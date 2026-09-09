@@ -60,6 +60,11 @@ export const gerarPropostaBodySchema = z.preprocess(
           const n = Number(raw);
           return Number.isFinite(n) && n > 0 ? n : null;
         }),
+      descontoParceiroPercentual: z.coerce.number().min(0).max(100).optional(),
+      descontoParceiroRole: z
+        .enum(['corretor', 'agente', 'promotor'])
+        .optional()
+        .default('corretor'),
       wizardAddonIds: z.array(z.number()).optional(),
       /** Intenção do client — valor resolvido server-side. */
       upgradeVaranda: z.boolean().optional().default(false),

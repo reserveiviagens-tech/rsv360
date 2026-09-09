@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Head from 'next/head';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import AnfitriaoRoleGuard from '../../components/AnfitriaoRoleGuard';
+import { AnfitriaoHostNav } from '../../components/anfitriao/AnfitriaoHostNav';
 import { useAnfitriaoCalendarioAgregado } from '@/hooks/useAnfitriao';
 
 function contarEstados(dias: Array<{ estado: string; precoOverride?: string | null }>) {
@@ -32,15 +33,22 @@ export default function AnfitriaoCalendarioAgregadoPage() {
       <Head>
         <title>Calendário agregado | Anfitrião</title>
       </Head>
-      <div className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-5xl">
-          <Link href="/anfitriao" className="text-sm text-blue-600 hover:underline">
-            ← Painel
-          </Link>
-          <h1 className="mt-4 text-2xl font-bold">Calendário agregado</h1>
+      <div className="min-h-screen bg-slate-50">
+        <AnfitriaoHostNav />
+        <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
+          <h1 className="text-2xl font-bold">Calendário</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Visão somente leitura de todas as suas unidades — bloqueios, reservas e preços especiais.
+            Visão multi-anúncios — selecione uma unidade para editar preço, bloqueio e conjuntos de
+            regras no calendário de tarifas.
           </p>
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <p className="font-semibold">Conjuntos de regras</p>
+            <p className="mt-1 text-slate-500">
+              Defina preço por noite (%), descontos (duração, última hora, antecipada) e
+              disponibilidade (mín/máx noites, dias sem check-in/out) por temporada. Abra uma unidade
+              para aplicar no calendário.
+            </p>
+          </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
             <label className="text-sm">
@@ -84,12 +92,15 @@ export default function AnfitriaoCalendarioAgregadoPage() {
                         #{u.acomodacaoId} · {u.hotelId}
                       </p>
                     </div>
-                    <Link
-                      href={`/anfitriao/unidades/${u.acomodacaoId}/disponibilidade`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      Editar calendário
-                    </Link>
+                    {Number.isFinite(u.acomodacaoId) && u.acomodacaoId > 0 ? (
+                      <Link
+                        href={`/anfitriao/unidades/${u.acomodacaoId}/disponibilidade`}
+                        className="text-sm text-blue-600 hover:underline"
+                        prefetch={false}
+                      >
+                        Editar calendário
+                      </Link>
+                    ) : null}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-3 text-xs">
                     <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-800">

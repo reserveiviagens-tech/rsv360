@@ -16,12 +16,42 @@ import { cn } from '@/lib/utils';
 
 export type CalendarioDiaEstado = 'livre' | 'bloqueado' | 'reservado';
 
+export type DiaContexto = {
+  fimDeSemana: boolean;
+  feriado: {
+    data: string;
+    nome: string;
+    tipo?: 'nacional' | 'estadual' | 'municipal';
+    uf?: string;
+    municipio?: string;
+  } | null;
+  temporada: {
+    id: number;
+    slug: string;
+    nome: string;
+    tipo: 'alta' | 'media' | 'baixa' | 'feriado';
+  } | null;
+  alerta: {
+    nivel: 'ok' | 'abaixo' | 'acima';
+    mensagem: string;
+    faixa: { minSugerido: number; referencia: number; maxSugerido: number };
+    tags: string[];
+  };
+};
+
 export interface CalendarioDiaView {
   data: string;
   estado: CalendarioDiaEstado;
   disponivel: boolean;
   readOnly: boolean;
   precoOverride?: string | null;
+  /** Preço efetivo resolvido (base + regras + override) */
+  precoEfetivo?: number | null;
+  /** Preço base antes de override/desconto de dia */
+  precoBase?: number | null;
+  /** Nota do anfitrião / marcador de sistema */
+  observacao?: string | null;
+  contexto?: DiaContexto | null;
 }
 
 const ESTADO_STYLES: Record<CalendarioDiaEstado, string> = {
@@ -95,32 +125,122 @@ export function AnfitriaoMonthCalendar({
           const key = format(day, 'yyyy-MM-dd');
           const info = diaMap.get(key);
           const estado: CalendarioDiaEstado = info?.estado ?? 'livre';
-          const dayReadOnly = readOnly || info?.readOnly || estado === 'reservado';
           const inMonth = isSameMonth(day, month);
           const selected = selectedSet.has(key);
-          const preco = info?.precoOverride;
+          const preco =
+            info?.precoEfetivo != null
+              ? String(info.precoEfetivo)
+              : info?.precoOverride;
+          const dayReadOnly =
+            readOnly || info?.readOnly || estado === 'reservado';
+          // Masters may open blocked days to unblock; reserved stays locked.
+          const clickable =
+            inMonth &&
+            (selectionMode
+              ? !readOnly && estado !== 'reservado'
+              : !dayReadOnly && Boolean(onToggleDia));
 
           return (
             <button
               key={key}
               type="button"
-              disabled={!inMonth || dayReadOnly || (!selectionMode && !onToggleDia)}
+              disabled={!clickable}
               onClick={() => {
                 if (selectionMode) onSelectDia?.(key, estado);
                 else onToggleDia?.(key, estado);
               }}
               className={cn(
-                `min-h-[56px] rounded border p-1 text-left text-xs ${ESTADO_STYLES[estado]}`,
-                isToday(day) && 'ring-2 ring-blue-400',
-                selected && 'ring-2 ring-indigo-600 ring-offset-1',
+                'min-h-[72px] rounded-2xl border p-2 text-left text-xs transition',
+                !selected && ESTADO_STYLES[estado],
+                !inMonth && 'opacity-40',
+                isToday(day) && !selected && 'ring-2 ring-rose-400',
+                selected &&
+                  'border-transparent bg-slate-900 text-white shadow-md ring-0 hover:bg-slate-900',
               )}
-              title={estado}
+              title={
+                info?.contexto
+                  ? info.contexto.alerta.tags.join(' · ')
+                  : estado
+              }
             >
-              <span className="font-semibold">{format(day, 'd')}</span>
-              <span className="mt-0.5 block capitalize">{estado}</span>
+              <span
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold',
+                  selected && 'bg-white/15',
+                  isToday(day) && !selected && 'ring-2 ring-rose-500',
+                  estado === 'bloqueado' && selected && 'line-through decoration-white/80',
+                )}
+              >
+                {format(day, 'd')}
+              </span>
               {preco && (
-                <span className="mt-0.5 block text-[10px] font-medium text-indigo-700">
-                  R$ {preco}
+                <span
+                  className={cn(
+                    'mt-1 block text-[11px] font-semibold',
+                    selected ? 'text-white' : 'text-slate-800',
+                  )}
+                >
+                  R${Number(preco).toFixed(0)}
+                </span>
+              )}
+              {info?.contexto && (
+                <span
+                  className={cn(
+                    'mt-1 flex flex-wrap gap-0.5',
+                    selected ? 'opacity-90' : '',
+                  )}
+                >
+                  {info.contexto.fimDeSemana && (
+                    <span
+                      className={cn(
+                        'rounded px-1 text-[9px] font-bold uppercase',
+                        selected ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800',
+                      )}
+                    >
+                      FDS
+                    </span>
+                  )}
+                  {info.contexto.feriado && (
+                    <span
+                      className={cn(
+                        'rounded px-1 text-[9px] font-bold uppercase',
+                        selected ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800',
+                      )}
+                    >
+                      Fer
+                    </span>
+                  )}
+                  {(info.contexto.temporada?.tipo === 'alta' ||
+                    info.contexto.temporada?.tipo === 'feriado') && (
+                    <span
+                      className={cn(
+                        'rounded px-1 text-[9px] font-bold uppercase',
+                        selected ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-900',
+                      )}
+                    >
+                      Alta
+                    </span>
+                  )}
+                  {info.contexto.temporada?.tipo === 'media' && !info.contexto.feriado && (
+                    <span
+                      className={cn(
+                        'rounded px-1 text-[9px] font-bold uppercase',
+                        selected ? 'bg-white/20 text-white' : 'bg-sky-100 text-sky-900',
+                      )}
+                    >
+                      Méd
+                    </span>
+                  )}
+                  {info.contexto.temporada?.tipo === 'baixa' && (
+                    <span
+                      className={cn(
+                        'rounded px-1 text-[9px] font-bold uppercase',
+                        selected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700',
+                      )}
+                    >
+                      Baixa
+                    </span>
+                  )}
                 </span>
               )}
             </button>
@@ -139,7 +259,16 @@ export function AnfitriaoMonthCalendar({
           <span className="h-3 w-3 rounded bg-amber-200" /> Reservado
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded bg-indigo-200" /> Preço especial
+          <span className="rounded bg-indigo-100 px-1 text-[9px] font-bold text-indigo-800">FDS</span>{' '}
+          Fim de semana
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="rounded bg-rose-100 px-1 text-[9px] font-bold text-rose-800">Fer</span>{' '}
+          Feriado
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="rounded bg-orange-100 px-1 text-[9px] font-bold text-orange-900">Alta</span>{' '}
+          Alta temporada
         </span>
       </div>
     </div>

@@ -1,11 +1,18 @@
 /**
  * Fase 2 — anti-overbooking por data (disponibilidade_acomodacao).
  * Tabela vazia = todas as diárias livres (zero regressão).
+ * Também aplica regras de estadia da unidade (min/max, antecedência, cutoff, dias).
  */
 import { and, eq, sql } from 'drizzle-orm';
 import { countWizardNights } from '@rsv360/shared';
 import { db } from '../../../lib/db';
+import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { disponibilidadeAcomodacao } from '../../../../backend/src/db/schema/disponibilidade-acomodacao';
+import {
+  normalizeMinNoitesPorCheckin,
+  parseWeekdayList,
+  validarRegrasEstadiaAcomodacao,
+} from './host-pricing.helpers';
 
 type ReservaTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type RunReservaTransaction = <T>(
@@ -21,6 +28,17 @@ export class DisponibilidadeReservaConflictError extends Error {
   ) {
     super('Unidade indisponível nas datas solicitadas');
     this.name = 'DisponibilidadeReservaConflictError';
+  }
+}
+
+export class RegrasEstadiaAcomodacaoError extends Error {
+  readonly statusCode = 400;
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'RegrasEstadiaAcomodacaoError';
+    this.code = code;
   }
 }
 
@@ -53,6 +71,62 @@ export async function isDataBloqueada(acomodacaoId: number, data: string): Promi
   return row.disponivel === false;
 }
 
+function metadataFlag(meta: unknown, key: string, defaultValue: boolean): boolean {
+  if (meta == null || typeof meta !== 'object' || Array.isArray(meta)) return defaultValue;
+  const v = (meta as Record<string, unknown>)[key];
+  if (typeof v === 'boolean') return v;
+  return defaultValue;
+}
+
+export async function assertRegrasEstadiaAcomodacao(
+  acomodacaoId: number,
+  checkIn: string,
+  checkOut: string,
+  now: Date = new Date(),
+): Promise<void> {
+  const [unit] = await db
+    .select({
+      minNoites: acomodacoes.minNoites,
+      maxNoites: acomodacoes.maxNoites,
+      minNoitesPorCheckin: acomodacoes.minNoitesPorCheckin,
+      antecedenciaDias: acomodacoes.antecedenciaDias,
+      avisoPrevioMesmoDia: acomodacoes.avisoPrevioMesmoDia,
+      periodoDisponibilidadeMeses: acomodacoes.periodoDisponibilidadeMeses,
+      checkinDiasPermitidos: acomodacoes.checkinDiasPermitidos,
+      checkoutDiasPermitidos: acomodacoes.checkoutDiasPermitidos,
+      metadata: acomodacoes.metadata,
+    })
+    .from(acomodacoes)
+    .where(eq(acomodacoes.id, acomodacaoId))
+    .limit(1);
+
+  if (!unit) {
+    throw new RegrasEstadiaAcomodacaoError('not_found', 'Unidade não encontrada.');
+  }
+
+  const minNoites = Number(unit.minNoites ?? 1) || 1;
+  const result = validarRegrasEstadiaAcomodacao(
+    checkIn,
+    checkOut,
+    {
+      minNoites,
+      maxNoites: Number(unit.maxNoites ?? 30) || 30,
+      minNoitesPorCheckin: normalizeMinNoitesPorCheckin(unit.minNoitesPorCheckin, minNoites),
+      antecedenciaDias: Number(unit.antecedenciaDias ?? 0) || 0,
+      avisoPrevioMesmoDia: unit.avisoPrevioMesmoDia,
+      permitirPedidosMesmoDia: metadataFlag(unit.metadata, 'permitirPedidosMesmoDia', true),
+      periodoDisponibilidadeMeses: Number(unit.periodoDisponibilidadeMeses ?? 12) || 12,
+      checkinDiasPermitidos: parseWeekdayList(unit.checkinDiasPermitidos),
+      checkoutDiasPermitidos: parseWeekdayList(unit.checkoutDiasPermitidos),
+    },
+    now,
+  );
+
+  if (result.ok === false) {
+    throw new RegrasEstadiaAcomodacaoError(result.code, result.message);
+  }
+}
+
 export async function verificarDisponibilidadeReserva(
   acomodacaoId: number,
   checkIn: string,
@@ -75,6 +149,7 @@ export async function assertDisponibilidadeReserva(
   checkIn: string,
   checkOut: string,
 ): Promise<void> {
+  await assertRegrasEstadiaAcomodacao(acomodacaoId, checkIn, checkOut);
   const result = await verificarDisponibilidadeReserva(acomodacaoId, checkIn, checkOut);
   if (result.ok === false) {
     throw new DisponibilidadeReservaConflictError(acomodacaoId, result.datasIndisponiveis);
@@ -133,6 +208,8 @@ export async function comHoldReservaAtomico<T>(
   onClaimed: (tx: ReservaTransaction) => Promise<T>,
   runInTransaction: RunReservaTransaction = (fn) => db.transaction(fn),
 ): Promise<T> {
+  await assertRegrasEstadiaAcomodacao(acomodacaoId, checkIn, checkOut);
+
   const datas = [...listDiariasEstadia(checkIn, checkOut)].sort();
 
   return runInTransaction(async (tx) => {
@@ -168,8 +245,10 @@ export async function comHoldReservaAtomico<T>(
 
 module.exports = {
   DisponibilidadeReservaConflictError,
+  RegrasEstadiaAcomodacaoError,
   listDiariasEstadia,
   isDataBloqueada,
+  assertRegrasEstadiaAcomodacao,
   verificarDisponibilidadeReserva,
   assertDisponibilidadeReserva,
   marcarDiariasReservadas,
