@@ -10,6 +10,7 @@ import {
 } from './AcessibilidadeEditor';
 import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
+import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_TIPOS } from './TipoPropriedadeEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import {
@@ -243,6 +244,18 @@ export function AnfitriaoListingEditor({
         return nomeInterno.trim()
           ? `${titulo.trim()} · ${nomeInterno.trim()}`
           : titulo.trim();
+      }
+      case 'tipo': {
+        const tipoLabel = TIPO_PROPRIEDADE_TIPOS.find((t) => t.id === tipoProp.tipo)?.label;
+        const acoLabel = TIPO_PROPRIEDADE_ACOMODACOES.find(
+          (t) => t.id === (tipoProp.acomodacao || tipoProp.representacao),
+        )?.label;
+        const parts = [
+          tipoLabel,
+          acoLabel,
+          tipoProp.tamanhoM2 != null ? `${tipoProp.tamanhoM2} m²` : null,
+        ].filter(Boolean);
+        return parts.length ? parts.join(' · ') : 'Adicionar informações';
       }
       case 'precos':
         return preco ? `R$ ${preco}/noite` : 'Definir preço';
@@ -1085,39 +1098,10 @@ function SeuEspacoPanel(props: {
 
   if (s === 'tipo') {
     return (
-      <div>
-        <PanelTitle title="Tipo de propriedade" />
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(
-            [
-              ['tipo', 'Tipo', 'Apartamento'],
-              ['acomodacao', 'Acomodação', 'Espaço inteiro'],
-              ['representacao', 'Representação', 'Espaço inteiro'],
-            ] as const
-          ).map(([key, label, ph]) => (
-            <label key={key} className="text-sm">
-              {label}
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-                value={props.tipoProp[key] ?? ''}
-                placeholder={ph}
-                onChange={(e) => props.setTipoProp({ ...props.tipoProp, [key]: e.target.value })}
-              />
-            </label>
-          ))}
-          <label className="text-sm">
-            Tamanho (m²)
-            <input
-              type="number"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-              value={props.tipoProp.tamanhoM2 ?? ''}
-              onChange={(e) =>
-                props.setTipoProp({ ...props.tipoProp, tamanhoM2: Number(e.target.value) || undefined })
-              }
-            />
-          </label>
-        </div>
-      </div>
+      <TipoPropriedadeEditor
+        value={props.tipoProp}
+        onChange={props.setTipoProp}
+      />
     );
   }
 
