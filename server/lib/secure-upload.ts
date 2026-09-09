@@ -73,7 +73,9 @@ export function safeStoredFilename(uuid: string, mime: string): string {
 }
 
 export function sanitizeUploadBasename(name: string): string {
-  const base = path.basename(String(name || 'upload')).replace(/[^\w.\-+() ]+/g, '_');
+  // Normalize Windows separators so path.basename works on Linux CI runners too.
+  const normalized = String(name || 'upload').replace(/\\/g, '/');
+  const base = path.basename(normalized).replace(/[^\w.\-+() ]+/g, '_');
   const trimmed = base.slice(0, 180).trim();
   return trimmed || 'upload.bin';
 }

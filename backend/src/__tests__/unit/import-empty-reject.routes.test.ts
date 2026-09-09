@@ -66,7 +66,8 @@ function buildApp() {
 }
 
 const auth = { 'x-test-role': 'admin', 'x-test-user-id': '1' };
-const LIXO = Buffer.from('not-a-real-xlsx');
+/** Minimal ZIP/XLSX magic so PR-08 assertImportMemoryFile accepts the upload before the pipeline mock runs. */
+const XLSX_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00]);
 
 describe('D2 — rotas import IMPORT_VAZIO → 422', () => {
   beforeEach(() => {
@@ -79,7 +80,7 @@ describe('D2 — rotas import IMPORT_VAZIO → 422', () => {
     const res = await request(buildApp())
       .post('/api/v1/acomodacoes/import/preview')
       .set(auth)
-      .attach('file', LIXO, 'lixo.xlsx');
+      .attach('file', XLSX_MAGIC, 'lixo.xlsx');
 
     expect(res.status).toBe(422);
     expect(res.body).toMatchObject({
@@ -95,7 +96,7 @@ describe('D2 — rotas import IMPORT_VAZIO → 422', () => {
     const res = await request(buildApp())
       .post('/api/v1/acomodacoes/import/commit')
       .set(auth)
-      .attach('file', LIXO, 'lixo.xlsx');
+      .attach('file', XLSX_MAGIC, 'lixo.xlsx');
 
     expect(res.status).toBe(422);
     expect(res.body).toMatchObject({
