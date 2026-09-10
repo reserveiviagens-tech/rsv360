@@ -74,13 +74,13 @@ describeDb('Fase 1 — CRUD integrado (7 módulos)', () => {
     const doc = await request(app)
       .post(`/api/v1/passageiros/${passageiroId}/documentos`)
       .set(authHeader())
-      .send({ tipo: 'rg', numero: 'MG123456', orgao: 'SSP' });
+      .send({ tipo: 'rg', numero: 'MG123456' });
     expect(doc.status).toBe(201);
 
     const fnrh = await request(app)
       .post(`/api/v1/passageiros/${passageiroId}/fnrh`)
       .set(authHeader())
-      .send({ hotelNome: 'Hotel Test', dataCheckin: '2026-07-01', dataCheckout: '2026-07-04' });
+      .send({ hotelNome: 'Hotel Test', dataEntrada: '2026-07-01', dataSaida: '2026-07-04' });
     expect(fnrh.status).toBe(201);
   });
 
@@ -92,7 +92,7 @@ describeDb('Fase 1 — CRUD integrado (7 módulos)', () => {
     const tx = await request(app)
       .post('/api/v1/financeiro/transacoes')
       .set(authHeader())
-      .send({ tipo: 'entrada', descricao: 'Teste Jest', valor: '500.00', status: 'pago' });
+      .send({ tipo: 'receita', descricao: 'Teste Jest', valor: '500.00', status: 'pago' });
     expect(tx.status).toBe(201);
   });
 
@@ -118,7 +118,7 @@ describeDb('Fase 1 — CRUD integrado (7 módulos)', () => {
     const forn = await request(app)
       .post('/api/v1/logistica/fornecedores')
       .set(authHeader())
-      .send({ nome: 'Fornecedor Jest', tipo: 'hotel', status: 'ativo' });
+      .send({ nome: 'Fornecedor Jest', categoria: 'hotel', status: 'ativo' });
     expect(forn.status).toBe(201);
 
     const voucher = await request(app)
