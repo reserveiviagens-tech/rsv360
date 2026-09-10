@@ -11,9 +11,6 @@ export default defineConfig({
     baseURL: backendBase,
     extraHTTPHeaders: {
       Accept: 'application/json',
-      // Login sets refresh cookie; Playwright reuses the jar on /refresh.
-      // cookieMutationOriginGuard requires Origin/Referer when that cookie is present.
-      Origin: process.env.RSV_AUTH_V1_ORIGIN || 'http://localhost:3004',
     },
   },
   reporter: [['list']],
