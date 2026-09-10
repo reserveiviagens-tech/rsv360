@@ -223,6 +223,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
         error: 'Nome interno deve ter no máximo 80 caracteres',
       });
     }
+    if (result.error === 'tipo_propriedade_invalido') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Tipo de propriedade inválido',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });

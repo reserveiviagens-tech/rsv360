@@ -39,6 +39,7 @@ import {
   sanitizeTituloPublico,
   validateListingTitles,
 } from './listing-titulo.util';
+import { validateTipoPropriedade } from './listing-tipo-propriedade.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -191,6 +192,22 @@ export const anfitriaoService = {
       }
     } else if (typeof patchPermitido.titulo === 'string') {
       patchPermitido.titulo = sanitizeTituloPublico(patchPermitido.titulo) || patchPermitido.titulo;
+    }
+
+    const updatingTipoPropriedade =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'tipoPropriedade');
+    if (updatingTipoPropriedade) {
+      const tipo = validateTipoPropriedade(
+        (metadataPatch as Record<string, unknown>).tipoPropriedade,
+      );
+      if (!tipo.ok) {
+        return { error: tipo.error, message: tipo.message };
+      }
+      (metadataPatch as Record<string, unknown>).tipoPropriedade =
+        Object.keys(tipo.value).length > 0 ? tipo.value : undefined;
     }
 
     const status = patchPermitido.statusPublicacao ?? row.statusPublicacao;
