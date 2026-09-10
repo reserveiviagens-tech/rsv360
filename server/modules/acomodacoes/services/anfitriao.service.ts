@@ -49,6 +49,7 @@ import { validateListingLocalizacao } from './listing-localizacao.util';
 import { validateListingSobreAnfitriao } from './listing-sobre-anfitriao.util';
 import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
+import { validateListingRegrasCasa } from './listing-regras-casa.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -356,6 +357,22 @@ export const anfitriaoService = {
       if (Object.prototype.hasOwnProperty.call(meta, 'mensagemPreReserva')) {
         meta.mensagemPreReserva = config.value.mensagemPreReserva ?? undefined;
       }
+    }
+
+    const updatingRegrasCasa =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'regrasCasa');
+    if (updatingRegrasCasa) {
+      const regras = validateListingRegrasCasa(
+        (metadataPatch as Record<string, unknown>).regrasCasa,
+      );
+      if (!regras.ok) {
+        return { error: regras.error, message: regras.message };
+      }
+      const empty = Object.keys(regras.value).length === 0;
+      (metadataPatch as Record<string, unknown>).regrasCasa = empty ? undefined : regras.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
