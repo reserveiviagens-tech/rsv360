@@ -47,6 +47,7 @@ import { validateListingAmenidades } from './listing-comodidades.util';
 import { validateListingAcessibilidade } from './listing-acessibilidade.util';
 import { validateListingLocalizacao } from './listing-localizacao.util';
 import { validateListingSobreAnfitriao } from './listing-sobre-anfitriao.util';
+import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -301,6 +302,22 @@ export const anfitriaoService = {
       }
       const empty = Object.keys(sobre.value).length === 0;
       (metadataPatch as Record<string, unknown>).sobreAnfitriao = empty ? undefined : sobre.value;
+    }
+
+    const updatingCoanfitrioes =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'coanfitrioes');
+    if (updatingCoanfitrioes) {
+      const cohosts = validateListingCoanfitrioes(
+        (metadataPatch as Record<string, unknown>).coanfitrioes,
+      );
+      if (!cohosts.ok) {
+        return { error: cohosts.error, message: cohosts.message };
+      }
+      (metadataPatch as Record<string, unknown>).coanfitrioes =
+        cohosts.value.length > 0 ? cohosts.value : undefined;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

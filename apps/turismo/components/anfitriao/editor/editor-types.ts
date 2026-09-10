@@ -136,6 +136,13 @@ export type EditorMeta = {
     anosAnfitriao?: number;
     mostrarNoAnuncio?: boolean;
   };
+  coanfitrioes?: Array<{
+    id: string;
+    nome: string;
+    email?: string;
+    papel: 'calendario' | 'mensagens' | 'tudo';
+    status: 'pendente' | 'ativo' | 'revogado';
+  }>;
   guiaChegada?: {
     comoChegar?: string;
     metodoCheckIn?: string;
