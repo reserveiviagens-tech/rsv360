@@ -45,6 +45,7 @@ import { CAPACIDADE_MAX, validateListingCapacidade } from './listing-hospedes.ut
 import { validateListingDescricaoDetalhada } from './listing-descricao.util';
 import { validateListingAmenidades } from './listing-comodidades.util';
 import { validateListingAcessibilidade } from './listing-acessibilidade.util';
+import { validateListingLocalizacao } from './listing-localizacao.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -267,6 +268,22 @@ export const anfitriaoService = {
       }
       (metadataPatch as Record<string, unknown>).acessibilidade =
         acc.value.length > 0 ? acc.value : undefined;
+    }
+
+    const updatingLocalizacao =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'localizacao');
+    if (updatingLocalizacao) {
+      const loc = validateListingLocalizacao(
+        (metadataPatch as Record<string, unknown>).localizacao,
+      );
+      if (!loc.ok) {
+        return { error: loc.error, message: loc.message };
+      }
+      const empty = Object.keys(loc.value).length === 0;
+      (metadataPatch as Record<string, unknown>).localizacao = empty ? undefined : loc.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

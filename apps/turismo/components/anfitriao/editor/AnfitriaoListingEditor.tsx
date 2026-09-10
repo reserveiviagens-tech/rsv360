@@ -28,6 +28,7 @@ import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_T
 import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } from './TiposCamaEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
+import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -324,6 +325,8 @@ export function AnfitriaoListingEditor({
         return statusAnuncio === 'anunciado' ? 'Anunciado' : 'Não anunciado';
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
+      case 'localizacao':
+        return summarizeLocalizacaoClient(localizacao) ?? 'Adicionar informações';
       default:
         return 'Adicionar informações';
     }
@@ -1103,50 +1106,7 @@ function SeuEspacoPanel(props: {
   }
 
   if (s === 'localizacao') {
-    return (
-      <div>
-        <PanelTitle title="Localização" />
-        {(
-          [
-            ['endereco', 'Endereço'],
-            ['apto', 'Apto / unidade'],
-            ['bairro', 'Bairro'],
-            ['cidade', 'Cidade'],
-            ['uf', 'UF'],
-            ['cep', 'CEP'],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="mt-3 block text-sm">
-            {label}
-            <input
-              className="mt-1 w-full rounded-xl border px-3 py-2"
-              value={props.localizacao[key] ?? ''}
-              onChange={(e) => props.setLocalizacao({ ...props.localizacao, [key]: e.target.value })}
-            />
-          </label>
-        ))}
-        <label className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
-          <span>Mostrar localização exata</span>
-          <input
-            type="checkbox"
-            checked={Boolean(props.localizacao.mostrarExata)}
-            onChange={(e) =>
-              props.setLocalizacao({ ...props.localizacao, mostrarExata: e.target.checked })
-            }
-          />
-        </label>
-        <label className="mt-3 block text-sm">
-          Descrição do bairro
-          <textarea
-            className="mt-1 h-24 w-full rounded-xl border px-3 py-2"
-            value={props.localizacao.descricaoBairro ?? ''}
-            onChange={(e) =>
-              props.setLocalizacao({ ...props.localizacao, descricaoBairro: e.target.value })
-            }
-          />
-        </label>
-      </div>
-    );
+    return <LocalizacaoEditor value={props.localizacao} onChange={props.setLocalizacao} />;
   }
 
   if (s === 'acessibilidade') {
