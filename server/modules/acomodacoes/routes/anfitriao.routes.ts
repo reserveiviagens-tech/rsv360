@@ -268,6 +268,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Comodidades inválidas',
       });
     }
+    if (result.error === 'acessibilidade_invalida') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Recursos de acessibilidade inválidos',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });

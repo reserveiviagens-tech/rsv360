@@ -6,6 +6,7 @@ import { resolveUnitThumbUrl, compactThumbUrl, unitThumbPlaceholder } from '../u
 import {
   AcessibilidadeEditor,
   normalizeAcessibilidadeItems,
+  summarizeAcessibilidadeClient,
   type AcessibilidadeItem,
 } from './AcessibilidadeEditor';
 import { FotosTourEditor } from './FotosTourEditor';
@@ -321,21 +322,8 @@ export function AnfitriaoListingEditor({
         return guia.preferenciaInteracao || 'Adicionar informações';
       case 'status':
         return statusAnuncio === 'anunciado' ? 'Anunciado' : 'Não anunciado';
-      case 'acessibilidade': {
-        const informed = acessibilidade.filter((i) => i.possui != null).length;
-        const pub = acessibilidade.reduce(
-          (n, i) => n + i.fotos.filter((f) => f.status === 'publicado').length,
-          0,
-        );
-        const waiting = acessibilidade.reduce(
-          (n, i) =>
-            n + i.fotos.filter((f) => f.status === 'pendente' || f.status === 'em_revisao').length,
-          0,
-        );
-        if (waiting > 0) return `${waiting} foto(s) em revisão`;
-        if (pub > 0) return `${pub} foto(s) publicadas`;
-        return informed > 0 ? `${informed} recurso(s) informados` : 'Adicionar informações';
-      }
+      case 'acessibilidade':
+        return summarizeAcessibilidadeClient(acessibilidade);
       default:
         return 'Adicionar informações';
     }

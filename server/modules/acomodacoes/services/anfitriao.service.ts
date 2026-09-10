@@ -44,6 +44,7 @@ import { validateTiposCama } from './listing-tipos-cama.util';
 import { CAPACIDADE_MAX, validateListingCapacidade } from './listing-hospedes.util';
 import { validateListingDescricaoDetalhada } from './listing-descricao.util';
 import { validateListingAmenidades } from './listing-comodidades.util';
+import { validateListingAcessibilidade } from './listing-acessibilidade.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -250,6 +251,22 @@ export const anfitriaoService = {
         return { error: amen.error, message: amen.message };
       }
       patchPermitido.amenidades = amen.value;
+    }
+
+    const updatingAcessibilidade =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'acessibilidade');
+    if (updatingAcessibilidade) {
+      const acc = validateListingAcessibilidade(
+        (metadataPatch as Record<string, unknown>).acessibilidade,
+      );
+      if (!acc.ok) {
+        return { error: acc.error, message: acc.message };
+      }
+      (metadataPatch as Record<string, unknown>).acessibilidade =
+        acc.value.length > 0 ? acc.value : undefined;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
