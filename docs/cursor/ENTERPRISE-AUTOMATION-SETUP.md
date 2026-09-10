@@ -34,6 +34,7 @@ O `hooks.json` **não contém lógica JavaScript** — só chama `node .cursor/h
 | `enterprise-design-system.mdc` | Tokens, a11y, estados UI |
 | `enterprise-testing.mdc` | Matriz de testes por tipo de mudança |
 | `enterprise-pr-policy.mdc` | Checklist obrigatório de PR |
+| `enterprise-ci-slice-gate.mdc` | Gate CI: verificar/analisar/corrigir antes da próxima fatia |
 | `enterprise-architecture.mdc` | Camadas e domínio turismo/CRM/PMS |
 | `enterprise-project-rules.mdc` | Regras gerais |
 | `enterprise-automation-guardrails.mdc` | Fases da automation |

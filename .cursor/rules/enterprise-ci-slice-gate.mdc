@@ -1,0 +1,54 @@
+---
+description: "Gate obrigatório — verificar/analisar/corrigir CI antes da próxima fatia ou tarefa"
+alwaysApply: true
+---
+
+# Enterprise CI Slice Gate (RSV360)
+
+Escopo: **todo o monorepo**. Aplica-se a fatias de produto, fixes, chores e “próximo passo”.
+
+## Fluxo obrigatório (1 fatia → 1 PR → gate → próxima)
+
+Depois de **abrir**, **atualizar** (push) ou **pedir merge** de qualquer PR:
+
+1. **Verificar** — `gh pr checks <N>` (ou runs equivalentes); listar fail/skip/pass
+2. **Analisar** — causa-raiz; classificar: *deste PR* vs *pré-existente em main* vs *flaky/infra*
+3. **Corrigir se necessário**:
+   - Bug do escopo da fatia → patch na **mesma** PR
+   - Blocker de CI fora do escopo (harness, tipinho em main, drift de teste) → **PR separada** imediata; não misturar com a fatia
+4. **Só então** iniciar a próxima fatia / tarefa / passo
+
+## Bloqueado até o gate passar
+
+- Iniciar próxima fatia do plano (ex.: editor Anfitrião) com a fatia atual aberta **e** CI crítico vermelho sem plano/PR de correção
+- Declarar “pronto para próxima” sem reportar status do CI
+- Ignorar falhas em: `monorepo-build`, `route-smoke`, `backend-tests`, typecheck/eslint gate da área tocada
+
+## Critérios de “gate OK”
+
+| Situação | Pode seguir? |
+|----------|----------------|
+| Checks críticos verdes (ou só skipped documentados) | Sim |
+| Vermelho **deste** PR — fix aplicado e re-check pendente/verde | Sim após verde ou com PR de fix aberta **e** owner ciente |
+| Vermelho **pré-existente** em `main` | Sim **somente** se PR de correção separada estiver aberta (ou owner dispensar por escrito) |
+| Owner: “seguir mesmo com CI vermelho” | Sim (exceção explícita da sessão) |
+
+## Report mínimo ao owner
+
+- O que falhou (nome do check)
+- Causa-raiz em 1–3 linhas
+- PR deste escopo vs PR separada
+- Próximo passo liberado ou bloqueado
+
+## Proibido
+
+- Pular verificação CI “para ganhar tempo”
+- Auto-merge para “passar o gate”
+- Desabilitar teste/check para green build
+- Misturar fix de auth/CI harness com fatia de UI/produto sem racional e aprovação
+
+## Relação com outras regras
+
+- Não substitui PACR (Fases 0–5) em bugs
+- Não substitui `enterprise-pr-policy.mdc` (checklist de PR)
+- Precedência de segurança/LGPD permanece acima deste gate

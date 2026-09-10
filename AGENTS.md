@@ -29,6 +29,7 @@ Documento-fonte PACR: https://www.notion.so/PACR-Ampla-Protocolo-de-An-lise-de-C
 | Design system | `.cursor/rules/enterprise-design-system.mdc` |
 | Testes | `.cursor/rules/enterprise-testing.mdc` |
 | Política de PR | `.cursor/rules/enterprise-pr-policy.mdc` |
+| Gate CI por fatia | `.cursor/rules/enterprise-ci-slice-gate.mdc` |
 
 Automação Cursor: `.cursor/automations/phase-config.json` · Setup: `docs/cursor/ENTERPRISE-AUTOMATION-SETUP.md` · Memória: `MEMORIES.md`
 
@@ -49,6 +50,12 @@ Automação Cursor: `.cursor/automations/phase-config.json` · Setup: `docs/curs
 
 Fase 0 Triagem → Fase 1 Hipóteses → Fase 2 Evidência read-only → Fase 3 Causa-raiz → Fase 4 Defesa em profundidade → Fase 5 Patch + validação.
 
+### Gate CI por fatia (obrigatório)
+
+Entrega incremental: **1 fatia → 1 PR → verificar/analisar/corrigir CI → merge (humano) → só então próxima fatia**.
+
+Ver `.cursor/rules/enterprise-ci-slice-gate.mdc`. Proibido iniciar a próxima fatia/tarefa com checks críticos vermelhos sem plano ou PR de correção (salvo dispensa explícita do owner).
+
 ## Guardrails enterprise (todos os agentes)
 
 - **Sem** auto-merge, deploy automático ou push force em branch protegida
@@ -56,6 +63,7 @@ Fase 0 Triagem → Fase 1 Hipóteses → Fase 2 Evidência read-only → Fase 3 
 - **Sem** apagar dados de produção ou SQL destrutivo sem confirmação do owner
 - **Sem** alterar arquivos enterprise protegidos sem token (ver abaixo)
 - PR do agente: escopo pequeno, testes, revisão humana obrigatória
+- **Sem** pular o gate CI por fatia (`enterprise-ci-slice-gate.mdc`)
 
 ## Arquivos protegidos
 
@@ -97,6 +105,7 @@ Consulte regras modulares v2 para detalhes por área.
 - Documentar D1..DN com saída literal
 - Declarar camada(s) afetada(s) e blast radius
 - Validar: `npm run lint`, `npm run test`, `npm run build`, `npm run type-check`
+- Após PR/push: verificar CI, analisar falhas, corrigir ou abrir PR separada **antes** da próxima fatia
 - Reportar limitações do ambiente em vez de adivinhar
 
 ## Conflito de instruções
@@ -115,7 +124,7 @@ Em conflito: seguir o nível mais restritivo de segurança.
 
 Resposta inicial do agente:
 
-`PACR-Ampla v1.0 internalizado. Enterprise Rules v2 ativas. Autonomia controlada por guardrails. Pronto para Fase 0.`
+`PACR-Ampla v1.0 internalizado. Enterprise Rules v2 ativas. CI slice gate ativo. Autonomia controlada por guardrails. Pronto para Fase 0.`
 
 ## Revogação
 
