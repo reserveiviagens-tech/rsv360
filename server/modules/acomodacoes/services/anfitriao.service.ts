@@ -41,6 +41,7 @@ import {
 } from './listing-titulo.util';
 import { validateTipoPropriedade } from './listing-tipo-propriedade.util';
 import { validateTiposCama } from './listing-tipos-cama.util';
+import { CAPACIDADE_MAX, validateListingCapacidade } from './listing-hospedes.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -146,7 +147,7 @@ export const anfitriaoService = {
       amenidades: unknown;
       midia: unknown;
       capacidadeMax: number;
-      capacidadeBase: number;
+      capacidadeBase: number | null;
       statusPublicacao: string;
       dadosCompletos: boolean;
       /** Shallow-merged into existing metadata jsonb (listing editor extensions). */
@@ -223,6 +224,49 @@ export const anfitriaoService = {
       }
       (metadataPatch as Record<string, unknown>).tiposCama =
         Object.keys(camas.value).length > 0 ? camas.value : undefined;
+    }
+
+    const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
+    const updatingCapacidadeBase = Object.prototype.hasOwnProperty.call(patch, 'capacidadeBase');
+    if (updatingCapacidadeMax || updatingCapacidadeBase) {
+      const cap = validateListingCapacidade({
+        ...(updatingCapacidadeMax ? { capacidadeMax: patch.capacidadeMax } : {}),
+        ...(updatingCapacidadeBase ? { capacidadeBase: patch.capacidadeBase } : {}),
+      });
+      if (!cap.ok) {
+        return { error: cap.error, message: cap.message };
+      }
+      if (cap.capacidadeMax !== undefined) {
+        patchPermitido.capacidadeMax = cap.capacidadeMax;
+        // Keep base coherent when only max is updated and base would exceed max.
+        const currentBase =
+          patchPermitido.capacidadeBase ??
+          (row.capacidadeBase != null ? Number(row.capacidadeBase) : null);
+        if (
+          currentBase != null &&
+          Number.isFinite(currentBase) &&
+          currentBase > cap.capacidadeMax &&
+          !updatingCapacidadeBase
+        ) {
+          patchPermitido.capacidadeBase = cap.capacidadeMax;
+        }
+      }
+      if (cap.capacidadeBase !== undefined) {
+        patchPermitido.capacidadeBase =
+          cap.capacidadeBase == null ? null : cap.capacidadeBase;
+      }
+      // Cross-check against existing max when only base is patched
+      if (cap.capacidadeBase != null && cap.capacidadeMax == null) {
+        const maxRef =
+          patchPermitido.capacidadeMax ??
+          (row.capacidadeMax != null ? Number(row.capacidadeMax) : CAPACIDADE_MAX);
+        if (cap.capacidadeBase > maxRef) {
+          return {
+            error: 'capacidade_invalida' as const,
+            message: 'Capacidade base não pode ser maior que a capacidade máxima',
+          };
+        }
+      }
     }
 
     const status = patchPermitido.statusPublicacao ?? row.statusPublicacao;
