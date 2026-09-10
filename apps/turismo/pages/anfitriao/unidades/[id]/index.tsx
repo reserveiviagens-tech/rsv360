@@ -44,6 +44,15 @@ export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps)
       precoFimSemana: unidade.precoFimSemana != null ? Number(unidade.precoFimSemana) : null,
       minNoites: unidade.minNoites ?? undefined,
       maxNoites: unidade.maxNoites ?? undefined,
+      antecedenciaDias:
+        unidade.antecedenciaDias != null ? Number(unidade.antecedenciaDias) : undefined,
+      avisoPrevioMesmoDia: unidade.avisoPrevioMesmoDia ?? undefined,
+      minNoitesPorCheckin:
+        unidade.minNoitesPorCheckin &&
+        typeof unidade.minNoitesPorCheckin === 'object' &&
+        !Array.isArray(unidade.minNoitesPorCheckin)
+          ? (unidade.minNoitesPorCheckin as Record<string, number>)
+          : undefined,
       descontoSemanalPct:
         unidade.descontoSemanalPct != null ? Number(unidade.descontoSemanalPct) : undefined,
       descontoMensalPct:

@@ -23,6 +23,7 @@ import {
 } from './host-pricing.helpers';
 import { validateListingPrecosPatch } from './listing-precos.util';
 import { validateListingDescontosPatch } from './listing-descontos.util';
+import { validateListingDisponibilidadePatch } from './listing-disponibilidade.util';
 import {
   avaliarPrecificacao,
   classificarTemporadaTipo,
@@ -620,6 +621,56 @@ export const rateCalendarService = {
     }
     if (discounts.value.descontoMensalPct !== undefined) {
       patch.descontoMensalPct = discounts.value.descontoMensalPct;
+    }
+
+    const disponibilidade = validateListingDisponibilidadePatch(
+      {
+        ...(patch.minNoites !== undefined ? { minNoites: patch.minNoites } : {}),
+        ...(patch.maxNoites !== undefined ? { maxNoites: patch.maxNoites } : {}),
+        ...(patch.antecedenciaDias !== undefined
+          ? { antecedenciaDias: patch.antecedenciaDias }
+          : {}),
+        ...(patch.avisoPrevioMesmoDia !== undefined
+          ? { avisoPrevioMesmoDia: patch.avisoPrevioMesmoDia }
+          : {}),
+        ...(patch.minNoitesPorCheckin !== undefined
+          ? { minNoitesPorCheckin: patch.minNoitesPorCheckin }
+          : {}),
+      },
+      {
+        fallbackMinNoites:
+          Number((unitResult.data as { minNoites?: number }).minNoites ?? 1) || 1,
+      },
+    );
+    if (!disponibilidade.ok) {
+      return { error: 'disponibilidade_invalida' as const, message: disponibilidade.message };
+    }
+    if (disponibilidade.value.minNoites !== undefined) {
+      patch.minNoites = disponibilidade.value.minNoites;
+    }
+    if (disponibilidade.value.maxNoites !== undefined) {
+      patch.maxNoites = disponibilidade.value.maxNoites;
+    }
+    if (disponibilidade.value.antecedenciaDias !== undefined) {
+      patch.antecedenciaDias = disponibilidade.value.antecedenciaDias;
+    }
+    if (disponibilidade.value.avisoPrevioMesmoDia !== undefined) {
+      patch.avisoPrevioMesmoDia = disponibilidade.value.avisoPrevioMesmoDia;
+    }
+    if (disponibilidade.value.minNoitesPorCheckin !== undefined) {
+      patch.minNoitesPorCheckin = disponibilidade.value.minNoitesPorCheckin;
+    }
+
+    // Cross-field: when both min and max present after merge with existing unit
+    const unitMin = Number((unitResult.data as { minNoites?: number }).minNoites ?? 1) || 1;
+    const unitMax = Number((unitResult.data as { maxNoites?: number }).maxNoites ?? 30) || 30;
+    const effectiveMin = patch.minNoites !== undefined ? patch.minNoites : unitMin;
+    const effectiveMax = patch.maxNoites !== undefined ? patch.maxNoites : unitMax;
+    if (effectiveMax < effectiveMin) {
+      return {
+        error: 'disponibilidade_invalida' as const,
+        message: 'Máximo de noites deve ser maior ou igual ao mínimo',
+      };
     }
 
     const set: Record<string, unknown> = { atualizadoEm: new Date() };

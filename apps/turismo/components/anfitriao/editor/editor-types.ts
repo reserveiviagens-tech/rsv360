@@ -59,6 +59,9 @@ export type ListingEditorUnidade = {
   metadata?: unknown;
   minNoites?: number | null;
   maxNoites?: number | null;
+  antecedenciaDias?: number | null;
+  avisoPrevioMesmoDia?: string | null;
+  minNoitesPorCheckin?: Record<string, number> | null;
   descontoSemanalPct?: string | number | null;
   descontoMensalPct?: string | number | null;
   politicaCancelamentoCurta?: string | null;

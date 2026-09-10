@@ -12,6 +12,12 @@ import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
 import { PrecosEditor, summarizePrecosClient } from './PrecosEditor';
 import { DescontosEditor, summarizeDescontosClient } from './DescontosEditor';
+import {
+  DisponibilidadeEditor,
+  normalizeMinPorCheckinClient,
+  summarizeDisponibilidadeClient,
+  type MinNoitesPorCheckinClient,
+} from './DisponibilidadeEditor';
 import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_TIPOS } from './TipoPropriedadeEditor';
 import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } from './TiposCamaEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
@@ -46,6 +52,7 @@ type PricingDefaults = {
   precoInteligenteAtivo?: boolean;
   antecedenciaDias?: number;
   avisoPrevioMesmoDia?: string | null;
+  minNoitesPorCheckin?: MinNoitesPorCheckinClient | null;
 };
 
 type Props = {
@@ -162,6 +169,19 @@ export function AnfitriaoListingEditor({
   );
   const [minNoites, setMinNoites] = useState(Number(pricing?.minNoites ?? unidade.minNoites ?? 1));
   const [maxNoites, setMaxNoites] = useState(Number(pricing?.maxNoites ?? unidade.maxNoites ?? 30));
+  const [antecedenciaDias, setAntecedenciaDias] = useState(
+    Number(pricing?.antecedenciaDias ?? unidade.antecedenciaDias ?? 0),
+  );
+  const [avisoPrevioMesmoDia, setAvisoPrevioMesmoDia] = useState(
+    String(pricing?.avisoPrevioMesmoDia ?? unidade.avisoPrevioMesmoDia ?? '09:00'),
+  );
+  const [minNoitesPorCheckin, setMinNoitesPorCheckin] = useState<MinNoitesPorCheckinClient | null>(
+    () =>
+      normalizeMinPorCheckinClient(
+        pricing?.minNoitesPorCheckin ?? unidade.minNoitesPorCheckin,
+        Number(pricing?.minNoites ?? unidade.minNoites ?? 1),
+      ),
+  );
   const [descSemanal, setDescSemanal] = useState(
     Number(pricing?.descontoSemanalPct ?? unidade.descontoSemanalPct ?? 0),
   );
@@ -280,7 +300,7 @@ export function AnfitriaoListingEditor({
           summarizeDescontosClient(descSemanal, descMensal) || 'Adicionar descontos'
         );
       case 'disponibilidade':
-        return `${minNoites}–${maxNoites} noites`;
+        return summarizeDisponibilidadeClient(minNoites, maxNoites, antecedenciaDias);
       case 'hospedes':
         return `Máximo de ${capacidade} hóspedes`;
       case 'descricao':
@@ -379,6 +399,9 @@ export function AnfitriaoListingEditor({
       precoInteligenteAtivo: precoInteligente,
       minNoites,
       maxNoites,
+      antecedenciaDias,
+      avisoPrevioMesmoDia: antecedenciaDias === 0 ? avisoPrevioMesmoDia || '09:00' : null,
+      minNoitesPorCheckin,
       descontoSemanalPct: descSemanal,
       descontoMensalPct: descMensal,
       politicaCancelamentoCurta: polCurta,
@@ -524,6 +547,21 @@ export function AnfitriaoListingEditor({
             maxNoites={maxNoites}
             setMaxNoites={(v) => {
               setMaxNoites(v);
+              markDirty();
+            }}
+            antecedenciaDias={antecedenciaDias}
+            setAntecedenciaDias={(v) => {
+              setAntecedenciaDias(v);
+              markDirty();
+            }}
+            avisoPrevioMesmoDia={avisoPrevioMesmoDia}
+            setAvisoPrevioMesmoDia={(v) => {
+              setAvisoPrevioMesmoDia(v);
+              markDirty();
+            }}
+            minNoitesPorCheckin={minNoitesPorCheckin}
+            setMinNoitesPorCheckin={(v) => {
+              setMinNoitesPorCheckin(v);
               markDirty();
             }}
             descSemanal={descSemanal}
@@ -787,6 +825,12 @@ function SeuEspacoPanel(props: {
   setMinNoites: (v: number) => void;
   maxNoites: number;
   setMaxNoites: (v: number) => void;
+  antecedenciaDias: number;
+  setAntecedenciaDias: (v: number) => void;
+  avisoPrevioMesmoDia: string;
+  setAvisoPrevioMesmoDia: (v: string) => void;
+  minNoitesPorCheckin: MinNoitesPorCheckinClient | null;
+  setMinNoitesPorCheckin: (v: MinNoitesPorCheckinClient | null) => void;
   descSemanal: number;
   setDescSemanal: (v: number) => void;
   descMensal: number;
@@ -897,38 +941,19 @@ function SeuEspacoPanel(props: {
 
   if (s === 'disponibilidade') {
     return (
-      <div>
-        <PanelTitle title="Disponibilidade" hint="Mínimo e máximo de noites." />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm">
-            Mínimo de noites
-            <input
-              type="number"
-              min={1}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-              value={props.minNoites}
-              onChange={(e) => props.setMinNoites(Number(e.target.value) || 1)}
-            />
-          </label>
-          <label className="text-sm">
-            Máximo de noites
-            <input
-              type="number"
-              min={1}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-              value={props.maxNoites}
-              onChange={(e) => props.setMaxNoites(Number(e.target.value) || 30)}
-            />
-          </label>
-        </div>
-        <Link
-          href={`/anfitriao/unidades/${props.unitId}/disponibilidade`}
-          className="mt-4 inline-block text-sm underline"
-          prefetch={false}
-        >
-          Personalizar no calendário →
-        </Link>
-      </div>
+      <DisponibilidadeEditor
+        unitId={props.unitId}
+        minNoites={props.minNoites}
+        setMinNoites={props.setMinNoites}
+        maxNoites={props.maxNoites}
+        setMaxNoites={props.setMaxNoites}
+        antecedenciaDias={props.antecedenciaDias}
+        setAntecedenciaDias={props.setAntecedenciaDias}
+        avisoPrevioMesmoDia={props.avisoPrevioMesmoDia}
+        setAvisoPrevioMesmoDia={props.setAvisoPrevioMesmoDia}
+        minNoitesPorCheckin={props.minNoitesPorCheckin}
+        setMinNoitesPorCheckin={props.setMinNoitesPorCheckin}
+      />
     );
   }
 
