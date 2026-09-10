@@ -25,6 +25,7 @@ import {
   resolvePropostaPublicaByToken,
   registrarEventosCinematicos,
 } from '../services/proposta-cinematic-events.service';
+import { gerarTokenPublicoProposta } from '../../../lib/proposta-token';
 import { solicitarAlteracao, aprovar, negar } from '../aprovacao';
 import { hasMinRole } from '../rbac';
 import { registrarIndicacao } from '../mgm';
@@ -394,6 +395,7 @@ router.post('/', ...staffAuth, async (req, res) => {
       {
         ...body,
         ...(body.valorTotal !== undefined ? { valorTotal: String(body.valorTotal) } : {}),
+        ...(body.isPublica ? { tokenPublico: gerarTokenPublicoProposta() } : {}),
       },
       req.user?.id,
     );

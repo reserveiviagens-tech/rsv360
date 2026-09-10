@@ -48,6 +48,16 @@ describe('refresh family DPoP bind (PR-10c-b)', () => {
 
   beforeEach(() => {
     dpop.clearDpopJtiCacheForTests();
+    // PR-10c-infra (#221): token-endpoint DPoP proofs require a JTI store.
+    // Mirror dpop.service.test.ts so family bind tests do not depend on Redis.
+    const consumed = new Set<string>();
+    dpop.setDpopJtiStoreForTests({
+      async consume(jti: string) {
+        if (consumed.has(jti)) return false;
+        consumed.add(jti);
+        return true;
+      },
+    });
     delete process.env.AUTH_DPOP_ENABLED;
     process.env.DATABASE_URL = 'postgres://test';
   });
