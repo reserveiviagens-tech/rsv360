@@ -22,6 +22,7 @@ import {
   type MinNoitesPorCheckin,
 } from './host-pricing.helpers';
 import { validateListingPrecosPatch } from './listing-precos.util';
+import { validateListingDescontosPatch } from './listing-descontos.util';
 import {
   avaliarPrecificacao,
   classificarTemporadaTipo,
@@ -601,6 +602,24 @@ export const rateCalendarService = {
     }
     if (prices.value.precoInteligenteAtivo !== undefined) {
       patch.precoInteligenteAtivo = prices.value.precoInteligenteAtivo;
+    }
+
+    const discounts = validateListingDescontosPatch({
+      ...(patch.descontoSemanalPct !== undefined
+        ? { descontoSemanalPct: patch.descontoSemanalPct }
+        : {}),
+      ...(patch.descontoMensalPct !== undefined
+        ? { descontoMensalPct: patch.descontoMensalPct }
+        : {}),
+    });
+    if (!discounts.ok) {
+      return { error: 'desconto_invalido' as const, message: discounts.message };
+    }
+    if (discounts.value.descontoSemanalPct !== undefined) {
+      patch.descontoSemanalPct = discounts.value.descontoSemanalPct;
+    }
+    if (discounts.value.descontoMensalPct !== undefined) {
+      patch.descontoMensalPct = discounts.value.descontoMensalPct;
     }
 
     const set: Record<string, unknown> = { atualizadoEm: new Date() };
