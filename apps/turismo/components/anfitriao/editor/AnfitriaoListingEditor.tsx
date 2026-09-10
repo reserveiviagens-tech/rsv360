@@ -11,6 +11,7 @@ import {
 import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
 import { PrecosEditor, summarizePrecosClient } from './PrecosEditor';
+import { DescontosEditor, summarizeDescontosClient } from './DescontosEditor';
 import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_TIPOS } from './TipoPropriedadeEditor';
 import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } from './TiposCamaEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
@@ -275,7 +276,9 @@ export function AnfitriaoListingEditor({
         return summarizePrecosClient(preco, showFimSemana ? precoFds : '', precoInteligente) ||
           'Definir preço';
       case 'descontos':
-        return `Semanal ${descSemanal}% · Mensal ${descMensal}%`;
+        return (
+          summarizeDescontosClient(descSemanal, descMensal) || 'Adicionar descontos'
+        );
       case 'disponibilidade':
         return `${minNoites}–${maxNoites} noites`;
       case 'hospedes':
@@ -881,31 +884,14 @@ function SeuEspacoPanel(props: {
 
   if (s === 'descontos') {
     return (
-      <div>
-        <PanelTitle title="Descontos" />
-        <label className="block text-sm">
-          Semanal (7+ noites): {props.descSemanal}%
-          <input
-            type="range"
-            min={0}
-            max={99}
-            className="mt-2 w-full"
-            value={props.descSemanal}
-            onChange={(e) => props.setDescSemanal(Number(e.target.value))}
-          />
-        </label>
-        <label className="mt-4 block text-sm">
-          Mensal (28+ noites): {props.descMensal}%
-          <input
-            type="range"
-            min={0}
-            max={99}
-            className="mt-2 w-full"
-            value={props.descMensal}
-            onChange={(e) => props.setDescMensal(Number(e.target.value))}
-          />
-        </label>
-      </div>
+      <DescontosEditor
+        unitId={props.unitId}
+        precoDiaria={props.preco}
+        descSemanal={props.descSemanal}
+        setDescSemanal={props.setDescSemanal}
+        descMensal={props.descMensal}
+        setDescMensal={props.setDescMensal}
+      />
     );
   }
 
