@@ -15,6 +15,7 @@ import { HospedesEditor, clampCapacidadeClient, summarizeCapacidadeClient } from
 import { DescricaoEditor, summarizeDescricaoClient } from './DescricaoEditor';
 import type { DescricaoSubKey } from './descricao-limits';
 import { DESCRICAO_ANUNCIO_MAX, DESCRICAO_CAMPO_MAX } from './descricao-limits';
+import { ComodidadesEditor, normalizeAmenitySetClient, summarizeComodidadesClient } from './ComodidadesEditor';
 import { DescontosEditor, summarizeDescontosClient } from './DescontosEditor';
 import {
   DisponibilidadeEditor,
@@ -27,7 +28,6 @@ import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } f
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import {
-  AMENITY_CATALOG,
   GUIA_CARDS,
   PREF_CARDS,
   SEU_ESPACO_CARDS,
@@ -73,16 +73,7 @@ type Props = {
 };
 
 function asAmenitySet(raw: unknown): Set<string> {
-  const set = new Set<string>();
-  if (Array.isArray(raw)) {
-    for (const item of raw) {
-      if (typeof item === 'string') set.add(item.toLowerCase());
-      else if (item && typeof item === 'object' && 'id' in item) {
-        set.add(String((item as { id: string }).id).toLowerCase());
-      }
-    }
-  }
-  return set;
+  return normalizeAmenitySetClient(raw);
 }
 
 function FooterSave({
@@ -310,7 +301,7 @@ export function AnfitriaoListingEditor({
       case 'descricao':
         return summarizeDescricaoClient(descAnuncio) || 'Adicionar informações';
       case 'comodidades':
-        return `${amenities.size} comodidades`;
+        return summarizeComodidadesClient(amenities) || 'Adicionar comodidades';
       case 'config-reserva':
         return modoReserva === 'instantanea'
           ? 'Reserva Instantânea'
@@ -982,27 +973,7 @@ function SeuEspacoPanel(props: {
 
   if (s === 'comodidades') {
     return (
-      <div>
-        <PanelTitle title="Comodidades" hint="Marque o que o anúncio oferece." />
-        <ul className="space-y-2">
-          {AMENITY_CATALOG.map((a) => (
-            <li key={a.id}>
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-3 py-3">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={props.amenities.has(a.id)}
-                  onChange={() => props.toggleAmenity(a.id)}
-                />
-                <span>
-                  <span className="block font-medium">{a.label}</span>
-                  <span className="text-xs text-slate-500">{a.desc}</span>
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ComodidadesEditor amenities={props.amenities} toggleAmenity={props.toggleAmenity} />
     );
   }
 

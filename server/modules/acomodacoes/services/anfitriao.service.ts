@@ -43,6 +43,7 @@ import { validateTipoPropriedade } from './listing-tipo-propriedade.util';
 import { validateTiposCama } from './listing-tipos-cama.util';
 import { CAPACIDADE_MAX, validateListingCapacidade } from './listing-hospedes.util';
 import { validateListingDescricaoDetalhada } from './listing-descricao.util';
+import { validateListingAmenidades } from './listing-comodidades.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -241,6 +242,14 @@ export const anfitriaoService = {
       }
       (metadataPatch as Record<string, unknown>).descricaoDetalhada =
         Object.keys(desc.value).length > 0 ? desc.value : undefined;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'amenidades')) {
+      const amen = validateListingAmenidades(patch.amenidades);
+      if (!amen.ok) {
+        return { error: amen.error, message: amen.message };
+      }
+      patchPermitido.amenidades = amen.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
