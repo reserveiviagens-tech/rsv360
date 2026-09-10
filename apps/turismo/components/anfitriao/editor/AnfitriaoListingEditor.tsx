@@ -29,6 +29,7 @@ import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } f
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEditor';
+import { SobreAnfitriaoEditor, summarizeSobreAnfitriaoClient } from './SobreAnfitriaoEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -205,6 +206,7 @@ export function AnfitriaoListingEditor({
   );
   const [tipoProp, setTipoProp] = useState(meta0.tipoPropriedade ?? {});
   const [localizacao, setLocalizacao] = useState(meta0.localizacao ?? {});
+  const [sobreAnfitriao, setSobreAnfitriao] = useState(meta0.sobreAnfitriao ?? {});
   const [acessibilidade, setAcessibilidade] = useState<AcessibilidadeItem[]>(() =>
     normalizeAcessibilidadeItems(meta0.acessibilidade),
   );
@@ -327,6 +329,8 @@ export function AnfitriaoListingEditor({
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
         return summarizeLocalizacaoClient(localizacao) ?? 'Adicionar informações';
+      case 'sobre-anfitriao':
+        return summarizeSobreAnfitriaoClient(sobreAnfitriao) ?? 'Adicionar informações';
       default:
         return 'Adicionar informações';
     }
@@ -362,6 +366,7 @@ export function AnfitriaoListingEditor({
       exigirFotoPerfil: exigirFoto,
       hospedagemSolidaria: solidaria,
       localizacao,
+      sobreAnfitriao,
       acessibilidade,
       seguranca,
       verificacaoLocal,
@@ -640,6 +645,11 @@ export function AnfitriaoListingEditor({
               setLocalizacao(v);
               markDirty();
             }}
+            sobreAnfitriao={sobreAnfitriao}
+            setSobreAnfitriao={(v) => {
+              setSobreAnfitriao(v);
+              markDirty();
+            }}
             acessibilidade={acessibilidade}
             setAcessibilidade={(v) => {
               setAcessibilidade(v);
@@ -853,6 +863,8 @@ function SeuEspacoPanel(props: {
   setTipoProp: (v: NonNullable<EditorMeta['tipoPropriedade']>) => void;
   localizacao: NonNullable<EditorMeta['localizacao']>;
   setLocalizacao: (v: NonNullable<EditorMeta['localizacao']>) => void;
+  sobreAnfitriao: NonNullable<EditorMeta['sobreAnfitriao']>;
+  setSobreAnfitriao: (v: NonNullable<EditorMeta['sobreAnfitriao']>) => void;
   acessibilidade: AcessibilidadeItem[];
   setAcessibilidade: (v: AcessibilidadeItem[]) => void;
   seguranca: SegurancaMeta;
@@ -1109,6 +1121,12 @@ function SeuEspacoPanel(props: {
     return <LocalizacaoEditor value={props.localizacao} onChange={props.setLocalizacao} />;
   }
 
+  if (s === 'sobre-anfitriao') {
+    return (
+      <SobreAnfitriaoEditor value={props.sobreAnfitriao} onChange={props.setSobreAnfitriao} />
+    );
+  }
+
   if (s === 'acessibilidade') {
     return (
       <AcessibilidadeEditor
@@ -1133,22 +1151,14 @@ function SeuEspacoPanel(props: {
     );
   }
 
-  if (s === 'sobre-anfitriao' || s === 'coanfitrioes') {
-    const copy: Record<string, { title: string; body: string }> = {
-      'sobre-anfitriao': {
-        title: 'Sobre o anfitrião',
-        body: 'Perfil do anfitrião (foto, bio, interesses) é gerenciado na área de perfil. Acesse Perfil no menu Hoje.',
-      },
-      coanfitrioes: {
-        title: 'Coanfitriões',
-        body: 'Convite por SMS/e-mail com níveis de permissão. RBAC completo na fase 2 — salve preferências no metadata por enquanto.',
-      },
-    };
-    const c = copy[s];
+  if (s === 'coanfitrioes') {
     return (
       <div>
-        <PanelTitle title={c.title} />
-        <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">{c.body}</p>
+        <PanelTitle title="Coanfitriões" />
+        <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Convite por SMS/e-mail com níveis de permissão. RBAC completo na fase 2 — salve
+          preferências no metadata por enquanto.
+        </p>
       </div>
     );
   }

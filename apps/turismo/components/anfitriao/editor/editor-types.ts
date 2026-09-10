@@ -130,6 +130,12 @@ export type EditorMeta = {
     locomocao?: string;
     vistas?: string[];
   };
+  sobreAnfitriao?: {
+    bioCurta?: string;
+    interesses?: string[];
+    anosAnfitriao?: number;
+    mostrarNoAnuncio?: boolean;
+  };
   guiaChegada?: {
     comoChegar?: string;
     metodoCheckIn?: string;
