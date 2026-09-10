@@ -21,6 +21,7 @@ import {
   sugerirPrecoCompetitivo,
   type MinNoitesPorCheckin,
 } from './host-pricing.helpers';
+import { validateListingPrecosPatch } from './listing-precos.util';
 import {
   avaliarPrecificacao,
   classificarTemporadaTipo,
@@ -581,6 +582,26 @@ export const rateCalendarService = {
     }
     const unitResult = await anfitriaoService.obterUnidade(auth, acomodacaoId);
     if ('error' in unitResult) return unitResult;
+
+    const prices = validateListingPrecosPatch({
+      ...(patch.precoDiaria !== undefined ? { precoDiaria: patch.precoDiaria } : {}),
+      ...(patch.precoFimSemana !== undefined ? { precoFimSemana: patch.precoFimSemana } : {}),
+      ...(patch.precoInteligenteAtivo !== undefined
+        ? { precoInteligenteAtivo: patch.precoInteligenteAtivo }
+        : {}),
+    });
+    if (!prices.ok) {
+      return { error: 'preco_invalido' as const, message: prices.message };
+    }
+    if (prices.value.precoDiaria !== undefined) {
+      patch.precoDiaria = prices.value.precoDiaria;
+    }
+    if (prices.value.precoFimSemana !== undefined) {
+      patch.precoFimSemana = prices.value.precoFimSemana;
+    }
+    if (prices.value.precoInteligenteAtivo !== undefined) {
+      patch.precoInteligenteAtivo = prices.value.precoInteligenteAtivo;
+    }
 
     const set: Record<string, unknown> = { atualizadoEm: new Date() };
     if (patch.precoDiaria !== undefined) {

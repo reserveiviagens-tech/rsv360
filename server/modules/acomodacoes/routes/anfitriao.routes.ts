@@ -982,7 +982,17 @@ router.put('/unidades/:id/pricing-defaults', ...masterAuth, async (req, res) => 
       req.body ?? {},
     );
     if ('error' in result) {
-      return res.status(403).json({ success: false, error: 'Acesso negado' });
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      const message =
+        'message' in result && typeof result.message === 'string'
+          ? result.message
+          : 'Dados de preço inválidos';
+      return res.status(400).json({ success: false, error: message });
     }
     res.json({ success: true, data: result.data });
   } catch (error) {
