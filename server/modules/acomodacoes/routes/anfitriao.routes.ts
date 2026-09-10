@@ -250,6 +250,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Capacidade de hóspedes inválida',
       });
     }
+    if (result.error === 'descricao_invalida') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Descrição inválida',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });

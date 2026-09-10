@@ -12,6 +12,9 @@ import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
 import { PrecosEditor, summarizePrecosClient } from './PrecosEditor';
 import { HospedesEditor, clampCapacidadeClient, summarizeCapacidadeClient } from './HospedesEditor';
+import { DescricaoEditor, summarizeDescricaoClient } from './DescricaoEditor';
+import type { DescricaoSubKey } from './descricao-limits';
+import { DESCRICAO_ANUNCIO_MAX, DESCRICAO_CAMPO_MAX } from './descricao-limits';
 import { DescontosEditor, summarizeDescontosClient } from './DescontosEditor';
 import {
   DisponibilidadeEditor,
@@ -163,9 +166,7 @@ export function AnfitriaoListingEditor({
     meta0.descricaoDetalhada?.interacaoHospedes ?? '',
   );
   const [descOutras, setDescOutras] = useState(meta0.descricaoDetalhada?.outrasInformacoes ?? '');
-  const [descSub, setDescSub] = useState<
-    'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null
-  >(null);
+  const [descSub, setDescSub] = useState<DescricaoSubKey | null>(null);
   const [amenities, setAmenities] = useState(() => asAmenitySet(unidade.amenidades));
   const [camas, setCamas] = useState<Record<string, number>>(() =>
     normalizeTiposCamaClient(meta0.tiposCama),
@@ -307,7 +308,7 @@ export function AnfitriaoListingEditor({
       case 'hospedes':
         return summarizeCapacidadeClient(capacidade) || 'Definir capacidade';
       case 'descricao':
-        return descAnuncio ? descAnuncio.slice(0, 80) : 'Adicionar informações';
+        return summarizeDescricaoClient(descAnuncio) || 'Adicionar informações';
       case 'comodidades':
         return `${amenities.size} comodidades`;
       case 'config-reserva':
@@ -361,11 +362,11 @@ export function AnfitriaoListingEditor({
       ...meta0,
       nomeInterno: nomeInterno || undefined,
       descricaoDetalhada: {
-        anuncio: descAnuncio,
-        suaPropriedade: descProp,
-        acessoHospede: descAcesso,
-        interacaoHospedes: descInteracao,
-        outrasInformacoes: descOutras,
+        anuncio: descAnuncio.slice(0, DESCRICAO_ANUNCIO_MAX),
+        suaPropriedade: descProp.slice(0, DESCRICAO_CAMPO_MAX),
+        acessoHospede: descAcesso.slice(0, DESCRICAO_CAMPO_MAX),
+        interacaoHospedes: descInteracao.slice(0, DESCRICAO_CAMPO_MAX),
+        outrasInformacoes: descOutras.slice(0, DESCRICAO_CAMPO_MAX),
       },
       tiposCama: camas,
       tipoPropriedade: tipoProp,
@@ -843,9 +844,9 @@ function SeuEspacoPanel(props: {
   descAcesso: string;
   descInteracao: string;
   descOutras: string;
-  descSub: 'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null;
-  setDescSub: (v: 'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null) => void;
-  setDescField: (key: 'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras', v: string) => void;
+  descSub: DescricaoSubKey | null;
+  setDescSub: (v: DescricaoSubKey | null) => void;
+  setDescField: (key: DescricaoSubKey, v: string) => void;
   amenities: Set<string>;
   toggleAmenity: (id: string) => void;
   camas: Record<string, number>;
@@ -965,61 +966,17 @@ function SeuEspacoPanel(props: {
   }
 
   if (s === 'descricao') {
-    if (props.descSub) {
-      const map = {
-        anuncio: { label: 'Descrição do anúncio', value: props.descAnuncio, max: 500 },
-        propriedade: { label: 'Sua propriedade', value: props.descProp, max: 1000 },
-        acesso: { label: 'Acesso do hóspede', value: props.descAcesso, max: 1000 },
-        interacao: { label: 'Interação com os hóspedes', value: props.descInteracao, max: 1000 },
-        outras: { label: 'Outras informações importantes', value: props.descOutras, max: 1000 },
-      } as const;
-      const cur = map[props.descSub];
-      return (
-        <div>
-          <button type="button" className="mb-3 text-sm text-slate-600" onClick={() => props.setDescSub(null)}>
-            ← Voltar
-          </button>
-          <PanelTitle title={cur.label} />
-          <textarea
-            className="h-56 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            value={cur.value}
-            maxLength={cur.max}
-            onChange={(e) => props.setDescField(props.descSub!, e.target.value)}
-          />
-          <p className="mt-1 text-xs text-slate-500">
-            {cur.value.length}/{cur.max} disponíveis
-          </p>
-        </div>
-      );
-    }
-    const rows = [
-      ['anuncio', 'Descrição do anúncio', props.descAnuncio],
-      ['propriedade', 'Sua propriedade', props.descProp],
-      ['acesso', 'Acesso do hóspede', props.descAcesso],
-      ['interacao', 'Interação com os hóspedes', props.descInteracao],
-      ['outras', 'Outras informações importantes', props.descOutras],
-    ] as const;
     return (
-      <div>
-        <PanelTitle title="Descrição" />
-        <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
-          {rows.map(([key, label, val]) => (
-            <li key={key}>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between px-4 py-3 text-left"
-                onClick={() => props.setDescSub(key)}
-              >
-                <span>
-                  <span className="block font-medium">{label}</span>
-                  <span className="line-clamp-1 text-xs text-slate-500">{val || 'Adicionar'}</span>
-                </span>
-                <span aria-hidden>›</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <DescricaoEditor
+        descAnuncio={props.descAnuncio}
+        descProp={props.descProp}
+        descAcesso={props.descAcesso}
+        descInteracao={props.descInteracao}
+        descOutras={props.descOutras}
+        descSub={props.descSub}
+        setDescSub={props.setDescSub}
+        setDescField={props.setDescField}
+      />
     );
   }
 
