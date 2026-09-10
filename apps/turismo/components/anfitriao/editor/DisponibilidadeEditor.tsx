@@ -45,7 +45,7 @@ type Props = {
 
 export function summarizeDisponibilidadeClient(
   minNoites: number,
-  maxNoites: number;
+  maxNoites: number,
   antecedenciaDias: number,
 ): string {
   const min = Math.max(1, Math.floor(minNoites) || 1);
