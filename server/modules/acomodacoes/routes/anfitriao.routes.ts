@@ -232,6 +232,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Tipo de propriedade inválido',
       });
     }
+    if (result.error === 'tipos_cama_invalido') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Tipos de cama inválidos',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });

@@ -219,6 +219,7 @@ export const PREF_CARDS: Array<{ id: PreferenciasSection; title: string }> = [
   { id: 'remover', title: 'Remover anúncio' },
 ];
 
+/** @deprecated Prefer TiposCamaEditor / CAMA_CATALOG ids; kept for label reference. */
 export const CAMA_TIPOS = [
   'Solteiro',
   'Casal',

@@ -264,7 +264,11 @@ export function avaliarOportunidades(units: OppUnitInput[]): Oportunidade[] {
       categoria: 'atraentes',
       ok: (u) => {
         const camas = asRecord(asRecord(u.metadata).tiposCama);
-        return num(camas['Berço']) > 0 || hasAmenity(amenityIds(u.amenidades), 'berço', 'berco');
+        return (
+          num(camas['berco']) > 0 ||
+          num(camas['Berço']) > 0 ||
+          hasAmenity(amenityIds(u.amenidades), 'berço', 'berco')
+        );
       },
     },
     {

@@ -11,11 +11,11 @@ import {
 import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
 import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_TIPOS } from './TipoPropriedadeEditor';
+import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } from './TiposCamaEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import {
   AMENITY_CATALOG,
-  CAMA_TIPOS,
   GUIA_CARDS,
   PREF_CARDS,
   SEU_ESPACO_CARDS,
@@ -146,7 +146,9 @@ export function AnfitriaoListingEditor({
     'anuncio' | 'propriedade' | 'acesso' | 'interacao' | 'outras' | null
   >(null);
   const [amenities, setAmenities] = useState(() => asAmenitySet(unidade.amenidades));
-  const [camas, setCamas] = useState<Record<string, number>>(() => meta0.tiposCama ?? {});
+  const [camas, setCamas] = useState<Record<string, number>>(() =>
+    normalizeTiposCamaClient(meta0.tiposCama),
+  );
   const [minNoites, setMinNoites] = useState(Number(pricing?.minNoites ?? unidade.minNoites ?? 1));
   const [maxNoites, setMaxNoites] = useState(Number(pricing?.maxNoites ?? unidade.maxNoites ?? 30));
   const [descSemanal, setDescSemanal] = useState(
@@ -257,6 +259,8 @@ export function AnfitriaoListingEditor({
         ].filter(Boolean);
         return parts.length ? parts.join(' · ') : 'Adicionar informações';
       }
+      case 'camas':
+        return summarizeTiposCamaClient(camas) || 'Adicionar informações';
       case 'precos':
         return preco ? `R$ ${preco}/noite` : 'Definir preço';
       case 'descontos':
@@ -538,9 +542,9 @@ export function AnfitriaoListingEditor({
               });
             }}
             camas={camas}
-            setCama={(tipo, n) => {
+            setCamas={(next) => {
               markDirty();
-              setCamas((prev) => ({ ...prev, [tipo]: Math.max(0, n) }));
+              setCamas(next);
             }}
             modoReserva={modoReserva}
             setModoReserva={(v) => {
@@ -776,7 +780,7 @@ function SeuEspacoPanel(props: {
   amenities: Set<string>;
   toggleAmenity: (id: string) => void;
   camas: Record<string, number>;
-  setCama: (tipo: string, n: number) => void;
+  setCamas: (v: Record<string, number>) => void;
   modoReserva: 'instantanea' | 'aprovar';
   setModoReserva: (v: 'instantanea' | 'aprovar') => void;
   exigirHistorico: boolean;
@@ -1065,35 +1069,7 @@ function SeuEspacoPanel(props: {
   }
 
   if (s === 'camas') {
-    return (
-      <div>
-        <PanelTitle title="Tipos de cama" />
-        <ul className="space-y-2">
-          {CAMA_TIPOS.map((tipo) => (
-            <li key={tipo} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
-              <span className="text-sm font-medium">{tipo}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-8 w-8 rounded-full border"
-                  onClick={() => props.setCama(tipo, (props.camas[tipo] ?? 0) - 1)}
-                >
-                  −
-                </button>
-                <span className="w-6 text-center text-sm">{props.camas[tipo] ?? 0}</span>
-                <button
-                  type="button"
-                  className="h-8 w-8 rounded-full border"
-                  onClick={() => props.setCama(tipo, (props.camas[tipo] ?? 0) + 1)}
-                >
-                  +
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
+    return <TiposCamaEditor value={props.camas} onChange={props.setCamas} />;
   }
 
   if (s === 'tipo') {

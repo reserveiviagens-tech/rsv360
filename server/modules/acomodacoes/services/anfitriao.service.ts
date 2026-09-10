@@ -40,6 +40,7 @@ import {
   validateListingTitles,
 } from './listing-titulo.util';
 import { validateTipoPropriedade } from './listing-tipo-propriedade.util';
+import { validateTiposCama } from './listing-tipos-cama.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -208,6 +209,20 @@ export const anfitriaoService = {
       }
       (metadataPatch as Record<string, unknown>).tipoPropriedade =
         Object.keys(tipo.value).length > 0 ? tipo.value : undefined;
+    }
+
+    const updatingTiposCama =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'tiposCama');
+    if (updatingTiposCama) {
+      const camas = validateTiposCama((metadataPatch as Record<string, unknown>).tiposCama);
+      if (!camas.ok) {
+        return { error: camas.error, message: camas.message };
+      }
+      (metadataPatch as Record<string, unknown>).tiposCama =
+        Object.keys(camas.value).length > 0 ? camas.value : undefined;
     }
 
     const status = patchPermitido.statusPublicacao ?? row.statusPublicacao;
