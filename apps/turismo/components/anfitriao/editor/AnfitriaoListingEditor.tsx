@@ -30,6 +30,7 @@ import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEditor';
 import { SobreAnfitriaoEditor, summarizeSobreAnfitriaoClient } from './SobreAnfitriaoEditor';
+import { CoanfitrioesEditor, summarizeCoanfitrioesClient } from './CoanfitrioesEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -207,6 +208,7 @@ export function AnfitriaoListingEditor({
   const [tipoProp, setTipoProp] = useState(meta0.tipoPropriedade ?? {});
   const [localizacao, setLocalizacao] = useState(meta0.localizacao ?? {});
   const [sobreAnfitriao, setSobreAnfitriao] = useState(meta0.sobreAnfitriao ?? {});
+  const [coanfitrioes, setCoanfitrioes] = useState(meta0.coanfitrioes ?? []);
   const [acessibilidade, setAcessibilidade] = useState<AcessibilidadeItem[]>(() =>
     normalizeAcessibilidadeItems(meta0.acessibilidade),
   );
@@ -331,6 +333,8 @@ export function AnfitriaoListingEditor({
         return summarizeLocalizacaoClient(localizacao) ?? 'Adicionar informações';
       case 'sobre-anfitriao':
         return summarizeSobreAnfitriaoClient(sobreAnfitriao) ?? 'Adicionar informações';
+      case 'coanfitrioes':
+        return summarizeCoanfitrioesClient(coanfitrioes) ?? 'Adicionar';
       default:
         return 'Adicionar informações';
     }
@@ -367,6 +371,7 @@ export function AnfitriaoListingEditor({
       hospedagemSolidaria: solidaria,
       localizacao,
       sobreAnfitriao,
+      coanfitrioes: coanfitrioes.length > 0 ? coanfitrioes : undefined,
       acessibilidade,
       seguranca,
       verificacaoLocal,
@@ -650,6 +655,11 @@ export function AnfitriaoListingEditor({
               setSobreAnfitriao(v);
               markDirty();
             }}
+            coanfitrioes={coanfitrioes}
+            setCoanfitrioes={(v) => {
+              setCoanfitrioes(v);
+              markDirty();
+            }}
             acessibilidade={acessibilidade}
             setAcessibilidade={(v) => {
               setAcessibilidade(v);
@@ -865,6 +875,8 @@ function SeuEspacoPanel(props: {
   setLocalizacao: (v: NonNullable<EditorMeta['localizacao']>) => void;
   sobreAnfitriao: NonNullable<EditorMeta['sobreAnfitriao']>;
   setSobreAnfitriao: (v: NonNullable<EditorMeta['sobreAnfitriao']>) => void;
+  coanfitrioes: NonNullable<EditorMeta['coanfitrioes']>;
+  setCoanfitrioes: (v: NonNullable<EditorMeta['coanfitrioes']>) => void;
   acessibilidade: AcessibilidadeItem[];
   setAcessibilidade: (v: AcessibilidadeItem[]) => void;
   seguranca: SegurancaMeta;
@@ -1153,13 +1165,7 @@ function SeuEspacoPanel(props: {
 
   if (s === 'coanfitrioes') {
     return (
-      <div>
-        <PanelTitle title="Coanfitriões" />
-        <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          Convite por SMS/e-mail com níveis de permissão. RBAC completo na fase 2 — salve
-          preferências no metadata por enquanto.
-        </p>
-      </div>
+      <CoanfitrioesEditor value={props.coanfitrioes} onChange={props.setCoanfitrioes} />
     );
   }
 
