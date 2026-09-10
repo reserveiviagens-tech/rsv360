@@ -11,6 +11,7 @@ import {
 import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
 import { PrecosEditor, summarizePrecosClient } from './PrecosEditor';
+import { HospedesEditor, clampCapacidadeClient, summarizeCapacidadeClient } from './HospedesEditor';
 import { DescontosEditor, summarizeDescontosClient } from './DescontosEditor';
 import {
   DisponibilidadeEditor,
@@ -152,7 +153,9 @@ export function AnfitriaoListingEditor({
       (pricing?.precoFimSemana != null && Number(pricing.precoFimSemana) > 0) ||
       (unidade.precoFimSemana != null && Number(unidade.precoFimSemana) > 0),
   );
-  const [capacidade, setCapacidade] = useState(Number(unidade.capacidadeMax ?? 2));
+  const [capacidade, setCapacidade] = useState(
+    clampCapacidadeClient(Number(unidade.capacidadeMax ?? 2)),
+  );
   const [descAnuncio, setDescAnuncio] = useState(meta0.descricaoDetalhada?.anuncio ?? '');
   const [descProp, setDescProp] = useState(meta0.descricaoDetalhada?.suaPropriedade ?? '');
   const [descAcesso, setDescAcesso] = useState(meta0.descricaoDetalhada?.acessoHospede ?? '');
@@ -302,7 +305,7 @@ export function AnfitriaoListingEditor({
       case 'disponibilidade':
         return summarizeDisponibilidadeClient(minNoites, maxNoites, antecedenciaDias);
       case 'hospedes':
-        return `Máximo de ${capacidade} hóspedes`;
+        return summarizeCapacidadeClient(capacidade) || 'Definir capacidade';
       case 'descricao':
         return descAnuncio ? descAnuncio.slice(0, 80) : 'Adicionar informações';
       case 'comodidades':
@@ -385,7 +388,7 @@ export function AnfitriaoListingEditor({
     await onSaveUnit({
       titulo,
       precoDiaria: preco,
-      capacidadeMax: capacidade,
+      capacidadeMax: clampCapacidadeClient(capacidade),
       amenidades: Array.from(amenities),
       midia,
       metadata,
@@ -958,31 +961,7 @@ function SeuEspacoPanel(props: {
   }
 
   if (s === 'hospedes') {
-    return (
-      <div>
-        <PanelTitle
-          title="Número de hóspedes"
-          hint="Quantos hóspedes seu espaço acomoda com conforto?"
-        />
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className="h-10 w-10 rounded-full border border-slate-300 text-lg"
-            onClick={() => props.setCapacidade(Math.max(1, props.capacidade - 1))}
-          >
-            −
-          </button>
-          <span className="text-2xl font-bold">{props.capacidade}</span>
-          <button
-            type="button"
-            className="h-10 w-10 rounded-full border border-slate-300 text-lg"
-            onClick={() => props.setCapacidade(props.capacidade + 1)}
-          >
-            +
-          </button>
-        </div>
-      </div>
-    );
+    return <HospedesEditor capacidade={props.capacidade} setCapacidade={props.setCapacidade} />;
   }
 
   if (s === 'descricao') {

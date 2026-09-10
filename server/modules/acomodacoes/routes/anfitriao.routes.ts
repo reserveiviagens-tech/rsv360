@@ -241,6 +241,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Tipos de cama inválidos',
       });
     }
+    if (result.error === 'capacidade_invalida') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Capacidade de hóspedes inválida',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
