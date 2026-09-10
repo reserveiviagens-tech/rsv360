@@ -17,6 +17,10 @@ Abrir PR **somente** se:
 
 Confiança média/baixa → **report only**.
 
+## Gate pós-PR (fatia / próxima tarefa)
+
+Após abrir ou atualizar PR: **verificar → analisar → corrigir CI** conforme `enterprise-ci-slice-gate.mdc` **antes** de iniciar a próxima fatia ou tarefa. Checks críticos vermelhos sem plano/PR de correção = gate fechado (salvo dispensa explícita do owner).
+
 ## Checklist obrigatório no corpo do PR
 
 - [ ] Escopo pequeno e justificado
@@ -41,3 +45,4 @@ Confiança média/baixa → **report only**.
 ## Template
 
 Usar `.github/pull_request_template.md` e preencher seção **Enterprise / Segurança**.
+Ver também `enterprise-ci-slice-gate.mdc` (gate pós-PR antes da próxima fatia).
