@@ -10,6 +10,7 @@ import {
 } from './AcessibilidadeEditor';
 import { FotosTourEditor } from './FotosTourEditor';
 import { TituloEditor } from './TituloEditor';
+import { PrecosEditor, summarizePrecosClient } from './PrecosEditor';
 import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_TIPOS } from './TipoPropriedadeEditor';
 import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } from './TiposCamaEditor';
 import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
@@ -129,10 +130,19 @@ export function AnfitriaoListingEditor({
     String(pricing?.precoDiaria ?? unidade.precoDiaria ?? ''),
   );
   const [precoFds, setPrecoFds] = useState(
-    pricing?.precoFimSemana != null ? String(pricing.precoFimSemana) : '',
+    pricing?.precoFimSemana != null
+      ? String(pricing.precoFimSemana)
+      : unidade.precoFimSemana != null
+        ? String(unidade.precoFimSemana)
+        : '',
   );
   const [precoInteligente, setPrecoInteligente] = useState(
     Boolean(pricing?.precoInteligenteAtivo ?? unidade.precoInteligenteAtivo),
+  );
+  const [showFimSemana, setShowFimSemana] = useState(
+    () =>
+      (pricing?.precoFimSemana != null && Number(pricing.precoFimSemana) > 0) ||
+      (unidade.precoFimSemana != null && Number(unidade.precoFimSemana) > 0),
   );
   const [capacidade, setCapacidade] = useState(Number(unidade.capacidadeMax ?? 2));
   const [descAnuncio, setDescAnuncio] = useState(meta0.descricaoDetalhada?.anuncio ?? '');
@@ -262,7 +272,8 @@ export function AnfitriaoListingEditor({
       case 'camas':
         return summarizeTiposCamaClient(camas) || 'Adicionar informações';
       case 'precos':
-        return preco ? `R$ ${preco}/noite` : 'Definir preço';
+        return summarizePrecosClient(preco, showFimSemana ? precoFds : '', precoInteligente) ||
+          'Definir preço';
       case 'descontos':
         return `Semanal ${descSemanal}% · Mensal ${descMensal}%`;
       case 'disponibilidade':
@@ -359,8 +370,9 @@ export function AnfitriaoListingEditor({
     });
 
     await onSavePricing({
-      precoDiaria: preco === '' ? null : Number(preco),
-      precoFimSemana: precoFds === '' ? null : Number(precoFds),
+      precoDiaria: preco === '' ? null : Number(String(preco).replace(',', '.')),
+      precoFimSemana:
+        !showFimSemana || precoFds === '' ? null : Number(String(precoFds).replace(',', '.')),
       precoInteligenteAtivo: precoInteligente,
       minNoites,
       maxNoites,
@@ -489,6 +501,11 @@ export function AnfitriaoListingEditor({
             precoInteligente={precoInteligente}
             setPrecoInteligente={(v) => {
               setPrecoInteligente(v);
+              markDirty();
+            }}
+            showFimSemana={showFimSemana}
+            setShowFimSemana={(v) => {
+              setShowFimSemana(v);
               markDirty();
             }}
             capacidade={capacidade}
@@ -759,6 +776,8 @@ function SeuEspacoPanel(props: {
   setPrecoFds: (v: string) => void;
   precoInteligente: boolean;
   setPrecoInteligente: (v: boolean) => void;
+  showFimSemana: boolean;
+  setShowFimSemana: (v: boolean) => void;
   capacidade: number;
   setCapacidade: (v: number) => void;
   minNoites: number;
@@ -846,45 +865,17 @@ function SeuEspacoPanel(props: {
 
   if (s === 'precos') {
     return (
-      <div>
-        <PanelTitle title="Preços" hint="Preço base e fim de semana. Preço Inteligente no calendário." />
-        <label className="block text-sm">
-          <span className="font-medium">Preço básico (R$)</span>
-          <input
-            type="number"
-            min={0}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-            value={props.preco}
-            onChange={(e) => props.setPreco(e.target.value)}
-          />
-        </label>
-        <label className="mt-4 block text-sm">
-          <span className="font-medium">Preço fim de semana (R$)</span>
-          <input
-            type="number"
-            min={0}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
-            value={props.precoFds}
-            onChange={(e) => props.setPrecoFds(e.target.value)}
-            placeholder="Opcional"
-          />
-        </label>
-        <label className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm">
-          <span className="font-medium">Preço Inteligente</span>
-          <input
-            type="checkbox"
-            checked={props.precoInteligente}
-            onChange={(e) => props.setPrecoInteligente(e.target.checked)}
-          />
-        </label>
-        <Link
-          href={`/anfitriao/unidades/${props.unitId}/disponibilidade`}
-          className="mt-4 inline-block text-sm text-slate-700 underline"
-          prefetch={false}
-        >
-          Abrir calendário de tarifas →
-        </Link>
-      </div>
+      <PrecosEditor
+        unitId={props.unitId}
+        preco={props.preco}
+        setPreco={props.setPreco}
+        precoFds={props.precoFds}
+        setPrecoFds={props.setPrecoFds}
+        precoInteligente={props.precoInteligente}
+        setPrecoInteligente={props.setPrecoInteligente}
+        showFimSemana={props.showFimSemana}
+        setShowFimSemana={props.setShowFimSemana}
+      />
     );
   }
 
