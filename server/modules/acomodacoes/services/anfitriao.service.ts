@@ -48,6 +48,7 @@ import { validateListingAcessibilidade } from './listing-acessibilidade.util';
 import { validateListingLocalizacao } from './listing-localizacao.util';
 import { validateListingSobreAnfitriao } from './listing-sobre-anfitriao.util';
 import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
+import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -318,6 +319,43 @@ export const anfitriaoService = {
       }
       (metadataPatch as Record<string, unknown>).coanfitrioes =
         cohosts.value.length > 0 ? cohosts.value : undefined;
+    }
+
+    const updatingConfigReserva =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      (Object.prototype.hasOwnProperty.call(metadataPatch, 'modoReserva') ||
+        Object.prototype.hasOwnProperty.call(metadataPatch, 'exigirBomHistorico') ||
+        Object.prototype.hasOwnProperty.call(metadataPatch, 'mensagemPreReserva'));
+    if (updatingConfigReserva) {
+      const meta = metadataPatch as Record<string, unknown>;
+      const input: Record<string, unknown> = {};
+      if (Object.prototype.hasOwnProperty.call(meta, 'modoReserva')) {
+        input.modoReserva = meta.modoReserva;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'exigirBomHistorico')) {
+        input.exigirBomHistorico = meta.exigirBomHistorico;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'mensagemPreReserva')) {
+        input.mensagemPreReserva = meta.mensagemPreReserva;
+      }
+      const config = validateListingConfigReserva(input);
+      if (!config.ok) {
+        return { error: config.error, message: config.message };
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'modoReserva')) {
+        meta.modoReserva = config.value.modoReserva;
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(meta, 'exigirBomHistorico') ||
+        config.value.modoReserva === 'aprovar'
+      ) {
+        meta.exigirBomHistorico = config.value.exigirBomHistorico;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'mensagemPreReserva')) {
+        meta.mensagemPreReserva = config.value.mensagemPreReserva ?? undefined;
+      }
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

@@ -31,6 +31,7 @@ import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './Verificacao
 import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEditor';
 import { SobreAnfitriaoEditor, summarizeSobreAnfitriaoClient } from './SobreAnfitriaoEditor';
 import { CoanfitrioesEditor, summarizeCoanfitrioesClient } from './CoanfitrioesEditor';
+import { ConfigReservaEditor, summarizeConfigReservaClient } from './ConfigReservaEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -309,9 +310,7 @@ export function AnfitriaoListingEditor({
       case 'comodidades':
         return summarizeComodidadesClient(amenities) || 'Adicionar comodidades';
       case 'config-reserva':
-        return modoReserva === 'instantanea'
-          ? 'Reserva Instantânea'
-          : 'Pedidos a serem aprovados';
+        return summarizeConfigReservaClient(modoReserva);
       case 'regras':
       case 'regras-guia':
         return `Check-in ${regras.checkInDe ?? '14:00'} · Checkout ${regras.checkOutAte ?? '11:00'}`;
@@ -1007,52 +1006,14 @@ function SeuEspacoPanel(props: {
 
   if (s === 'config-reserva') {
     return (
-      <div>
-        <PanelTitle title="Configurações de reserva" />
-        <div className="space-y-3">
-          {(
-            [
-              ['instantanea', 'Usar Reserva Instantânea', 'Hóspedes reservam automaticamente.'],
-              ['aprovar', 'Aprovar todas as reservas', 'Analise todos os pedidos de reserva.'],
-            ] as const
-          ).map(([id, title, desc]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => props.setModoReserva(id)}
-              className={`w-full rounded-2xl border p-4 text-left ${
-                props.modoReserva === id ? 'border-slate-900' : 'border-slate-200'
-              }`}
-            >
-              <p className="font-semibold">{title}</p>
-              <p className="mt-1 text-sm text-slate-500">{desc}</p>
-            </button>
-          ))}
-        </div>
-        {props.modoReserva === 'instantanea' && (
-          <>
-            <label className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
-              <span>Exigir bom histórico</span>
-              <input
-                type="checkbox"
-                checked={props.exigirHistorico}
-                onChange={(e) => props.setExigirHistorico(e.target.checked)}
-              />
-            </label>
-            <label className="mt-4 block text-sm">
-              Mensagem pré-reserva
-              <textarea
-                className="mt-1 h-28 w-full rounded-xl border px-3 py-2"
-                value={props.msgPre}
-                maxLength={400}
-                onChange={(e) => props.setMsgPre(e.target.value)}
-                placeholder="Ex.: Olá! Conte um pouco sobre sua viagem…"
-              />
-              <span className="text-xs text-slate-500">{props.msgPre.length}/400</span>
-            </label>
-          </>
-        )}
-      </div>
+      <ConfigReservaEditor
+        modoReserva={props.modoReserva}
+        setModoReserva={props.setModoReserva}
+        exigirHistorico={props.exigirHistorico}
+        setExigirHistorico={props.setExigirHistorico}
+        msgPre={props.msgPre}
+        setMsgPre={props.setMsgPre}
+      />
     );
   }
 
