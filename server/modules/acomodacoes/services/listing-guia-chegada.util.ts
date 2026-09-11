@@ -24,12 +24,28 @@ export const METODO_CHECKIN_VALUES = [
 
 export type MetodoCheckInValue = (typeof METODO_CHECKIN_VALUES)[number];
 
+export const PREFERENCIA_INTERACAO_VALUES = [
+  'Não estarei disponível pessoalmente e prefiro me comunicar pelo aplicativo',
+  'Gosto de cumprimentar pessoalmente, mas fora isso, prefiro ficar mais na minha',
+  'Eu gosto de socializar e passar tempo com os hóspedes',
+  'Não tenho preferência, me adapto às preferências dos hóspedes',
+] as const;
+
+export type PreferenciaInteracaoValue = (typeof PREFERENCIA_INTERACAO_VALUES)[number];
+
+export const PREFERENCIA_INTERACAO_SHORT_LABELS: Record<PreferenciaInteracaoValue, string> = {
+  'Não estarei disponível pessoalmente e prefiro me comunicar pelo aplicativo':
+    'Pelo aplicativo',
+  'Gosto de cumprimentar pessoalmente, mas fora isso, prefiro ficar mais na minha': 'Discreto',
+  'Eu gosto de socializar e passar tempo com os hóspedes': 'Gosta de socializar',
+  'Não tenho preferência, me adapto às preferências dos hóspedes': 'Adaptável',
+};
+
 export const GUIA_CHEGADA_STRING_KEYS = [
   'comoChegar',
   'wifiRede',
   'wifiSenha',
   'guiaCasa',
-  'preferenciaInteracao',
 ] as const;
 
 export type GuiaChegadaStringKey = (typeof GUIA_CHEGADA_STRING_KEYS)[number];
@@ -49,7 +65,7 @@ export type ListingGuiaChegada = {
   wifiSenha?: string;
   guiaCasa?: string;
   instrucoesCheckout?: ListingInstrucaoCheckout[];
-  preferenciaInteracao?: string;
+  preferenciaInteracao?: PreferenciaInteracaoValue;
 };
 
 export type GuiaChegadaValidationOk = { ok: true; value: ListingGuiaChegada };
@@ -67,9 +83,11 @@ const ALLOWED_TOP_KEYS = new Set<string>([
   'metodoCheckInDetalhe',
   'instrucoesCheckIn',
   'instrucoesCheckout',
+  'preferenciaInteracao',
 ]);
 
 const METODO_CHECKIN_SET = new Set<string>(METODO_CHECKIN_VALUES);
+const PREFERENCIA_INTERACAO_SET = new Set<string>(PREFERENCIA_INTERACAO_VALUES);
 
 const INSTRUCAO_ITEM_KEYS = new Set(['id', 'titulo', 'texto']);
 
@@ -104,6 +122,31 @@ function validateOptionalStringField(
   }
   const cleaned = sanitizeGuiaText(raw, max);
   return { ok: true, value: cleaned || undefined };
+}
+
+function validatePreferenciaInteracao(
+  raw: unknown,
+):
+  | { ok: true; value: PreferenciaInteracaoValue | undefined }
+  | GuiaChegadaValidationErr {
+  if (raw == null || raw === '') {
+    return { ok: true, value: undefined };
+  }
+  if (typeof raw !== 'string') {
+    return {
+      ok: false,
+      error: 'guia_chegada_invalido',
+      message: 'Preferência de interação inválida',
+    };
+  }
+  if (!PREFERENCIA_INTERACAO_SET.has(raw)) {
+    return {
+      ok: false,
+      error: 'guia_chegada_invalido',
+      message: 'Preferência de interação inválida',
+    };
+  }
+  return { ok: true, value: raw as PreferenciaInteracaoValue };
 }
 
 function validateMetodoCheckIn(
@@ -273,7 +316,6 @@ export function validateListingGuiaChegada(
     wifiRede: 'Rede Wi-Fi',
     wifiSenha: 'Senha Wi-Fi',
     guiaCasa: 'Guia da casa',
-    preferenciaInteracao: 'Preferência de interação',
   };
 
   const stringMax: Record<GuiaChegadaStringKey, number> = {
@@ -281,7 +323,6 @@ export function validateListingGuiaChegada(
     wifiRede: WIFI_REDE_MAX,
     wifiSenha: WIFI_SENHA_MAX,
     guiaCasa: GUIA_CASA_MAX,
-    preferenciaInteracao: GUIA_CHEGADA_TEXT_MAX,
   };
 
   for (const key of GUIA_CHEGADA_STRING_KEYS) {
@@ -334,6 +375,14 @@ export function validateListingGuiaChegada(
     if (!list.ok) return list;
     if (list.value) {
       value.instrucoesCheckout = list.value;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(src, 'preferenciaInteracao')) {
+    const interacao = validatePreferenciaInteracao(src.preferenciaInteracao);
+    if (!interacao.ok) return interacao;
+    if (interacao.value) {
+      value.preferenciaInteracao = interacao.value;
     }
   }
 
@@ -394,4 +443,20 @@ export function summarizeCheckoutInstrucoes(
   }
   const n = list.length;
   return n === 1 ? '1 instrução' : `${n} instruções`;
+}
+
+/** Card preview for "Preferências de interação" section. */
+export function summarizeInteracao(
+  guia: ListingGuiaChegada | null | undefined,
+): string {
+  const raw =
+    guia && typeof guia.preferenciaInteracao === 'string'
+      ? guia.preferenciaInteracao.trim()
+      : '';
+  if (!raw) return 'Adicionar informações';
+  if (PREFERENCIA_INTERACAO_SET.has(raw)) {
+    return PREFERENCIA_INTERACAO_SHORT_LABELS[raw as PreferenciaInteracaoValue];
+  }
+  const collapsed = raw.replace(/\s+/g, ' ');
+  return collapsed.length <= 40 ? collapsed : `${collapsed.slice(0, 39)}…`;
 }

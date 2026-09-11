@@ -6,11 +6,13 @@ import {
   INSTRUCOES_CHECKIN_MAX,
   METODO_CHECKIN_DETALHE_MAX,
   METODO_CHECKIN_VALUES,
+  PREFERENCIA_INTERACAO_VALUES,
   WIFI_REDE_MAX,
   WIFI_SENHA_MAX,
   summarizeCheckoutInstrucoes,
   summarizeComoChegar,
   summarizeGuiaCasa,
+  summarizeInteracao,
   summarizeMetodoCheckin,
   summarizeWifi,
   validateListingGuiaChegada,
@@ -233,6 +235,31 @@ describe('listing-guia-chegada.util', () => {
     expect(validateListingGuiaChegada({ instrucoesCheckIn: long }).ok).toBe(false);
   });
 
+  it.each(PREFERENCIA_INTERACAO_VALUES)(
+    'accepts preferenciaInteracao value %s',
+    (option) => {
+      expect(validateListingGuiaChegada({ preferenciaInteracao: option })).toEqual({
+        ok: true,
+        value: { preferenciaInteracao: option },
+      });
+    },
+  );
+
+  it('rejects unknown preferenciaInteracao', () => {
+    const result = validateListingGuiaChegada({
+      preferenciaInteracao: 'Prefiro falar só por telefone',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe('guia_chegada_invalido');
+      expect(result.message).toContain('Preferência de interação');
+    }
+  });
+
+  it('rejects preferenciaInteracao with extra whitespace-only value', () => {
+    expect(validateListingGuiaChegada({ preferenciaInteracao: '   ' }).ok).toBe(false);
+  });
+
   describe('summarizeMetodoCheckin', () => {
     it('returns default when empty or invalid', () => {
       expect(summarizeMetodoCheckin({})).toBe('Adicionar informações');
@@ -337,6 +364,47 @@ describe('listing-guia-chegada.util', () => {
       const long =
         'Siga pela Avenida Principal até o cruzamento com a Rua das Flores e entre pelo portão metálico';
       const summary = summarizeComoChegar({ comoChegar: long });
+      expect(summary.length).toBeLessThanOrEqual(40);
+      expect(summary.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('summarizeInteracao', () => {
+    it('returns default when empty', () => {
+      expect(summarizeInteracao({})).toBe('Adicionar informações');
+      expect(summarizeInteracao(null)).toBe('Adicionar informações');
+    });
+
+    it('returns short label for whitelisted options', () => {
+      expect(
+        summarizeInteracao({
+          preferenciaInteracao:
+            'Não estarei disponível pessoalmente e prefiro me comunicar pelo aplicativo',
+        }),
+      ).toBe('Pelo aplicativo');
+      expect(
+        summarizeInteracao({
+          preferenciaInteracao:
+            'Gosto de cumprimentar pessoalmente, mas fora isso, prefiro ficar mais na minha',
+        }),
+      ).toBe('Discreto');
+      expect(
+        summarizeInteracao({
+          preferenciaInteracao: 'Eu gosto de socializar e passar tempo com os hóspedes',
+        }),
+      ).toBe('Gosta de socializar');
+      expect(
+        summarizeInteracao({
+          preferenciaInteracao:
+            'Não tenho preferência, me adapto às preferências dos hóspedes',
+        }),
+      ).toBe('Adaptável');
+    });
+
+    it('truncates unknown legacy text to about 40 chars', () => {
+      const legacy =
+        'Texto legado muito longo que não está na whitelist mas ainda pode aparecer no card';
+      const summary = summarizeInteracao({ preferenciaInteracao: legacy as never });
       expect(summary.length).toBeLessThanOrEqual(40);
       expect(summary.endsWith('…')).toBe(true);
     });
