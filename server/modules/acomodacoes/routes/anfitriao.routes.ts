@@ -66,6 +66,24 @@ router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
   }
 });
 
+router.get('/impostos/export.csv', ...parceiroAuth, async (req, res) => {
+  try {
+    const ativo = parseAtivoFilter(req.query.ativo);
+    if (ativo == null) {
+      return res.status(400).json({ success: false, error: 'Parâmetro inválido' });
+    }
+    const csv = await anfitriaoService.exportImpostosCsv(authFromReq(req), { ativo });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="impostos-anfitriao-rsv360.csv"',
+    );
+    res.send(csv);
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/unidades/desarquivar-bulk', ...parceiroAuth, async (req, res) => {
   try {
     const parsed = parseBulkIds(req.body?.ids);

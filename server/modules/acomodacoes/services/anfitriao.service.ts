@@ -59,6 +59,7 @@ import { validateListingHospedagemSolidaria } from './listing-solidaria.util';
 import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
+import { buildImpostosExportCsv } from './listing-impostos-export.util';
 import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
 import {
   ativoFilterWhere,
@@ -1608,6 +1609,22 @@ export const anfitriaoService = {
     }
 
     return { data: unidades, de, ate };
+  },
+
+  async exportImpostosCsv(
+    auth: AuthContext,
+    opts?: { ativo?: AtivoFilter },
+  ): Promise<string> {
+    const ativo = resolveAtivoFilter(opts?.ativo);
+    const { items } = await this.listarMinhas(auth, 1, 5000, { ativo });
+    return buildImpostosExportCsv(
+      items.map((unit) => ({
+        id: unit.id,
+        titulo: unit.titulo,
+        hotelId: unit.hotelId,
+        metadata: unit.metadata,
+      })),
+    );
   },
 
   async atribuirCarteira(staffRole: string, corretorId: number, proprietarioId: number) {

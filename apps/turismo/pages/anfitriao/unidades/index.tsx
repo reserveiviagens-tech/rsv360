@@ -66,6 +66,8 @@ export default function AnfitriaoUnidadesPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkSuccess, setBulkSuccess] = useState<string | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const items = (data?.data?.items ?? []) as Unidade[];
@@ -89,6 +91,21 @@ export default function AnfitriaoUnidadesPage() {
 
   function clearSelection() {
     setSelectedIds(new Set());
+  }
+
+  async function handleExportFiscalCsv() {
+    if (exportLoading) return;
+    setExportLoading(true);
+    setExportError(null);
+    try {
+      await fase1Api.anfitriaoExportImpostosCsv(ativoFilter);
+    } catch (err) {
+      setExportError(
+        err instanceof Error ? err.message : 'Não foi possível exportar o CSV fiscal.',
+      );
+    } finally {
+      setExportLoading(false);
+    }
   }
 
   async function handleBulkDesarquivar() {
@@ -131,37 +148,54 @@ export default function AnfitriaoUnidadesPage() {
             </p>
           </div>
 
-          <div
-            className="mb-4 inline-flex rounded-xl border border-slate-200 bg-white p-1"
-            role="tablist"
-            aria-label="Filtrar anúncios"
-          >
-            {ATIVO_TABS.map((tab) => {
-              const selected = ativoFilter === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => {
-                    setAtivoFilter(tab.value);
-                    setQuery('');
-                    setSelectedIds(new Set());
-                    setBulkError(null);
-                    setBulkSuccess(null);
-                  }}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                    selected
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div
+              className="inline-flex rounded-xl border border-slate-200 bg-white p-1"
+              role="tablist"
+              aria-label="Filtrar anúncios"
+            >
+              {ATIVO_TABS.map((tab) => {
+                const selected = ativoFilter === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => {
+                      setAtivoFilter(tab.value);
+                      setQuery('');
+                      setSelectedIds(new Set());
+                      setBulkError(null);
+                      setBulkSuccess(null);
+                      setExportError(null);
+                    }}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                      selected
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleExportFiscalCsv()}
+              disabled={exportLoading}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {exportLoading ? 'Exportando…' : 'Exportar fiscal (CSV)'}
+            </button>
           </div>
+
+          {exportError ? (
+            <p className="mb-4 text-sm text-red-600" role="alert">
+              {exportError}
+            </p>
+          ) : null}
 
           {isArchivedTab && filtered.length > 0 && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
