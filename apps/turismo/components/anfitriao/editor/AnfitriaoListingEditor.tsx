@@ -48,6 +48,10 @@ import { InteracaoEditor, summarizeInteracaoClient } from './InteracaoEditor';
 import { GuiasLocaisEditor, summarizeGuiasLocaisClient } from './GuiasLocaisEditor';
 import { StatusAnuncioEditor, summarizeStatusAnuncioClient } from './StatusAnuncioEditor';
 import {
+  RequisitosHospedeEditor,
+  summarizeRequisitosClient,
+} from './RequisitosHospedeEditor';
+import {
   GUIA_CARDS,
   PREF_CARDS,
   SEU_ESPACO_CARDS,
@@ -351,6 +355,8 @@ export function AnfitriaoListingEditor({
         return summarizeGuiasLocaisClient();
       case 'status':
         return summarizeStatusAnuncioClient(statusAnuncio);
+      case 'requisitos':
+        return summarizeRequisitosClient(exigirFoto);
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -1196,20 +1202,7 @@ function PreferenciasPanel({
     );
   }
   if (section === 'requisitos') {
-    return (
-      <div>
-        <PanelTitle title="Requisitos do hóspede" />
-        <label className="flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
-          <span>Exigir foto de perfil</span>
-          <input type="checkbox" checked={exigirFoto} onChange={(e) => setExigirFoto(e.target.checked)} />
-        </label>
-        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-slate-600">
-          <li>E-mail e telefone confirmados</li>
-          <li>Informações de pagamento</li>
-          <li>Concordar com as Regras da Casa</li>
-        </ul>
-      </div>
-    );
+    return <RequisitosHospedeEditor value={exigirFoto} onChange={setExigirFoto} />;
   }
   if (section === 'solidaria') {
     return (
