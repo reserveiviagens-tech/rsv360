@@ -36,6 +36,7 @@ import { CancelamentoEditor, summarizeCancelamentoClient } from './CancelamentoE
 import { LinkPersonalizadoEditor, summarizeLinkPersonalizadoClient } from './LinkPersonalizadoEditor';
 import { CheckinCheckoutEditor, summarizeCheckinCheckoutClient } from './CheckinCheckoutEditor';
 import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor';
+import { ComoChegarEditor, summarizeComoChegarClient } from './ComoChegarEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -313,6 +314,8 @@ export function AnfitriaoListingEditor({
         return summarizeConfigReservaClient(modoReserva);
       case 'checkin-checkout':
         return summarizeCheckinCheckoutClient(regras);
+      case 'como-chegar':
+        return summarizeComoChegarClient(guia);
       case 'regras':
       case 'regras-guia':
         return summarizeRegrasCasaClient(regras);
@@ -1125,17 +1128,7 @@ function GuiaPanel({
     return <CheckinCheckoutEditor regras={regras} setRegras={setRegras} />;
   }
   if (section === 'como-chegar') {
-    return (
-      <div>
-        <PanelTitle title="Como chegar" hint="Compartilhado depois que a reserva é confirmada." />
-        <textarea
-          className="h-40 w-full rounded-xl border px-3 py-2 text-sm"
-          value={guia.comoChegar ?? ''}
-          onChange={(e) => setGuia({ ...guia, comoChegar: e.target.value })}
-          placeholder="Link do mapa ou instruções"
-        />
-      </div>
-    );
+    return <ComoChegarEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'metodo-checkin') {
     const metodos = [
