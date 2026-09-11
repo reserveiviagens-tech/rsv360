@@ -791,6 +791,52 @@ export const anfitriaoService = {
     return { data: updated, already_restored: false };
   },
 
+  async desarquivarUnidadesBulk(
+    auth: AuthContext,
+    ids: number[],
+    opts?: { motivo?: string },
+  ): Promise<
+    | { error: 'invalid_motivo'; message?: string }
+    | {
+        results: Array<
+          | { id: number; ok: true; already_restored?: boolean }
+          | { id: number; ok: false; error: 'not_found' | 'forbidden' | 'invalid_motivo' }
+        >;
+        restored: number;
+        already_restored: number;
+        failed: number;
+      }
+  > {
+    const motivo = validateMotivoDesarquivar(opts?.motivo);
+    if (!motivo.ok) {
+      return { error: 'invalid_motivo', message: motivo.message };
+    }
+
+    const results: Array<
+      | { id: number; ok: true; already_restored?: boolean }
+      | { id: number; ok: false; error: 'not_found' | 'forbidden' | 'invalid_motivo' }
+    > = [];
+    let restored = 0;
+    let already_restored = 0;
+    let failed = 0;
+
+    for (const id of ids) {
+      const result = await this.desarquivarUnidade(auth, id, { motivo: motivo.value });
+      if ('error' in result) {
+        results.push({ id, ok: false, error: result.error });
+        failed += 1;
+      } else if (result.already_restored) {
+        results.push({ id, ok: true, already_restored: true });
+        already_restored += 1;
+      } else {
+        results.push({ id, ok: true });
+        restored += 1;
+      }
+    }
+
+    return { results, restored, already_restored, failed };
+  },
+
   async definirTrilhoThumb(
     auth: AuthContext,
     id: number,

@@ -5,6 +5,7 @@ import { anfitriaoService, type AuthContext } from '../services/anfitriao.servic
 import { rateCalendarService } from '../services/rate-calendar.service';
 import { desempenhoService } from '../services/desempenho.service';
 import { parseAtivoFilter } from '../services/listing-ativo-filter.util';
+import { parseBulkIds } from '../services/listing-desarquivar-bulk.util';
 import {
   publicTrilhoUrl,
   trilhoThumbUpload,
@@ -62,6 +63,32 @@ router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
     res.send(csv);
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/desarquivar-bulk', ...parceiroAuth, async (req, res) => {
+  try {
+    const parsed = parseBulkIds(req.body?.ids);
+    if ('error' in parsed) {
+      return res.status(400).json({ success: false, error: parsed.error });
+    }
+    const rawMotivo = req.body?.motivo;
+    if (rawMotivo !== undefined && rawMotivo !== null && typeof rawMotivo !== 'string') {
+      return res.status(400).json({ success: false, error: 'Motivo deve ser texto' });
+    }
+    const motivo = typeof rawMotivo === 'string' ? rawMotivo : undefined;
+    const result = await anfitriaoService.desarquivarUnidadesBulk(authFromReq(req), parsed, {
+      motivo,
+    });
+    if ('error' in result) {
+      return res.status(400).json({
+        success: false,
+        error: result.message ?? 'Motivo inválido',
+      });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
   }
 });
 

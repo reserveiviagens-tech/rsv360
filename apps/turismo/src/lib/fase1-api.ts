@@ -339,6 +339,22 @@ export const fase1Api = {
       method: 'POST',
       body: JSON.stringify(body ?? {}),
     }),
+  anfitriaoDesarquivarUnidadesBulk: (ids: number[], motivo?: string) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        results: Array<
+          | { id: number; ok: true; already_restored?: boolean }
+          | { id: number; ok: false; error: 'not_found' | 'forbidden' | 'invalid_motivo' }
+        >;
+        restored: number;
+        already_restored: number;
+        failed: number;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/desarquivar-bulk`, {
+      method: 'POST',
+      body: JSON.stringify(motivo != null && motivo !== '' ? { ids, motivo } : { ids }),
+    }),
 
   anfitriaoDisponibilidade: (id: number, de: string, ate: string) =>
     fetchJson<{ success: boolean; data: unknown[] }>(
