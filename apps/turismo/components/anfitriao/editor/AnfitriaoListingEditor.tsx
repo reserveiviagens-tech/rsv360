@@ -53,6 +53,7 @@ import {
 } from './RequisitosHospedeEditor';
 import { SolidariaEditor, summarizeSolidariaClient } from './SolidariaEditor';
 import { IdiomasEditor, summarizeIdiomasClient } from './IdiomasEditor';
+import { LeisLocaisEditor, summarizeLeisLocaisClient } from './LeisLocaisEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -364,6 +365,8 @@ export function AnfitriaoListingEditor({
         return summarizeSolidariaClient(solidaria);
       case 'idiomas':
         return summarizeIdiomasClient(idiomas);
+      case 'leis':
+        return summarizeLeisLocaisClient();
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -1229,15 +1232,7 @@ function PreferenciasPanel({
     return <IdiomasEditor />;
   }
   if (section === 'leis') {
-    return (
-      <div>
-        <PanelTitle title="Leis locais" />
-        <p className="text-sm text-slate-600">
-          Revise zoneamento, licenças e impostos aplicáveis à sua acomodação. Ao aceitar os Termos da
-          Reservei Viagens, você declara conformidade com as leis aplicáveis.
-        </p>
-      </div>
-    );
+    return <LeisLocaisEditor />;
   }
   return (
     <div>
