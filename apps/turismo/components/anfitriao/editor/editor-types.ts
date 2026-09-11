@@ -168,6 +168,7 @@ export type EditorMeta = {
   exigirFotoPerfil?: boolean;
   idiomas?: string[];
   hospedagemSolidaria?: boolean;
+  guiasLocais?: Array<{ id: string; titulo: string; conteudo: string }>;
 };
 
 export function readMeta(unidade: ListingEditorUnidade): EditorMeta {
