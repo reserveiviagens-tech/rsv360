@@ -175,6 +175,7 @@ export type EditorMeta = {
     aliquotaPct?: number;
     isento?: boolean;
     notas?: string;
+    cnpj?: string;
   };
 };
 

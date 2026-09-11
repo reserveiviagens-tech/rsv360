@@ -1,18 +1,20 @@
 /**
  * Fiscal cadastro on listing metadata (metadata.impostos — top-level).
- * Never log inscricaoMunicipal or notas contents in error paths.
+ * Never log inscricaoMunicipal, notas or cnpj in error paths.
  */
 
 export const IMPOSTOS_INSCRICAO_MAX = 40;
 export const IMPOSTOS_NOTAS_MAX = 500;
 export const IMPOSTOS_ALIQUOTA_MIN = 0;
 export const IMPOSTOS_ALIQUOTA_MAX = 100;
+export const IMPOSTOS_CNPJ_LEN = 14;
 
 export type ListingImpostos = {
   inscricaoMunicipal?: string;
   aliquotaPct?: number;
   isento?: boolean;
   notas?: string;
+  cnpj?: string;
 };
 
 export type ImpostosValidationOk = { ok: true; value: ListingImpostos | undefined };
@@ -22,7 +24,13 @@ export type ImpostosValidationErr = {
   message: string;
 };
 
-const IMPOSTOS_KEYS = new Set(['inscricaoMunicipal', 'aliquotaPct', 'isento', 'notas']);
+const IMPOSTOS_KEYS = new Set([
+  'inscricaoMunicipal',
+  'aliquotaPct',
+  'isento',
+  'notas',
+  'cnpj',
+]);
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const INSCRICAO_DISALLOWED = /[^\p{L}\p{N}\s.,\-/()]/gu;
 
@@ -65,6 +73,43 @@ function formatAliquotaPct(n: number): string {
   const rounded = Math.round(n * 100) / 100;
   const text = Number.isInteger(rounded) ? String(rounded) : String(rounded);
   return `${text}%`;
+}
+
+function stripCnpjDigits(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  return raw.replace(/\D/g, '');
+}
+
+/** LGPD-safe preview — never expose full CNPJ digits. */
+export function maskCnpj(digits: string): string {
+  const d = digits.replace(/\D/g, '');
+  if (d.length !== IMPOSTOS_CNPJ_LEN) {
+    return '**.***.***/****-**';
+  }
+  return `**.***.***/****-${d.slice(12)}`;
+}
+
+function isValidCnpjChecksum(digits: string): boolean {
+  if (digits.length !== IMPOSTOS_CNPJ_LEN) return false;
+  if (/^(\d)\1{13}$/.test(digits)) return false;
+
+  const calcCheck = (base: string): number => {
+    let sum = 0;
+    let pos = base.length - 7;
+    for (let i = base.length; i >= 1; i--) {
+      sum += parseInt(base.charAt(base.length - i), 10) * pos;
+      pos -= 1;
+      if (pos < 2) pos = 9;
+    }
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+
+  const base12 = digits.slice(0, 12);
+  const d1 = calcCheck(base12);
+  if (d1 !== parseInt(digits.charAt(12), 10)) return false;
+  const d2 = calcCheck(base12 + String(d1));
+  return d2 === parseInt(digits.charAt(13), 10);
 }
 
 export function validateListingImpostos(
@@ -169,6 +214,41 @@ export function validateListingImpostos(
     if (cleaned) value.notas = cleaned;
   }
 
+  if (Object.prototype.hasOwnProperty.call(src, 'cnpj')) {
+    if (typeof src.cnpj !== 'string' && src.cnpj != null) {
+      return {
+        ok: false,
+        error: 'impostos_invalido',
+        message: 'CNPJ inválido',
+      };
+    }
+    const rawText = typeof src.cnpj === 'string' ? src.cnpj : '';
+    const digits = stripCnpjDigits(rawText);
+    if (digits.length === 0) {
+      if (/[a-zA-Z]/.test(rawText)) {
+        return {
+          ok: false,
+          error: 'impostos_invalido',
+          message: 'CNPJ inválido',
+        };
+      }
+    } else if (digits.length !== IMPOSTOS_CNPJ_LEN) {
+      return {
+        ok: false,
+        error: 'impostos_invalido',
+        message: 'CNPJ inválido',
+      };
+    } else if (!isValidCnpjChecksum(digits)) {
+      return {
+        ok: false,
+        error: 'impostos_invalido',
+        message: 'CNPJ inválido',
+      };
+    } else {
+      value.cnpj = digits;
+    }
+  }
+
   return {
     ok: true,
     value: Object.keys(value).length ? value : undefined,
@@ -207,6 +287,12 @@ export function summarizeImpostos(
 
   if (inscricao) {
     return 'Inscrição cadastrada';
+  }
+
+  const cnpj =
+    typeof impostos.cnpj === 'string' ? impostos.cnpj.replace(/\D/g, '') : '';
+  if (cnpj.length === IMPOSTOS_CNPJ_LEN) {
+    return `CNPJ ${maskCnpj(cnpj)}`;
   }
 
   return 'Adicionar informações';
