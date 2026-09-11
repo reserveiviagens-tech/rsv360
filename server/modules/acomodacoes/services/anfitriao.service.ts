@@ -54,6 +54,7 @@ import { validateListingRegrasCasa } from './listing-regras-casa.util';
 import { validateListingGuiaChegada } from './listing-guia-chegada.util';
 import { validateListingSeguranca } from './listing-seguranca.util';
 import { validateListingStatusAnuncio } from './listing-status-anuncio.util';
+import { validateListingExigirFotoPerfil } from './listing-requisitos.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -464,6 +465,21 @@ export const anfitriaoService = {
         return { error: status.error, message: status.message };
       }
       (metadataPatch as Record<string, unknown>).statusAnuncio = status.value;
+    }
+
+    const updatingExigirFotoPerfil =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'exigirFotoPerfil');
+    if (updatingExigirFotoPerfil) {
+      const requisitos = validateListingExigirFotoPerfil(
+        (metadataPatch as Record<string, unknown>).exigirFotoPerfil,
+      );
+      if (!requisitos.ok) {
+        return { error: requisitos.error, message: requisitos.message };
+      }
+      (metadataPatch as Record<string, unknown>).exigirFotoPerfil = requisitos.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
