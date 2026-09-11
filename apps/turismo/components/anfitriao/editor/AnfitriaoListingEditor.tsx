@@ -26,7 +26,7 @@ import {
 } from './DisponibilidadeEditor';
 import { TipoPropriedadeEditor, TIPO_PROPRIEDADE_ACOMODACOES, TIPO_PROPRIEDADE_TIPOS } from './TipoPropriedadeEditor';
 import { TiposCamaEditor, normalizeTiposCamaClient, summarizeTiposCamaClient } from './TiposCamaEditor';
-import { SegurancaEditor, type SegurancaMeta } from './SegurancaEditor';
+import { SegurancaEditor, summarizeSegurancaClient, type SegurancaMeta } from './SegurancaEditor';
 import { VerificacaoLocalEditor, type VerificacaoLocalMeta } from './VerificacaoLocalEditor';
 import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEditor';
 import { SobreAnfitriaoEditor, summarizeSobreAnfitriaoClient } from './SobreAnfitriaoEditor';
@@ -263,12 +263,8 @@ export function AnfitriaoListingEditor({
         const thumb = resolveUnitThumbUrl(unidade.midia);
         return thumb ? 'Capa do trilho definida' : 'Adicionar fotos';
       }
-      case 'seguranca': {
-        const c = Object.values(seguranca.consideracoes ?? {}).filter(Boolean).length;
-        const d = Object.values(seguranca.dispositivos ?? {}).filter((x) => x?.ativo).length;
-        if (c + d === 0) return 'Adicionar informações';
-        return `${c} consideração(ões) · ${d} dispositivo(s)`;
-      }
+      case 'seguranca':
+        return summarizeSegurancaClient(seguranca);
       case 'verificacao':
         return verificacaoLocal.status === 'aprovado'
           ? 'Verificada'
