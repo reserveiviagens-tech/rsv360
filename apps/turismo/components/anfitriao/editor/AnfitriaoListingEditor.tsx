@@ -54,6 +54,7 @@ import {
 import { SolidariaEditor, summarizeSolidariaClient } from './SolidariaEditor';
 import { IdiomasEditor, summarizeIdiomasClient } from './IdiomasEditor';
 import { LeisLocaisEditor, summarizeLeisLocaisClient } from './LeisLocaisEditor';
+import { ImpostosEditor, summarizeImpostosClient } from './ImpostosEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -367,6 +368,8 @@ export function AnfitriaoListingEditor({
         return summarizeIdiomasClient(idiomas);
       case 'leis':
         return summarizeLeisLocaisClient();
+      case 'impostos':
+        return summarizeImpostosClient();
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -1234,12 +1237,8 @@ function PreferenciasPanel({
   if (section === 'leis') {
     return <LeisLocaisEditor />;
   }
-  return (
-    <div>
-      <PanelTitle title="Impostos" hint="Adicione impostos que você precisa recolher." />
-      <p className="rounded-2xl border border-dashed p-6 text-sm text-slate-500">
-        Cadastro fiscal completo (alíquota, isenções, registro) na fase 2.
-      </p>
-    </div>
-  );
+  if (section === 'impostos') {
+    return <ImpostosEditor />;
+  }
+  return <PanelTitle title="Seção" hint="Em construção." />;
 }
