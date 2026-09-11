@@ -93,7 +93,7 @@ export function AnfitriaoPropertySwitcher({
   className = '',
   variant = 'rail',
 }: Props) {
-  const { data, isLoading } = useAnfitriaoMinhas(1, 100);
+  const { data, isLoading } = useAnfitriaoMinhas(1, 100, 'true');
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [canScrollUp, setCanScrollUp] = useState(false);

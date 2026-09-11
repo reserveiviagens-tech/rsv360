@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../lib/db';
 import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { carteiraCorretor } from '../../../../backend/src/db/schema/carteira-corretor';
@@ -60,6 +60,11 @@ import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
 import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
+import {
+  ativoFilterWhere,
+  resolveAtivoFilter,
+  type AtivoFilter,
+} from './listing-ativo-filter.util';
 import { auditoriaEstados } from '../../../../backend/src/db/schema/auditoria';
 import { acomodacoesService } from './acomodacoes.service';
 import {
@@ -110,7 +115,12 @@ function escopoProprietarios(auth: AuthContext, proprietariosCarteira: number[])
 }
 
 export const anfitriaoService = {
-  async listarMinhas(auth: AuthContext, page = 1, pageSize = 20) {
+  async listarMinhas(
+    auth: AuthContext,
+    page = 1,
+    pageSize = 20,
+    opts?: { ativo?: AtivoFilter },
+  ) {
     if (!PARCEIRO_ROLES.has(auth.role) && !STAFF_ROLES.has(auth.role)) {
       return { items: [], total: 0, page, pageSize };
     }
@@ -119,22 +129,26 @@ export const anfitriaoService = {
     const proprietariosCarteira =
       BROKER_ROLES.has(auth.role) ? await proprietariosNaCarteira(auth.userId) : [];
 
-    const whereScope = STAFF_ROLES.has(auth.role)
+    const whereScope: SQL = STAFF_ROLES.has(auth.role)
       ? sql`true`
       : escopoProprietarios(auth, proprietariosCarteira);
+
+    const ativoFilter = resolveAtivoFilter(opts?.ativo);
+    const ativoWhere = ativoFilterWhere(ativoFilter);
+    const whereClause = ativoWhere ? and(whereScope, ativoWhere) : whereScope;
 
     const [rows, countRow] = await Promise.all([
       db
         .select()
         .from(acomodacoes)
-        .where(whereScope)
+        .where(whereClause)
         .orderBy(desc(acomodacoes.atualizadoEm))
         .limit(pageSize)
         .offset(offset),
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(acomodacoes)
-        .where(whereScope),
+        .where(whereClause),
     ]);
 
     return { items: rows, total: countRow[0]?.count ?? 0, page, pageSize };

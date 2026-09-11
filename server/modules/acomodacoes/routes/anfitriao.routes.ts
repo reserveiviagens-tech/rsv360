@@ -4,6 +4,7 @@ import { normalizarListaDatas } from '../services/anfitriao-bulk.util';
 import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
 import { rateCalendarService } from '../services/rate-calendar.service';
 import { desempenhoService } from '../services/desempenho.service';
+import { parseAtivoFilter } from '../services/listing-ativo-filter.util';
 import {
   publicTrilhoUrl,
   trilhoThumbUpload,
@@ -164,7 +165,13 @@ router.get('/minhas', ...parceiroAuth, async (req, res) => {
   try {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 20);
-    const data = await anfitriaoService.listarMinhas(authFromReq(req), page, pageSize);
+    const ativo = parseAtivoFilter(req.query.ativo);
+    if (ativo == null) {
+      return res.status(400).json({ success: false, error: 'Parâmetro inválido' });
+    }
+    const data = await anfitriaoService.listarMinhas(authFromReq(req), page, pageSize, {
+      ativo,
+    });
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });

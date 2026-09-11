@@ -75,7 +75,34 @@ describe('PR 24A — escopo cross-owner (403)', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.items).toHaveLength(1);
       expect(res.body.data.items[0].id).toBe(101);
-      expect(mockListarMinhas).toHaveBeenCalledWith({ userId: 1, role: 'anfitriao' }, 1, 20);
+      expect(mockListarMinhas).toHaveBeenCalledWith(
+        { userId: 1, role: 'anfitriao' },
+        1,
+        20,
+        { ativo: 'true' },
+      );
+    });
+
+    it('rejeita ativo inválido com 400', async () => {
+      const res = await request(buildApp())
+        .get('/api/v1/acomodacoes/anfitriao/minhas?ativo=sim')
+        .set(authHeaders('anfitriao', 1));
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(mockListarMinhas).not.toHaveBeenCalled();
+    });
+
+    it('repassa filtro ativo=false ao serviço', async () => {
+      mockListarMinhas.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 });
+      await request(buildApp())
+        .get('/api/v1/acomodacoes/anfitriao/minhas?ativo=false')
+        .set(authHeaders('anfitriao', 1));
+      expect(mockListarMinhas).toHaveBeenCalledWith(
+        { userId: 1, role: 'anfitriao' },
+        1,
+        20,
+        { ativo: 'false' },
+      );
     });
 
     it('corretor C vê U_A da carteira', async () => {
