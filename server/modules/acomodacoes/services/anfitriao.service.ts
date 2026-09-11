@@ -50,6 +50,7 @@ import { validateListingSobreAnfitriao } from './listing-sobre-anfitriao.util';
 import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
+import { validateListingSeguranca } from './listing-seguranca.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -373,6 +374,22 @@ export const anfitriaoService = {
       }
       const empty = Object.keys(regras.value).length === 0;
       (metadataPatch as Record<string, unknown>).regrasCasa = empty ? undefined : regras.value;
+    }
+
+    const updatingSeguranca =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'seguranca');
+    if (updatingSeguranca) {
+      const seg = validateListingSeguranca(
+        (metadataPatch as Record<string, unknown>).seguranca,
+      );
+      if (!seg.ok) {
+        return { error: seg.error, message: seg.message };
+      }
+      const empty = Object.keys(seg.value).length === 0;
+      (metadataPatch as Record<string, unknown>).seguranca = empty ? undefined : seg.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

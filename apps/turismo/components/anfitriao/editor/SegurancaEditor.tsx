@@ -7,6 +7,14 @@ export type SegurancaMeta = {
   recomendacoesEspeciais?: string;
 };
 
+/** Card preview — mirrors server summarizeSeguranca. */
+export function summarizeSegurancaClient(value: SegurancaMeta): string {
+  const c = Object.values(value.consideracoes ?? {}).filter(Boolean).length;
+  const d = Object.values(value.dispositivos ?? {}).filter((x) => x?.ativo).length;
+  if (c + d === 0) return 'Adicionar informações';
+  return `${c} consideração(ões) · ${d} dispositivo(s)`;
+}
+
 type Props = {
   value: SegurancaMeta;
   onChange: (next: SegurancaMeta) => void;
