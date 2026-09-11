@@ -59,7 +59,7 @@ import { validateListingHospedagemSolidaria } from './listing-solidaria.util';
 import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
-import { validateMotivoArquivar } from './listing-arquivar.util';
+import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
 import { auditoriaEstados } from '../../../../backend/src/db/schema/auditoria';
 import { acomodacoesService } from './acomodacoes.service';
 import {
@@ -721,6 +721,60 @@ export const anfitriaoService = {
     });
 
     return { data: updated, already_archived: false };
+  },
+
+  async desarquivarUnidade(
+    auth: AuthContext,
+    id: number,
+    opts?: { motivo?: string },
+  ): Promise<
+    | { error: 'not_found' | 'forbidden' | 'invalid_motivo'; message?: string }
+    | { data: typeof acomodacoes.$inferSelect; already_restored: boolean }
+  > {
+    const scoped = await this.obterUnidade(auth, id);
+    if ('error' in scoped) return { error: scoped.error };
+
+    const motivo = validateMotivoDesarquivar(opts?.motivo);
+    if (!motivo.ok) {
+      return { error: 'invalid_motivo', message: motivo.message };
+    }
+
+    const row = scoped.data;
+    if (row.ativo !== false) {
+      return { data: row, already_restored: true };
+    }
+
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const nextMetadata = { ...baseMeta, statusAnuncio: 'anunciado' as const };
+
+    const updated = await db.transaction(async (tx) => {
+      const [next] = await tx
+        .update(acomodacoes)
+        .set({
+          ativo: true,
+          metadata: nextMetadata,
+          atualizadoEm: new Date(),
+        })
+        .where(eq(acomodacoes.id, id))
+        .returning();
+
+      await tx.insert(auditoriaEstados).values({
+        entidade: 'acomodacao',
+        entidadeId: id,
+        de: 'arquivado',
+        para: 'reativado',
+        autorId: auth.userId,
+        autorRole: auth.role,
+        motivo: motivo.value ?? null,
+      });
+
+      return next;
+    });
+
+    return { data: updated, already_restored: false };
   },
 
   async definirTrilhoThumb(

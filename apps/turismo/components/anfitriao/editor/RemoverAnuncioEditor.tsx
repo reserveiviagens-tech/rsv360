@@ -19,9 +19,10 @@ function PanelTitle({ title, hint }: { title: string; hint?: string }) {
 type Props = {
   archived?: boolean;
   onArquivar?: (motivo?: string) => Promise<void>;
+  onDesarquivar?: (motivo?: string) => Promise<void>;
 };
 
-export function RemoverAnuncioEditor({ archived = false, onArquivar }: Props) {
+export function RemoverAnuncioEditor({ archived = false, onArquivar, onDesarquivar }: Props) {
   const [motivo, setMotivo] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,6 +46,23 @@ export function RemoverAnuncioEditor({ archived = false, onArquivar }: Props) {
     }
   }
 
+  async function handleDesarquivar() {
+    if (!onDesarquivar || !archived || loading) return;
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const trimmed = motivo.trim();
+      await onDesarquivar(trimmed ? trimmed : undefined);
+      setSuccess('Anúncio reativado. Você pode editar e pausar novamente pelo Status do anúncio.');
+      setMotivo('');
+    } catch (e) {
+      setError((e as Error).message || 'Não foi possível reativar o anúncio.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (archived) {
     return (
       <div>
@@ -56,8 +74,48 @@ export function RemoverAnuncioEditor({ archived = false, onArquivar }: Props) {
           className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
           role="status"
         >
-          Anúncio arquivado. Para reativar, entre em contato com o suporte Reservei.
+          Anúncio arquivado. Reative para voltar a editar e publicar no catálogo.
         </p>
+
+        <div className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="motivo-desarquivar" className="block text-sm font-medium text-slate-700">
+              Motivo (opcional)
+            </label>
+            <textarea
+              id="motivo-desarquivar"
+              rows={3}
+              maxLength={200}
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              disabled={loading}
+              placeholder="Ex.: retomada da temporada"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+            />
+            <p className="mt-1 text-xs text-slate-500">{motivo.length}/200 — não inclua dados pessoais.</p>
+          </div>
+
+          {error ? (
+            <p className="text-sm text-red-600" role="alert" aria-live="polite">
+              {error}
+            </p>
+          ) : null}
+          {success ? (
+            <p className="text-sm text-green-700" role="status" aria-live="polite">
+              {success}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => void handleDesarquivar()}
+            disabled={!onDesarquivar || loading}
+            aria-busy={loading}
+            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? 'Reativando…' : 'Reativar anúncio'}
+          </button>
+        </div>
       </div>
     );
   }

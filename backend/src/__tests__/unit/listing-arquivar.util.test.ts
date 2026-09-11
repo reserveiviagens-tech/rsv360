@@ -2,6 +2,7 @@ import {
   MOTIVO_ARQUIVAR_MAX,
   sanitizeMotivoArquivar,
   validateMotivoArquivar,
+  validateMotivoDesarquivar,
 } from '../../../../server/modules/acomodacoes/services/listing-arquivar.util';
 
 describe('listing-arquivar.util', () => {
@@ -31,5 +32,10 @@ describe('listing-arquivar.util', () => {
       error: 'invalid_motivo',
       message: 'Motivo deve ser texto',
     });
+  });
+
+  it('validateMotivoDesarquivar reuses archive sanitize rules', () => {
+    expect(validateMotivoDesarquivar).toBe(validateMotivoArquivar);
+    expect(validateMotivoDesarquivar(' retomada ')).toEqual({ ok: true, value: 'retomada' });
   });
 });

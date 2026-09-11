@@ -115,6 +115,13 @@ export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps)
     }
   }
 
+  async function onDesarquivar(motivo?: string) {
+    setMensagem(null);
+    await fase1Api.anfitriaoDesarquivarUnidade(unitId, motivo ? { motivo } : {});
+    setMensagem('Anúncio reativado.');
+    await refetch();
+  }
+
   return (
     <AnfitriaoRoleGuard>
       <Head>
@@ -155,6 +162,7 @@ export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps)
             onSavePricing={onSavePricing}
             onEnviarAprovacao={onEnviarAprovacao}
             onArquivar={onArquivar}
+            onDesarquivar={onDesarquivar}
           />
         )}
       </div>

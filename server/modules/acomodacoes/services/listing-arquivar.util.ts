@@ -32,3 +32,6 @@ export function validateMotivoArquivar(raw: unknown): MotivoArquivarOk | MotivoA
   }
   return { ok: true, value: sanitized };
 }
+
+/** Same sanitize rules as archive — optional reason on restore. */
+export const validateMotivoDesarquivar = validateMotivoArquivar;

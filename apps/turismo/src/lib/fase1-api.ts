@@ -324,6 +324,14 @@ export const fase1Api = {
       method: 'POST',
       body: JSON.stringify(body ?? {}),
     }),
+  anfitriaoDesarquivarUnidade: (id: number, body?: { motivo?: string }) =>
+    fetchJson<{
+      success: boolean;
+      data: { unidade: unknown; already_restored: boolean };
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/desarquivar`, {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
 
   anfitriaoDisponibilidade: (id: number, de: string, ate: string) =>
     fetchJson<{ success: boolean; data: unknown[] }>(
