@@ -1,6 +1,7 @@
 import {
   normalizeListingSlug,
   isValidListingSlug,
+  summarizeListingSlug,
   resolveModoReserva,
   clientAcceptNeedsHostApproval,
 } from '../../../../server/modules/acomodacoes/services/listing-slug.util';
@@ -15,6 +16,12 @@ describe('listing-slug.util', () => {
     expect(isValidListingSlug('a')).toBe(true);
     expect(isValidListingSlug('-bad')).toBe(false);
     expect(isValidListingSlug('Bad Caps')).toBe(false);
+  });
+
+  it('summarizeListingSlug returns normalized slug or empty', () => {
+    expect(summarizeListingSlug('  My Villa!! ')).toBe('my-villa');
+    expect(summarizeListingSlug('')).toBe('');
+    expect(summarizeListingSlug(null)).toBe('');
   });
 
   it('resolves modoReserva defaults to instantanea', () => {

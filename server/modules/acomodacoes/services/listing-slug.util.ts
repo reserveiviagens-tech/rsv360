@@ -16,6 +16,11 @@ export function isValidListingSlug(slug: string): boolean {
   return /^[a-z0-9](?:[a-z0-9-_]{0,114}[a-z0-9])?$/.test(slug) || /^[a-z0-9]$/.test(slug);
 }
 
+/** Card preview for custom listing link section. */
+export function summarizeListingSlug(slug: unknown): string {
+  return normalizeListingSlug(slug);
+}
+
 export type ModoReservaListing = 'instantanea' | 'aprovar';
 
 export function resolveModoReserva(raw: unknown): ModoReservaListing {
