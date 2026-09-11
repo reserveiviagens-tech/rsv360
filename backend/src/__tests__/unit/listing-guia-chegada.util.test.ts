@@ -1,6 +1,10 @@
 import {
   GUIA_CHEGADA_TEXT_MAX,
+  INSTRUCOES_CHECKIN_MAX,
+  METODO_CHECKIN_DETALHE_MAX,
+  METODO_CHECKIN_VALUES,
   summarizeComoChegar,
+  summarizeMetodoCheckin,
   validateListingGuiaChegada,
 } from '../../../../server/modules/acomodacoes/services/listing-guia-chegada.util';
 
@@ -99,6 +103,65 @@ describe('listing-guia-chegada.util', () => {
       texto: 'Texto',
     }));
     expect(validateListingGuiaChegada({ instrucoesCheckout: items }).ok).toBe(false);
+  });
+
+  it('accepts whitelisted metodoCheckIn with sanitized detalhe and instrucoes', () => {
+    expect(
+      validateListingGuiaChegada({
+        metodoCheckIn: 'Fechadura inteligente',
+        metodoCheckInDetalhe: '  Portão lateral\u0007 ',
+        instrucoesCheckIn: '  Digite 1234 no teclado  ',
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        metodoCheckIn: 'Fechadura inteligente',
+        metodoCheckInDetalhe: 'Portão lateral',
+        instrucoesCheckIn: 'Digite 1234 no teclado',
+      },
+    });
+  });
+
+  it.each(METODO_CHECKIN_VALUES)('accepts metodoCheckIn value %s', (method) => {
+    expect(validateListingGuiaChegada({ metodoCheckIn: method })).toEqual({
+      ok: true,
+      value: { metodoCheckIn: method },
+    });
+  });
+
+  it('rejects unknown metodoCheckIn', () => {
+    const result = validateListingGuiaChegada({ metodoCheckIn: 'Porteiro fantasma' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe('guia_chegada_invalido');
+      expect(result.message).toContain('Método de check-in');
+    }
+  });
+
+  it('rejects metodoCheckInDetalhe over max length', () => {
+    const long = 'd'.repeat(METODO_CHECKIN_DETALHE_MAX + 1);
+    expect(validateListingGuiaChegada({ metodoCheckInDetalhe: long }).ok).toBe(false);
+  });
+
+  it('rejects instrucoesCheckIn over max length', () => {
+    const long = 'i'.repeat(INSTRUCOES_CHECKIN_MAX + 1);
+    expect(validateListingGuiaChegada({ instrucoesCheckIn: long }).ok).toBe(false);
+  });
+
+  describe('summarizeMetodoCheckin', () => {
+    it('returns default when empty or invalid', () => {
+      expect(summarizeMetodoCheckin({})).toBe('Adicionar informações');
+      expect(summarizeMetodoCheckin(null)).toBe('Adicionar informações');
+      expect(summarizeMetodoCheckin({ metodoCheckIn: 'Porteiro fantasma' as never })).toBe(
+        'Adicionar informações',
+      );
+    });
+
+    it('returns method label when set', () => {
+      expect(
+        summarizeMetodoCheckin({ metodoCheckIn: 'Recepção presencial' }),
+      ).toBe('Recepção presencial');
+    });
   });
 
   describe('summarizeComoChegar', () => {

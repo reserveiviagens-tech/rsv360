@@ -3,16 +3,26 @@
  */
 
 export const GUIA_CHEGADA_TEXT_MAX = 4000;
+export const METODO_CHECKIN_DETALHE_MAX = 200;
+export const INSTRUCOES_CHECKIN_MAX = 4000;
 export const INSTRUCOES_CHECKOUT_MAX = 20;
 export const INSTRUCAO_CHECKOUT_ID_MAX = 64;
 export const INSTRUCAO_CHECKOUT_TITULO_MAX = 200;
 export const INSTRUCAO_CHECKOUT_TEXTO_MAX = 4000;
 
+export const METODO_CHECKIN_VALUES = [
+  'Fechadura inteligente',
+  'Teclado numérico',
+  'Cofre de chaves',
+  'Funcionários do prédio',
+  'Recepção presencial',
+  'Outro',
+] as const;
+
+export type MetodoCheckInValue = (typeof METODO_CHECKIN_VALUES)[number];
+
 export const GUIA_CHEGADA_STRING_KEYS = [
   'comoChegar',
-  'metodoCheckIn',
-  'metodoCheckInDetalhe',
-  'instrucoesCheckIn',
   'wifiRede',
   'wifiSenha',
   'guiaCasa',
@@ -29,7 +39,7 @@ export type ListingInstrucaoCheckout = {
 
 export type ListingGuiaChegada = {
   comoChegar?: string;
-  metodoCheckIn?: string;
+  metodoCheckIn?: MetodoCheckInValue;
   metodoCheckInDetalhe?: string;
   instrucoesCheckIn?: string;
   wifiRede?: string;
@@ -50,8 +60,13 @@ const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 
 const ALLOWED_TOP_KEYS = new Set<string>([
   ...GUIA_CHEGADA_STRING_KEYS,
+  'metodoCheckIn',
+  'metodoCheckInDetalhe',
+  'instrucoesCheckIn',
   'instrucoesCheckout',
 ]);
+
+const METODO_CHECKIN_SET = new Set<string>(METODO_CHECKIN_VALUES);
 
 const INSTRUCAO_ITEM_KEYS = new Set(['id', 'titulo', 'texto']);
 
@@ -86,6 +101,29 @@ function validateOptionalStringField(
   }
   const cleaned = sanitizeGuiaText(raw, max);
   return { ok: true, value: cleaned || undefined };
+}
+
+function validateMetodoCheckIn(
+  raw: unknown,
+): { ok: true; value: MetodoCheckInValue | undefined } | GuiaChegadaValidationErr {
+  if (raw == null || raw === '') {
+    return { ok: true, value: undefined };
+  }
+  if (typeof raw !== 'string') {
+    return {
+      ok: false,
+      error: 'guia_chegada_invalido',
+      message: 'Método de check-in inválido',
+    };
+  }
+  if (!METODO_CHECKIN_SET.has(raw)) {
+    return {
+      ok: false,
+      error: 'guia_chegada_invalido',
+      message: 'Método de check-in inválido',
+    };
+  }
+  return { ok: true, value: raw as MetodoCheckInValue };
 }
 
 function validateInstrucoesCheckout(
@@ -229,9 +267,6 @@ export function validateListingGuiaChegada(
 
   const stringLabels: Record<GuiaChegadaStringKey, string> = {
     comoChegar: 'Como chegar',
-    metodoCheckIn: 'Método de check-in',
-    metodoCheckInDetalhe: 'Detalhe do check-in',
-    instrucoesCheckIn: 'Instruções de check-in',
     wifiRede: 'Rede Wi-Fi',
     wifiSenha: 'Senha Wi-Fi',
     guiaCasa: 'Guia da casa',
@@ -248,6 +283,38 @@ export function validateListingGuiaChegada(
     if (!parsed.ok) return parsed;
     if (parsed.value) {
       value[key] = parsed.value;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(src, 'metodoCheckIn')) {
+    const method = validateMetodoCheckIn(src.metodoCheckIn);
+    if (!method.ok) return method;
+    if (method.value) {
+      value.metodoCheckIn = method.value;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(src, 'metodoCheckInDetalhe')) {
+    const detalhe = validateOptionalStringField(
+      src.metodoCheckInDetalhe,
+      'Detalhe do check-in',
+      METODO_CHECKIN_DETALHE_MAX,
+    );
+    if (!detalhe.ok) return detalhe;
+    if (detalhe.value) {
+      value.metodoCheckInDetalhe = detalhe.value;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(src, 'instrucoesCheckIn')) {
+    const instrucoes = validateOptionalStringField(
+      src.instrucoesCheckIn,
+      'Instruções de check-in',
+      INSTRUCOES_CHECKIN_MAX,
+    );
+    if (!instrucoes.ok) return instrucoes;
+    if (instrucoes.value) {
+      value.instrucoesCheckIn = instrucoes.value;
     }
   }
 
@@ -271,4 +338,16 @@ export function summarizeComoChegar(
   if (!text) return 'Adicionar informações';
   const collapsed = text.replace(/\s+/g, ' ');
   return collapsed.length <= 40 ? collapsed : `${collapsed.slice(0, 39)}…`;
+}
+
+/** Card preview for "Método de check-in" section. */
+export function summarizeMetodoCheckin(
+  guia: ListingGuiaChegada | null | undefined,
+): string {
+  const method =
+    guia && typeof guia.metodoCheckIn === 'string' ? guia.metodoCheckIn.trim() : '';
+  if (!method || !METODO_CHECKIN_SET.has(method)) {
+    return 'Adicionar informações';
+  }
+  return method;
 }
