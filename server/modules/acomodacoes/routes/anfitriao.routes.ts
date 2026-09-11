@@ -511,17 +511,20 @@ router.post('/unidades/:id/arquivar', ...parceiroAuth, async (req, res) => {
     const result = await anfitriaoService.arquivarUnidade(authFromReq(req), Number(req.params.id), {
       motivo,
     });
-    if (result.error === 'forbidden') {
-      return res.status(403).json({ success: false, error: 'Acesso negado' });
-    }
-    if (result.error === 'not_found') {
-      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
-    }
-    if (result.error === 'invalid_motivo') {
-      return res.status(400).json({
-        success: false,
-        error: result.message ?? 'Motivo inválido',
-      });
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      if (result.error === 'invalid_motivo') {
+        return res.status(400).json({
+          success: false,
+          error: result.message ?? 'Motivo inválido',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível arquivar' });
     }
     res.json({
       success: true,
