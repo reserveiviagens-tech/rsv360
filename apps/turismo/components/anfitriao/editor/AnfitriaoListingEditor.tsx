@@ -46,6 +46,7 @@ import {
 } from './CheckoutInstrucoesEditor';
 import { InteracaoEditor, summarizeInteracaoClient } from './InteracaoEditor';
 import { GuiasLocaisEditor, summarizeGuiasLocaisClient } from './GuiasLocaisEditor';
+import { StatusAnuncioEditor, summarizeStatusAnuncioClient } from './StatusAnuncioEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -349,7 +350,7 @@ export function AnfitriaoListingEditor({
       case 'guias-locais':
         return summarizeGuiasLocaisClient();
       case 'status':
-        return statusAnuncio === 'anunciado' ? 'Anunciado' : 'Não anunciado';
+        return summarizeStatusAnuncioClient(statusAnuncio);
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -1187,38 +1188,11 @@ function PreferenciasPanel({
 }) {
   if (section === 'status') {
     return (
-      <div>
-        <PanelTitle title="Status do anúncio" />
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(
-            [
-              ['anunciado', 'Anunciado', 'Aparece nas buscas e pode ser reservado.'],
-              ['nao_anunciado', 'Não anunciado', 'Fora da busca; você pode pausar datas.'],
-            ] as const
-          ).map(([id, title, desc]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setStatusAnuncio(id)}
-              className={`rounded-2xl border p-4 text-left ${
-                statusAnuncio === id ? 'border-slate-900' : 'border-slate-200'
-              }`}
-            >
-              <p className="font-semibold">{title}</p>
-              <p className="mt-1 text-sm text-slate-500">{desc}</p>
-            </button>
-          ))}
-        </div>
-        {onEnviarAprovacao && (
-          <button
-            type="button"
-            className="mt-4 rounded-lg border border-slate-300 px-4 py-2 text-sm"
-            onClick={() => void onEnviarAprovacao()}
-          >
-            Enviar para aprovação do staff
-          </button>
-        )}
-      </div>
+      <StatusAnuncioEditor
+        value={statusAnuncio}
+        onChange={setStatusAnuncio}
+        onEnviarAprovacao={onEnviarAprovacao}
+      />
     );
   }
   if (section === 'requisitos') {
