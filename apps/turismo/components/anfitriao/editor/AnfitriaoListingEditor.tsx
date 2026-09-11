@@ -32,6 +32,7 @@ import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEdit
 import { SobreAnfitriaoEditor, summarizeSobreAnfitriaoClient } from './SobreAnfitriaoEditor';
 import { CoanfitrioesEditor, summarizeCoanfitrioesClient } from './CoanfitrioesEditor';
 import { ConfigReservaEditor, summarizeConfigReservaClient } from './ConfigReservaEditor';
+import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -313,7 +314,7 @@ export function AnfitriaoListingEditor({
         return summarizeConfigReservaClient(modoReserva);
       case 'regras':
       case 'regras-guia':
-        return `Check-in ${regras.checkInDe ?? '14:00'} · Checkout ${regras.checkOutAte ?? '11:00'}`;
+        return summarizeRegrasCasaClient(regras);
       case 'cancelamento':
         return `${polCurta} · ${polLonga}`;
       case 'link-personalizado':
@@ -1018,7 +1019,14 @@ function SeuEspacoPanel(props: {
   }
 
   if (s === 'regras') {
-    return <RegrasPanel regras={props.regras} setRegras={props.setRegras} capacidade={props.capacidade} setCapacidade={props.setCapacidade} />;
+    return (
+      <RegrasCasaEditor
+        regras={props.regras}
+        setRegras={props.setRegras}
+        capacidade={props.capacidade}
+        setCapacidade={props.setCapacidade}
+      />
+    );
   }
 
   if (s === 'cancelamento') {
@@ -1133,118 +1141,6 @@ function SeuEspacoPanel(props: {
   return <PanelTitle title="Seção" hint="Em construção." />;
 }
 
-function RegrasPanel({
-  regras,
-  setRegras,
-  capacidade,
-  setCapacidade,
-}: {
-  regras: NonNullable<EditorMeta['regrasCasa']>;
-  setRegras: (v: NonNullable<EditorMeta['regrasCasa']>) => void;
-  capacidade: number;
-  setCapacidade: (v: number) => void;
-}) {
-  const toggles: Array<[keyof NonNullable<EditorMeta['regrasCasa']>, string]> = [
-    ['pets', 'Permitido animais de estimação'],
-    ['eventos', 'Permitido eventos'],
-    ['fumar', 'Permitido fumar e cigarros eletrônicos'],
-    ['silencio', 'Horários de silêncio'],
-    ['filmagem', 'Permitido fotografia comercial e filmagem'],
-  ];
-  return (
-    <div>
-      <PanelTitle title="Regras da Casa" hint="Os hóspedes devem respeitar estas regras." />
-      <ul className="space-y-3">
-        {toggles.map(([key, label]) => (
-          <li key={key} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
-            <span className="text-sm font-medium">{label}</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={`h-9 w-9 rounded-full border ${!regras[key] ? 'bg-slate-900 text-white' : ''}`}
-                onClick={() => setRegras({ ...regras, [key]: false })}
-              >
-                ✕
-              </button>
-              <button
-                type="button"
-                className={`h-9 w-9 rounded-full border ${regras[key] ? 'bg-slate-900 text-white' : ''}`}
-                onClick={() => setRegras({ ...regras, [key]: true })}
-              >
-                ✓
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {regras.silencio && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            Início
-            <input
-              className="mt-1 w-full rounded-xl border px-3 py-2"
-              value={regras.silencioInicio ?? '22:00'}
-              onChange={(e) => setRegras({ ...regras, silencioInicio: e.target.value })}
-            />
-          </label>
-          <label className="text-sm">
-            Término
-            <input
-              className="mt-1 w-full rounded-xl border px-3 py-2"
-              value={regras.silencioFim ?? '07:00'}
-              onChange={(e) => setRegras({ ...regras, silencioFim: e.target.value })}
-            />
-          </label>
-        </div>
-      )}
-      <div className="mt-4 flex items-center gap-3">
-        <span className="text-sm font-medium">Número de hóspedes</span>
-        <button type="button" className="h-8 w-8 rounded-full border" onClick={() => setCapacidade(Math.max(1, capacidade - 1))}>
-          −
-        </button>
-        <span className="font-bold">{capacidade}</span>
-        <button type="button" className="h-8 w-8 rounded-full border" onClick={() => setCapacidade(capacidade + 1)}>
-          +
-        </button>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <label className="text-xs">
-          Check-in de
-          <input
-            className="mt-1 w-full rounded-lg border px-2 py-1.5"
-            value={regras.checkInDe ?? '14:00'}
-            onChange={(e) => setRegras({ ...regras, checkInDe: e.target.value })}
-          />
-        </label>
-        <label className="text-xs">
-          Check-in até
-          <input
-            className="mt-1 w-full rounded-lg border px-2 py-1.5"
-            value={regras.checkInAte ?? 'Flexível'}
-            onChange={(e) => setRegras({ ...regras, checkInAte: e.target.value })}
-          />
-        </label>
-        <label className="text-xs">
-          Checkout
-          <input
-            className="mt-1 w-full rounded-lg border px-2 py-1.5"
-            value={regras.checkOutAte ?? '11:00'}
-            onChange={(e) => setRegras({ ...regras, checkOutAte: e.target.value })}
-          />
-        </label>
-      </div>
-      <label className="mt-4 block text-sm">
-        Regras adicionais
-        <textarea
-          className="mt-1 h-32 w-full rounded-xl border px-3 py-2"
-          value={regras.regrasAdicionais ?? ''}
-          onChange={(e) => setRegras({ ...regras, regrasAdicionais: e.target.value })}
-        />
-      </label>
-    </div>
-  );
-}
-
 function GuiaPanel({
   section,
   regras,
@@ -1263,7 +1159,14 @@ function GuiaPanel({
   setCapacidade: (v: number) => void;
 }) {
   if (section === 'regras-guia') {
-    return <RegrasPanel regras={regras} setRegras={setRegras} capacidade={capacidade} setCapacidade={setCapacidade} />;
+    return (
+      <RegrasCasaEditor
+        regras={regras}
+        setRegras={setRegras}
+        capacidade={capacidade}
+        setCapacidade={setCapacidade}
+      />
+    );
   }
   if (section === 'checkin-checkout') {
     return (
