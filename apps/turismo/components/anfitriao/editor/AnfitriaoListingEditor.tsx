@@ -45,6 +45,7 @@ import {
   summarizeCheckoutInstrucoesClient,
 } from './CheckoutInstrucoesEditor';
 import { InteracaoEditor, summarizeInteracaoClient } from './InteracaoEditor';
+import { GuiasLocaisEditor, summarizeGuiasLocaisClient } from './GuiasLocaisEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -345,6 +346,8 @@ export function AnfitriaoListingEditor({
         return summarizeCheckoutInstrucoesClient(guia);
       case 'interacao':
         return summarizeInteracaoClient(guia);
+      case 'guias-locais':
+        return summarizeGuiasLocaisClient();
       case 'status':
         return statusAnuncio === 'anunciado' ? 'Anunciado' : 'Não anunciado';
       case 'acessibilidade':
@@ -1157,14 +1160,10 @@ function GuiaPanel({
   if (section === 'interacao') {
     return <InteracaoEditor guia={guia} setGuia={setGuia} />;
   }
-  return (
-    <div>
-      <PanelTitle title="Guias" hint="Crie um guia para compartilhar dicas locais com os hóspedes." />
-      <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500">
-        MVP: estrutura salva no metadata. Editor rico de guias locais na fase 2.
-      </p>
-    </div>
-  );
+  if (section === 'guias-locais') {
+    return <GuiasLocaisEditor />;
+  }
+  return <PanelTitle title="Seção" hint="Em construção." />;
 }
 
 function PreferenciasPanel({
