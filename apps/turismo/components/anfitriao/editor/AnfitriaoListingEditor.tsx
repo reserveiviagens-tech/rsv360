@@ -55,6 +55,7 @@ import { SolidariaEditor, summarizeSolidariaClient } from './SolidariaEditor';
 import { IdiomasEditor, summarizeIdiomasClient } from './IdiomasEditor';
 import { LeisLocaisEditor, summarizeLeisLocaisClient } from './LeisLocaisEditor';
 import { ImpostosEditor, summarizeImpostosClient } from './ImpostosEditor';
+import { RemoverAnuncioEditor, summarizeRemoverAnuncioClient } from './RemoverAnuncioEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -370,6 +371,8 @@ export function AnfitriaoListingEditor({
         return summarizeLeisLocaisClient();
       case 'impostos':
         return summarizeImpostosClient();
+      case 'remover':
+        return summarizeRemoverAnuncioClient();
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -1221,15 +1224,7 @@ function PreferenciasPanel({
     return <SolidariaEditor value={solidaria} onChange={setSolidaria} />;
   }
   if (section === 'remover') {
-    return (
-      <div>
-        <PanelTitle title="Remover anúncio" hint="Ação destrutiva — use Não anunciado para pausar." />
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Para remover permanentemente, altere o status para Não anunciado e contate o suporte Reservei.
-          Soft-delete com auditoria na fase 2.
-        </p>
-      </div>
-    );
+    return <RemoverAnuncioEditor />;
   }
   if (section === 'idiomas') {
     return <IdiomasEditor />;
