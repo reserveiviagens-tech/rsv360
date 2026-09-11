@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { fase1Api } from '@/lib/fase1-api';
 import type { EditorMeta } from './editor-types';
 
 export type CoanfitriaoItem = NonNullable<EditorMeta['coanfitrioes']>[number];
@@ -24,6 +25,9 @@ const STATUS_LABEL: Record<CoanfitriaoItem['status'], string> = {
 type Props = {
   value: CoanfitrioesValue;
   onChange: (next: CoanfitrioesValue) => void;
+  unidadeId?: number;
+  currentUserEmail?: string;
+  onRefresh?: () => void | Promise<void>;
 };
 
 function newCoanfitriaoId(): string {
@@ -37,6 +41,11 @@ function papelLabel(papel: string): string {
   return COANFITRIOES_PAPEL_OPTIONS.find((p) => p.id === papel)?.label ?? papel;
 }
 
+function emailsMatch(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
 export function summarizeCoanfitrioesClient(value: CoanfitrioesValue | undefined): string | null {
   if (!Array.isArray(value) || value.length === 0) return null;
   const active = value.filter((c) => c.status !== 'revogado').length;
@@ -48,16 +57,18 @@ function AddCoanfitriaoForm({
   onCancel,
   onSave,
   disabled,
+  saving,
 }: {
   onCancel: () => void;
-  onSave: (item: Omit<CoanfitriaoItem, 'id' | 'status'> & { email?: string }) => void;
+  onSave: (item: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string }) => void | Promise<void>;
   disabled: boolean;
+  saving?: boolean;
 }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [papel, setPapel] = useState<CoanfitriaoItem['papel']>('tudo');
 
-  const canSave = nome.trim().length > 0 && !disabled;
+  const canSave = nome.trim().length > 0 && email.trim().length > 0 && !disabled && !saving;
 
   return (
     <div className="space-y-4">
@@ -71,7 +82,7 @@ function AddCoanfitriaoForm({
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Adicionar coanfitrião</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Convite por e-mail com nível de permissão (SMS na fase 2)
+          Convite salvo no servidor; envio por e-mail chega em versão futura
         </p>
       </div>
       <label className="block text-sm">
@@ -87,9 +98,10 @@ function AddCoanfitriaoForm({
         />
       </label>
       <label className="block text-sm">
-        E-mail <span className="text-slate-400">(opcional)</span>
+        E-mail
         <input
           type="email"
+          required
           className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -125,44 +137,125 @@ function AddCoanfitriaoForm({
           disabled={!canSave}
           className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
           onClick={() => {
-            const trimmedEmail = email.trim();
-            onSave({
+            void onSave({
               nome: nome.trim(),
-              ...(trimmedEmail ? { email: trimmedEmail } : {}),
+              email: email.trim(),
               papel,
             });
           }}
         >
-          Adicionar
+          {saving ? 'Salvando…' : 'Adicionar'}
         </button>
       </div>
     </div>
   );
 }
 
-export function CoanfitrioesEditor({ value, onChange }: Props) {
+export function CoanfitrioesEditor({
+  value,
+  onChange,
+  unidadeId,
+  currentUserEmail,
+  onRefresh,
+}: Props) {
   const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const list = Array.isArray(value) ? value : [];
   const atMax = list.length >= COANFITRIOES_MAX;
+  const useApi = unidadeId != null;
+
+  async function refreshFromServer() {
+    if (onRefresh) await onRefresh();
+  }
+
+  async function handleInvite(draft: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string }) {
+    setActionError(null);
+    if (useApi) {
+      setBusy(true);
+      try {
+        const res = await fase1Api.anfitriaoConvidarCoanfitriao(unidadeId, draft);
+        onChange(res.data as CoanfitrioesValue);
+        await refreshFromServer();
+        setAdding(false);
+      } catch (e) {
+        setActionError((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    onChange([
+      ...list,
+      {
+        id: newCoanfitriaoId(),
+        nome: draft.nome,
+        email: draft.email,
+        papel: draft.papel,
+        status: 'pendente',
+      },
+    ]);
+    setAdding(false);
+  }
+
+  async function handleRevoke(coId: string) {
+    setActionError(null);
+    if (useApi) {
+      setBusy(true);
+      try {
+        const res = await fase1Api.anfitriaoRevogarCoanfitriao(unidadeId, coId);
+        onChange(res.data as CoanfitrioesValue);
+        await refreshFromServer();
+      } catch (e) {
+        setActionError((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    onChange(list.map((c) => (c.id === coId ? { ...c, status: 'revogado' as const } : c)));
+  }
+
+  async function handleAccept(coId: string) {
+    setActionError(null);
+    if (!useApi) return;
+    setBusy(true);
+    try {
+      const res = await fase1Api.anfitriaoAceitarCoanfitriao(unidadeId, coId);
+      onChange(res.data as CoanfitrioesValue);
+      await refreshFromServer();
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(coId: string) {
+    setActionError(null);
+    if (useApi) {
+      setBusy(true);
+      try {
+        const res = await fase1Api.anfitriaoRemoverCoanfitriao(unidadeId, coId);
+        onChange(res.data as CoanfitrioesValue);
+        await refreshFromServer();
+      } catch (e) {
+        setActionError((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    onChange(list.filter((c) => c.id !== coId));
+  }
 
   if (adding) {
     return (
       <AddCoanfitriaoForm
         disabled={atMax}
+        saving={busy}
         onCancel={() => setAdding(false)}
-        onSave={(draft) => {
-          onChange([
-            ...list,
-            {
-              id: newCoanfitriaoId(),
-              nome: draft.nome,
-              ...(draft.email ? { email: draft.email } : {}),
-              papel: draft.papel,
-              status: 'pendente',
-            },
-          ]);
-          setAdding(false);
-        }}
+        onSave={handleInvite}
       />
     );
   }
@@ -176,66 +269,89 @@ export function CoanfitrioesEditor({ value, onChange }: Props) {
         </p>
       </div>
 
+      {actionError ? (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {actionError}
+        </p>
+      ) : null}
+
       {list.length === 0 ? (
         <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          Nenhum coanfitrião adicionado. Convites completos com RBAC chegam na fase 2.
+          Nenhum coanfitrião adicionado. Convites são salvos no servidor; o envio por e-mail chega
+          em versão futura.
         </p>
       ) : (
         <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
-          {list.map((item) => (
-            <li key={item.id} className="px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={`text-sm font-semibold ${
-                      item.status === 'revogado' ? 'text-slate-400 line-through' : 'text-slate-900'
-                    }`}
-                  >
-                    {item.nome}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">{papelLabel(item.papel)}</p>
-                  {item.email ? (
-                    <p className="mt-0.5 truncate text-xs text-slate-600">{item.email}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs font-medium text-slate-500">
-                    {STATUS_LABEL[item.status]}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col gap-1">
-                  {item.status !== 'revogado' ? (
-                    <button
-                      type="button"
-                      className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      onClick={() =>
-                        onChange(
-                          list.map((c) =>
-                            c.id === item.id ? { ...c, status: 'revogado' as const } : c,
-                          ),
-                        )
-                      }
+          {list.map((item) => {
+            const canAccept =
+              item.status === 'pendente' &&
+              currentUserEmail &&
+              item.email &&
+              emailsMatch(item.email, currentUserEmail);
+
+            return (
+              <li key={item.id} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-sm font-semibold ${
+                        item.status === 'revogado'
+                          ? 'text-slate-400 line-through'
+                          : 'text-slate-900'
+                      }`}
                     >
-                      Revogar
-                    </button>
-                  ) : null}
-                  {item.status === 'pendente' || item.status === 'revogado' ? (
-                    <button
-                      type="button"
-                      className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-                      onClick={() => onChange(list.filter((c) => c.id !== item.id))}
-                    >
-                      Remover
-                    </button>
-                  ) : null}
+                      {item.nome}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">{papelLabel(item.papel)}</p>
+                    {item.email ? (
+                      <p className="mt-0.5 truncate text-xs text-slate-600">{item.email}</p>
+                    ) : null}
+                    <p className="mt-1 text-xs font-medium text-slate-500">
+                      {STATUS_LABEL[item.status]}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-1">
+                    {canAccept ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-40"
+                        onClick={() => void handleAccept(item.id)}
+                      >
+                        Aceitar convite
+                      </button>
+                    ) : null}
+                    {item.status !== 'revogado' ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                        onClick={() => void handleRevoke(item.id)}
+                      >
+                        Revogar
+                      </button>
+                    ) : null}
+                    {item.status === 'pendente' || item.status === 'revogado' ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+                        onClick={() => void handleRemove(item.id)}
+                      >
+                        Remover
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 
       <button
         type="button"
-        disabled={atMax}
+        disabled={atMax || busy}
         className="w-full rounded-xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
         onClick={() => setAdding(true)}
       >

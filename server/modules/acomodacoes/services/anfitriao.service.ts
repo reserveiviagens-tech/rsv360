@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../lib/db';
 import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
@@ -47,7 +48,19 @@ import { validateListingAmenidades } from './listing-comodidades.util';
 import { validateListingAcessibilidade } from './listing-acessibilidade.util';
 import { validateListingLocalizacao } from './listing-localizacao.util';
 import { validateListingSobreAnfitriao } from './listing-sobre-anfitriao.util';
-import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
+import {
+  COANFITRIOES_MAX,
+  COANFITRIOES_NOME_MAX,
+  COANFITRIOES_PAPEIS,
+  coanfitriaoMatchesEmail,
+  findCoanfitriaoAtivoByEmail,
+  normalizeCoanfitriaoEmail,
+  papelPermiteCalendario,
+  papelPermiteMensagens,
+  validateListingCoanfitrioes,
+  type CoanfitriaoPapel,
+  type ListingCoanfitriao,
+} from './listing-coanfitrioes.util';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
@@ -81,6 +94,16 @@ const BROKER_ROLES = new Set(['corretor', 'agente', 'promotor']);
 export interface AuthContext {
   userId: number;
   role: string;
+  email?: string;
+}
+
+function readCoanfitrioesFromMetadata(metadata: unknown): ListingCoanfitriao[] {
+  if (metadata == null || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return [];
+  }
+  const raw = (metadata as Record<string, unknown>).coanfitrioes;
+  const validated = validateListingCoanfitrioes(raw);
+  return validated.ok ? validated.value : [];
 }
 
 async function proprietariosNaCarteira(corretorId: number): Promise<number[]> {
@@ -93,7 +116,10 @@ async function proprietariosNaCarteira(corretorId: number): Promise<number[]> {
   return rows.map((r: { proprietarioId: number }) => r.proprietarioId);
 }
 
-export async function podeVerUnidade(auth: AuthContext, row: typeof acomodacoes.$inferSelect) {
+export async function podeGerenciarUnidade(
+  auth: AuthContext,
+  row: typeof acomodacoes.$inferSelect,
+) {
   if (STAFF_ROLES.has(auth.role)) return true;
   if (auth.role === 'anfitriao') return row.proprietarioId === auth.userId;
   if (BROKER_ROLES.has(auth.role)) {
@@ -102,6 +128,35 @@ export async function podeVerUnidade(auth: AuthContext, row: typeof acomodacoes.
     return row.proprietarioId != null && carteira.includes(row.proprietarioId);
   }
   return false;
+}
+
+export async function podeVerUnidade(auth: AuthContext, row: typeof acomodacoes.$inferSelect) {
+  if (await podeGerenciarUnidade(auth, row)) return true;
+  if (auth.email) {
+    const cohosts = readCoanfitrioesFromMetadata(row.metadata);
+    if (findCoanfitriaoAtivoByEmail(cohosts, auth.email)) return true;
+  }
+  return false;
+}
+
+export async function podeEditarCalendarioUnidade(
+  auth: AuthContext,
+  row: typeof acomodacoes.$inferSelect,
+) {
+  if (await podeGerenciarUnidade(auth, row)) return true;
+  if (!auth.email) return false;
+  const cohost = findCoanfitriaoAtivoByEmail(readCoanfitrioesFromMetadata(row.metadata), auth.email);
+  return cohost != null && papelPermiteCalendario(cohost.papel);
+}
+
+export async function podeEditarMensagensUnidade(
+  auth: AuthContext,
+  row: typeof acomodacoes.$inferSelect,
+) {
+  if (await podeGerenciarUnidade(auth, row)) return true;
+  if (!auth.email) return false;
+  const cohost = findCoanfitriaoAtivoByEmail(readCoanfitrioesFromMetadata(row.metadata), auth.email);
+  return cohost != null && papelPermiteMensagens(cohost.papel);
 }
 
 function escopoProprietarios(auth: AuthContext, proprietariosCarteira: number[]) {
@@ -1197,6 +1252,12 @@ export const anfitriaoService = {
     const scoped = await this.assertPropostaNoEscopo(auth, propostaId);
     if ('error' in scoped) return { error: scoped.error };
 
+    const unitScoped = await this.obterUnidade(auth, scoped.data.estadia.acomodacaoId);
+    if ('error' in unitScoped) return { error: unitScoped.error };
+    if (!(await podeEditarMensagensUnidade(auth, unitScoped.data))) {
+      return { error: 'forbidden' as const };
+    }
+
     const [msg] = await db
       .insert(propostaChat)
       .values({
@@ -1450,6 +1511,9 @@ export const anfitriaoService = {
   ) {
     const scoped = await this.obterUnidade(auth, acomodacaoId);
     if ('error' in scoped) return { error: scoped.error };
+    if (!(await podeEditarCalendarioUnidade(auth, scoped.data))) {
+      return { error: 'forbidden' as const };
+    }
     if (datas.length > 50) return { error: 'limit_exceeded' as const };
 
     const obs = observacao?.trim() || OBSERVACAO_BLOQUEADO;
@@ -1498,6 +1562,9 @@ export const anfitriaoService = {
   async bulkDesbloquearDatas(auth: AuthContext, acomodacaoId: number, datas: string[]) {
     const scoped = await this.obterUnidade(auth, acomodacaoId);
     if ('error' in scoped) return { error: scoped.error };
+    if (!(await podeEditarCalendarioUnidade(auth, scoped.data))) {
+      return { error: 'forbidden' as const };
+    }
     if (datas.length > 50) return { error: 'limit_exceeded' as const };
 
     let count = 0;
@@ -1609,6 +1676,191 @@ export const anfitriaoService = {
     }
 
     return { data: unidades, de, ate };
+  },
+
+  async convidarCoanfitriao(
+    auth: AuthContext,
+    unidadeId: number,
+    input: { nome: string; email: string; papel: string },
+  ) {
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, unidadeId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+    if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
+
+    const email = normalizeCoanfitriaoEmail(input.email);
+    if (!email) return { error: 'email_required' as const };
+
+    const nome =
+      typeof input.nome === 'string'
+        ? input.nome.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, COANFITRIOES_NOME_MAX)
+        : '';
+    if (!nome) return { error: 'invalid_nome' as const };
+
+    const papelRaw = typeof input.papel === 'string' ? input.papel.trim() : '';
+    if (!COANFITRIOES_PAPEIS.includes(papelRaw as CoanfitriaoPapel)) {
+      return { error: 'invalid_papel' as const };
+    }
+    const papel = papelRaw as CoanfitriaoPapel;
+
+    const list = readCoanfitrioesFromMetadata(row.metadata);
+    if (list.length >= COANFITRIOES_MAX) return { error: 'coanfitrioes_max' as const };
+
+    const duplicate = list.some(
+      (item) =>
+        item.email &&
+        coanfitriaoMatchesEmail(item, email) &&
+        (item.status === 'ativo' || item.status === 'pendente'),
+    );
+    if (duplicate) return { error: 'duplicate_email' as const };
+
+    const nextList: ListingCoanfitriao[] = [
+      ...list,
+      { id: randomUUID(), nome, email, papel, status: 'pendente' },
+    ];
+    const validated = validateListingCoanfitrioes(nextList);
+    if (!validated.ok) {
+      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
+    }
+
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const nextMetadata = {
+      ...baseMeta,
+      coanfitrioes: validated.value,
+    };
+
+    await db
+      .update(acomodacoes)
+      .set({ metadata: nextMetadata, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, unidadeId));
+
+    return { data: validated.value };
+  },
+
+  async revogarCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, unidadeId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+    if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
+
+    const list = readCoanfitrioesFromMetadata(row.metadata);
+    const idx = list.findIndex((item) => item.id === coId);
+    if (idx < 0) return { error: 'not_found' as const };
+
+    const nextList = list.map((item, i) =>
+      i === idx ? { ...item, status: 'revogado' as const } : item,
+    );
+    const validated = validateListingCoanfitrioes(nextList);
+    if (!validated.ok) {
+      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
+    }
+
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    await db
+      .update(acomodacoes)
+      .set({
+        metadata: { ...baseMeta, coanfitrioes: validated.value },
+        atualizadoEm: new Date(),
+      })
+      .where(eq(acomodacoes.id, unidadeId));
+
+    return { data: validated.value };
+  },
+
+  async aceitarConviteCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
+    const authEmail = normalizeCoanfitriaoEmail(auth.email);
+    if (!authEmail) return { error: 'email_required' as const };
+
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, unidadeId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+
+    const list = readCoanfitrioesFromMetadata(row.metadata);
+    const target = list.find((item) => item.id === coId);
+    if (
+      !target ||
+      target.status !== 'pendente' ||
+      !target.email ||
+      !coanfitriaoMatchesEmail(target, authEmail)
+    ) {
+      return { error: 'forbidden' as const };
+    }
+
+    const nextList = list.map((item) =>
+      item.id === coId ? { ...item, status: 'ativo' as const } : item,
+    );
+    const validated = validateListingCoanfitrioes(nextList);
+    if (!validated.ok) {
+      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
+    }
+
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    await db
+      .update(acomodacoes)
+      .set({
+        metadata: { ...baseMeta, coanfitrioes: validated.value },
+        atualizadoEm: new Date(),
+      })
+      .where(eq(acomodacoes.id, unidadeId));
+
+    return { data: validated.value };
+  },
+
+  async removerCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, unidadeId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+    if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
+
+    const list = readCoanfitrioesFromMetadata(row.metadata);
+    const target = list.find((item) => item.id === coId);
+    if (!target) return { error: 'not_found' as const };
+    if (target.status !== 'pendente' && target.status !== 'revogado') {
+      return { error: 'invalid_status' as const };
+    }
+
+    const nextList = list.filter((item) => item.id !== coId);
+    const validated = validateListingCoanfitrioes(nextList);
+    if (!validated.ok) {
+      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
+    }
+
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const nextMetadata = {
+      ...baseMeta,
+      coanfitrioes: validated.value.length > 0 ? validated.value : undefined,
+    };
+
+    await db
+      .update(acomodacoes)
+      .set({ metadata: nextMetadata, atualizadoEm: new Date() })
+      .where(eq(acomodacoes.id, unidadeId));
+
+    return { data: validated.value };
   },
 
   async exportImpostosCsv(

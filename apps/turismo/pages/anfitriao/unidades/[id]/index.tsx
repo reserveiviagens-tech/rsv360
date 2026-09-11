@@ -13,6 +13,7 @@ import {
   useAtualizarAnfitriaoUnidade,
   useEnviarAprovacaoUnidade,
 } from '@/hooks/useAnfitriao';
+import { useAuth } from '@/context/AuthContext';
 import { fase1Api } from '@/lib/fase1-api';
 import { parseRouteId } from '@/lib/parse-route-id';
 
@@ -31,6 +32,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 
 export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { data, isLoading, isError, error, refetch } = useAnfitriaoUnidade(unitId);
   const atualizar = useAtualizarAnfitriaoUnidade(unitId);
   const enviar = useEnviarAprovacaoUnidade(unitId);
@@ -163,6 +165,8 @@ export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps)
             onEnviarAprovacao={onEnviarAprovacao}
             onArquivar={onArquivar}
             onDesarquivar={onDesarquivar}
+            currentUserEmail={user?.email}
+            onRefresh={refetch}
           />
         )}
       </div>

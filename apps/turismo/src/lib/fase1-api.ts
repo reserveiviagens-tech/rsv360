@@ -361,6 +361,33 @@ export const fase1Api = {
     URL.revokeObjectURL(a.href);
   },
 
+  anfitriaoConvidarCoanfitriao: (
+    id: number,
+    body: { nome: string; email: string; papel: string },
+  ) =>
+    fetchJson<{ success: boolean; data: unknown[] }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+  anfitriaoRevogarCoanfitriao: (id: number, coId: string) =>
+    fetchJson<{ success: boolean; data: unknown[] }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/revogar`,
+      { method: 'POST', body: '{}' },
+    ),
+  anfitriaoAceitarCoanfitriao: (id: number, coId: string) =>
+    fetchJson<{ success: boolean; data: unknown[] }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/aceitar`,
+      { method: 'POST', body: '{}' },
+    ),
+  anfitriaoRemoverCoanfitriao: (id: number, coId: string) =>
+    fetchJson<{ success: boolean; data: unknown[] }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}`,
+      { method: 'DELETE' },
+    ),
+
   anfitriaoDesarquivarUnidadesBulk: (ids: number[], motivo?: string) =>
     fetchJson<{
       success: boolean;

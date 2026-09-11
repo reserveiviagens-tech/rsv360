@@ -86,7 +86,7 @@ describe('PR-A — reservas e calendario anfitriao', () => {
     expect(res.status).toBe(200);
     expect(res.body.data[0].clienteEmail).toBe('c***@dominio.com');
     expect(mockListarReservas).toHaveBeenCalledWith(
-      { userId: 1, role: 'anfitriao' },
+      expect.objectContaining({ userId: 1, role: 'anfitriao' }),
       { de: '2026-08-01', ate: '2026-08-31', acomodacaoId: undefined },
     );
   });

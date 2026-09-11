@@ -81,7 +81,7 @@ describe('PR-C — bulk calendario anfitriao', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.count).toBe(30);
     expect(mockBulkBloquear).toHaveBeenCalledWith(
-      { userId: 1, role: 'anfitriao' },
+      expect.objectContaining({ userId: 1, role: 'anfitriao' }),
       101,
       datas30,
       undefined,

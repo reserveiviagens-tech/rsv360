@@ -44,13 +44,46 @@ function sanitizeId(raw: unknown): string {
   return raw.replace(CONTROL_CHARS, '').trim().slice(0, COANFITRIOES_ID_MAX);
 }
 
-function normalizeEmail(raw: unknown): string | undefined {
+export function normalizeCoanfitriaoEmail(raw: unknown): string | undefined {
   if (raw == null || raw === '') return undefined;
   if (typeof raw !== 'string') return undefined;
   const email = raw.replace(CONTROL_CHARS, '').trim().toLowerCase().slice(0, COANFITRIOES_EMAIL_MAX);
   if (!email) return undefined;
   if (!EMAIL_RE.test(email)) return undefined;
   return email;
+}
+
+/** Masks email for safe user-facing messages (LGPD). */
+export function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  if (at <= 0) return '***';
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const visible = local.slice(0, 1);
+  return `${visible}***@${domain}`;
+}
+
+export function coanfitriaoMatchesEmail(item: ListingCoanfitriao, email: string): boolean {
+  if (!item.email) return false;
+  const normalized = normalizeCoanfitriaoEmail(email);
+  if (!normalized) return false;
+  return item.email === normalized;
+}
+
+export function findCoanfitriaoAtivoByEmail(
+  list: ListingCoanfitriao[] | null | undefined,
+  email: string,
+): ListingCoanfitriao | undefined {
+  if (!Array.isArray(list) || !email) return undefined;
+  return list.find((item) => item.status === 'ativo' && coanfitriaoMatchesEmail(item, email));
+}
+
+export function papelPermiteCalendario(papel: CoanfitriaoPapel): boolean {
+  return papel === 'calendario' || papel === 'tudo';
+}
+
+export function papelPermiteMensagens(papel: CoanfitriaoPapel): boolean {
+  return papel === 'mensagens' || papel === 'tudo';
 }
 
 export function validateListingCoanfitrioes(
@@ -149,7 +182,7 @@ export function validateListingCoanfitrioes(
         };
       }
       if (typeof src.email === 'string' && src.email.trim()) {
-        email = normalizeEmail(src.email);
+        email = normalizeCoanfitriaoEmail(src.email);
         if (!email) {
           return {
             ok: false,

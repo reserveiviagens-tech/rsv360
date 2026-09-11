@@ -28,7 +28,11 @@ function authFromReq(req: Request): AuthContext {
   if (typeof userId !== 'number') {
     throw new Error('Usuário não autenticado');
   }
-  return { userId, role: req.user?.role ?? 'user' };
+  return {
+    userId,
+    role: req.user?.role ?? 'user',
+    email: typeof req.user?.email === 'string' ? req.user.email : undefined,
+  };
 }
 
 router.get('/dashboard', ...parceiroAuth, async (req, res) => {
@@ -622,6 +626,145 @@ router.post('/unidades/:id/desarquivar', ...parceiroAuth, async (req, res) => {
         already_restored: result.already_restored,
       },
     });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
+  try {
+    const nome = typeof req.body?.nome === 'string' ? req.body.nome : '';
+    const email = typeof req.body?.email === 'string' ? req.body.email : '';
+    const papel = typeof req.body?.papel === 'string' ? req.body.papel : '';
+    if (!email.trim()) {
+      return res.status(400).json({ success: false, error: 'E-mail é obrigatório' });
+    }
+    const result = await anfitriaoService.convidarCoanfitriao(
+      authFromReq(req),
+      Number(req.params.id),
+      { nome, email, papel },
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      if (result.error === 'email_required' || result.error === 'invalid_nome') {
+        return res.status(400).json({ success: false, error: 'Dados do convite inválidos' });
+      }
+      if (result.error === 'invalid_papel') {
+        return res.status(400).json({ success: false, error: 'Papel inválido' });
+      }
+      if (result.error === 'duplicate_email') {
+        return res.status(409).json({ success: false, error: 'Convite já existe para este e-mail' });
+      }
+      if (result.error === 'coanfitrioes_max') {
+        return res.status(400).json({ success: false, error: 'Limite de coanfitriões atingido' });
+      }
+      if (result.error === 'coanfitrioes_invalido') {
+        return res.status(400).json({
+          success: false,
+          error: result.message ?? 'Lista de coanfitriões inválida',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível convidar' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/coanfitrioes/:coId/revogar', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await anfitriaoService.revogarCoanfitriao(
+      authFromReq(req),
+      Number(req.params.id),
+      String(req.params.coId),
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Coanfitrião não encontrado' });
+      }
+      if (result.error === 'coanfitrioes_invalido') {
+        return res.status(400).json({
+          success: false,
+          error: result.message ?? 'Lista de coanfitriões inválida',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível revogar' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/unidades/:id/coanfitrioes/:coId/aceitar', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await anfitriaoService.aceitarConviteCoanfitriao(
+      authFromReq(req),
+      Number(req.params.id),
+      String(req.params.coId),
+    );
+    if ('error' in result) {
+      if (result.error === 'email_required') {
+        return res.status(400).json({ success: false, error: 'E-mail da sessão é obrigatório' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Convite inválido ou sem permissão' });
+      }
+      if (result.error === 'coanfitrioes_invalido') {
+        return res.status(400).json({
+          success: false,
+          error: result.message ?? 'Lista de coanfitriões inválida',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível aceitar convite' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.delete('/unidades/:id/coanfitrioes/:coId', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await anfitriaoService.removerCoanfitriao(
+      authFromReq(req),
+      Number(req.params.id),
+      String(req.params.coId),
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Coanfitrião não encontrado' });
+      }
+      if (result.error === 'invalid_status') {
+        return res.status(409).json({
+          success: false,
+          error: 'Somente convites pendentes ou revogados podem ser removidos',
+        });
+      }
+      if (result.error === 'coanfitrioes_invalido') {
+        return res.status(400).json({
+          success: false,
+          error: result.message ?? 'Lista de coanfitriões inválida',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível remover' });
+    }
+    res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }
