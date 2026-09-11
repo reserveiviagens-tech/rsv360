@@ -38,6 +38,7 @@ import { CheckinCheckoutEditor, summarizeCheckinCheckoutClient } from './Checkin
 import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor';
 import { ComoChegarEditor, summarizeComoChegarClient } from './ComoChegarEditor';
 import { MetodoCheckinEditor, summarizeMetodoCheckinClient } from './MetodoCheckinEditor';
+import { WifiEditor, summarizeWifiClient } from './WifiEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -329,7 +330,7 @@ export function AnfitriaoListingEditor({
       case 'link-personalizado':
         return summarizeLinkPersonalizadoClient(slug);
       case 'wifi':
-        return guia.wifiRede ? `Rede: ${guia.wifiRede}` : 'Adicionar informações';
+        return summarizeWifiClient(guia);
       case 'metodo-checkin':
         return summarizeMetodoCheckinClient(guia);
       case 'interacao':
@@ -1135,28 +1136,7 @@ function GuiaPanel({
     return <MetodoCheckinEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'wifi') {
-    return (
-      <div>
-        <PanelTitle title="Informações do Wi-Fi" hint="Compartilhado 24 a 48 horas antes do check-in." />
-        <label className="block text-sm">
-          Nome da rede
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={guia.wifiRede ?? ''}
-            onChange={(e) => setGuia({ ...guia, wifiRede: e.target.value })}
-          />
-        </label>
-        <label className="mt-3 block text-sm">
-          Senha
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={guia.wifiSenha ?? ''}
-            onChange={(e) => setGuia({ ...guia, wifiSenha: e.target.value })}
-            autoComplete="off"
-          />
-        </label>
-      </div>
-    );
+    return <WifiEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'guia-casa') {
     return (

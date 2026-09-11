@@ -3,8 +3,11 @@ import {
   INSTRUCOES_CHECKIN_MAX,
   METODO_CHECKIN_DETALHE_MAX,
   METODO_CHECKIN_VALUES,
+  WIFI_REDE_MAX,
+  WIFI_SENHA_MAX,
   summarizeComoChegar,
   summarizeMetodoCheckin,
+  summarizeWifi,
   validateListingGuiaChegada,
 } from '../../../../server/modules/acomodacoes/services/listing-guia-chegada.util';
 
@@ -53,22 +56,50 @@ describe('listing-guia-chegada.util', () => {
   it('passes through wifiRede and wifiSenha without requiring both', () => {
     const result = validateListingGuiaChegada({
       comoChegar: 'Portão azul',
-      wifiRede: 'wifi-test',
-      wifiSenha: 'wifi-test-secret',
+      wifiRede: 'rede-teste',
+      wifiSenha: 'senha-teste',
     });
     expect(result).toEqual({
       ok: true,
       value: {
         comoChegar: 'Portão azul',
-        wifiRede: 'wifi-test',
-        wifiSenha: 'wifi-test-secret',
+        wifiRede: 'rede-teste',
+        wifiSenha: 'senha-teste',
       },
     });
   });
 
+  it('sanitizes wifiRede and wifiSenha with trim and control-char strip', () => {
+    expect(
+      validateListingGuiaChegada({
+        wifiRede: '  rede-teste\u0007 ',
+        wifiSenha: '  senha-teste\u0007 ',
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        wifiRede: 'rede-teste',
+        wifiSenha: 'senha-teste',
+      },
+    });
+  });
+
+  it('rejects wifiRede over max length', () => {
+    const long = 'r'.repeat(WIFI_REDE_MAX + 1);
+    const result = validateListingGuiaChegada({ wifiRede: long });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain(String(WIFI_REDE_MAX));
+    }
+  });
+
   it('rejects wifiSenha over max length', () => {
-    const long = 'x'.repeat(GUIA_CHEGADA_TEXT_MAX + 1);
-    expect(validateListingGuiaChegada({ wifiSenha: long }).ok).toBe(false);
+    const long = 'x'.repeat(WIFI_SENHA_MAX + 1);
+    const result = validateListingGuiaChegada({ wifiSenha: long });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain(String(WIFI_SENHA_MAX));
+    }
   });
 
   it('accepts bounded instrucoesCheckout with sanitized fields', () => {
@@ -161,6 +192,28 @@ describe('listing-guia-chegada.util', () => {
       expect(
         summarizeMetodoCheckin({ metodoCheckIn: 'Recepção presencial' }),
       ).toBe('Recepção presencial');
+    });
+  });
+
+  describe('summarizeWifi', () => {
+    it('returns default when wifiRede is empty', () => {
+      expect(summarizeWifi({})).toBe('Adicionar informações');
+      expect(summarizeWifi(null)).toBe('Adicionar informações');
+      expect(summarizeWifi({ wifiSenha: 'senha-teste' })).toBe('Adicionar informações');
+    });
+
+    it('returns network label when wifiRede is set', () => {
+      expect(summarizeWifi({ wifiRede: 'rede-teste' })).toBe('Rede: rede-teste');
+    });
+
+    it('never includes password in summary even when set', () => {
+      const summary = summarizeWifi({
+        wifiRede: 'rede-teste',
+        wifiSenha: 'senha-teste',
+      });
+      expect(summary).toBe('Rede: rede-teste');
+      expect(summary).not.toContain('senha-teste');
+      expect(summary).not.toMatch(/senha/i);
     });
   });
 
