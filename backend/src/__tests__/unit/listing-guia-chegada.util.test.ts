@@ -1,11 +1,14 @@
 import {
   GUIA_CASA_MAX,
   GUIA_CHEGADA_TEXT_MAX,
+  INSTRUCAO_CHECKOUT_TEXTO_MAX,
+  INSTRUCAO_CHECKOUT_TITULO_MAX,
   INSTRUCOES_CHECKIN_MAX,
   METODO_CHECKIN_DETALHE_MAX,
   METODO_CHECKIN_VALUES,
   WIFI_REDE_MAX,
   WIFI_SENHA_MAX,
+  summarizeCheckoutInstrucoes,
   summarizeComoChegar,
   summarizeGuiaCasa,
   summarizeMetodoCheckin,
@@ -159,6 +162,34 @@ describe('listing-guia-chegada.util', () => {
     expect(validateListingGuiaChegada({ instrucoesCheckout: items }).ok).toBe(false);
   });
 
+  it('rejects instrucoesCheckout with empty id after sanitize', () => {
+    const result = validateListingGuiaChegada({
+      instrucoesCheckout: [{ id: '   ', titulo: 'Título', texto: 'Texto' }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain('ID');
+    }
+  });
+
+  it('rejects instrucoesCheckout titulo over max length', () => {
+    const long = 't'.repeat(INSTRUCAO_CHECKOUT_TITULO_MAX + 1);
+    expect(
+      validateListingGuiaChegada({
+        instrucoesCheckout: [{ id: 'item-1', titulo: long, texto: 'Texto' }],
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('rejects instrucoesCheckout texto over max length', () => {
+    const long = 'x'.repeat(INSTRUCAO_CHECKOUT_TEXTO_MAX + 1);
+    expect(
+      validateListingGuiaChegada({
+        instrucoesCheckout: [{ id: 'item-1', titulo: 'Título', texto: long }],
+      }).ok,
+    ).toBe(false);
+  });
+
   it('accepts whitelisted metodoCheckIn with sanitized detalhe and instrucoes', () => {
     expect(
       validateListingGuiaChegada({
@@ -258,6 +289,35 @@ describe('listing-guia-chegada.util', () => {
       const summary = summarizeGuiaCasa({ guiaCasa: long });
       expect(summary.length).toBeLessThanOrEqual(40);
       expect(summary.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('summarizeCheckoutInstrucoes', () => {
+    it('returns default when empty', () => {
+      expect(summarizeCheckoutInstrucoes({})).toBe('Adicionar informações');
+      expect(summarizeCheckoutInstrucoes(null)).toBe('Adicionar informações');
+      expect(summarizeCheckoutInstrucoes({ instrucoesCheckout: [] })).toBe(
+        'Adicionar informações',
+      );
+    });
+
+    it('returns singular count for one item', () => {
+      expect(
+        summarizeCheckoutInstrucoes({
+          instrucoesCheckout: [{ id: '1', titulo: 'Lixeira', texto: 'Levar lixo' }],
+        }),
+      ).toBe('1 instrução');
+    });
+
+    it('returns plural count for multiple items', () => {
+      expect(
+        summarizeCheckoutInstrucoes({
+          instrucoesCheckout: [
+            { id: '1', titulo: 'Lixeira', texto: 'Levar lixo' },
+            { id: '2', titulo: 'Chaves', texto: 'Deixar na mesa' },
+          ],
+        }),
+      ).toBe('2 instruções');
     });
   });
 

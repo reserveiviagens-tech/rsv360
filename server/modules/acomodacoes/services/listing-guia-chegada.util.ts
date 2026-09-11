@@ -7,8 +7,8 @@ export const METODO_CHECKIN_DETALHE_MAX = 200;
 export const INSTRUCOES_CHECKIN_MAX = 4000;
 export const INSTRUCOES_CHECKOUT_MAX = 20;
 export const INSTRUCAO_CHECKOUT_ID_MAX = 64;
-export const INSTRUCAO_CHECKOUT_TITULO_MAX = 200;
-export const INSTRUCAO_CHECKOUT_TEXTO_MAX = 4000;
+export const INSTRUCAO_CHECKOUT_TITULO_MAX = 80;
+export const INSTRUCAO_CHECKOUT_TEXTO_MAX = 140;
 export const WIFI_REDE_MAX = 128;
 export const WIFI_SENHA_MAX = 128;
 export const GUIA_CASA_MAX = 4000;
@@ -382,4 +382,16 @@ export function summarizeMetodoCheckin(
     return 'Adicionar informações';
   }
   return method;
+}
+
+/** Card preview for "Instruções de checkout" section. */
+export function summarizeCheckoutInstrucoes(
+  guia: ListingGuiaChegada | null | undefined,
+): string {
+  const list = guia?.instrucoesCheckout;
+  if (!Array.isArray(list) || list.length === 0) {
+    return 'Adicionar informações';
+  }
+  const n = list.length;
+  return n === 1 ? '1 instrução' : `${n} instruções`;
 }

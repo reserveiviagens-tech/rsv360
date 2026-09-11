@@ -41,6 +41,10 @@ import { MetodoCheckinEditor, summarizeMetodoCheckinClient } from './MetodoCheck
 import { WifiEditor, summarizeWifiClient } from './WifiEditor';
 import { GuiaCasaEditor, summarizeGuiaCasaClient } from './GuiaCasaEditor';
 import {
+  CheckoutInstrucoesEditor,
+  summarizeCheckoutInstrucoesClient,
+} from './CheckoutInstrucoesEditor';
+import {
   GUIA_CARDS,
   PREF_CARDS,
   SEU_ESPACO_CARDS,
@@ -336,6 +340,8 @@ export function AnfitriaoListingEditor({
         return summarizeGuiaCasaClient(guia);
       case 'metodo-checkin':
         return summarizeMetodoCheckinClient(guia);
+      case 'checkout-instrucoes':
+        return summarizeCheckoutInstrucoesClient(guia);
       case 'interacao':
         return guia.preferenciaInteracao || 'Adicionar informações';
       case 'status':
@@ -1145,55 +1151,7 @@ function GuiaPanel({
     return <GuiaCasaEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'checkout-instrucoes') {
-    const items = guia.instrucoesCheckout ?? [];
-    return (
-      <div>
-        <PanelTitle
-          title="Instruções de checkout"
-          hint="Visíveis antes da reserva. Lembrete às 17h do dia anterior."
-        />
-        <ul className="space-y-2">
-          {items.map((it, idx) => (
-            <li key={it.id} className="rounded-xl border px-3 py-2">
-              <input
-                className="w-full font-medium outline-none"
-                value={it.titulo}
-                onChange={(e) => {
-                  const next = [...items];
-                  next[idx] = { ...it, titulo: e.target.value };
-                  setGuia({ ...guia, instrucoesCheckout: next });
-                }}
-              />
-              <textarea
-                className="mt-1 w-full text-sm outline-none"
-                value={it.texto}
-                maxLength={140}
-                onChange={(e) => {
-                  const next = [...items];
-                  next[idx] = { ...it, texto: e.target.value };
-                  setGuia({ ...guia, instrucoesCheckout: next });
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-        <button
-          type="button"
-          className="mt-3 rounded-full border border-slate-300 px-4 py-2 text-sm"
-          onClick={() =>
-            setGuia({
-              ...guia,
-              instrucoesCheckout: [
-                ...items,
-                { id: `c-${Date.now()}`, titulo: 'Nova instrução', texto: '' },
-              ],
-            })
-          }
-        >
-          + Adicionar instrução
-        </button>
-      </div>
-    );
+    return <CheckoutInstrucoesEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'interacao') {
     const opts = [
