@@ -44,6 +44,7 @@ import {
   CheckoutInstrucoesEditor,
   summarizeCheckoutInstrucoesClient,
 } from './CheckoutInstrucoesEditor';
+import { InteracaoEditor, summarizeInteracaoClient } from './InteracaoEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -343,7 +344,7 @@ export function AnfitriaoListingEditor({
       case 'checkout-instrucoes':
         return summarizeCheckoutInstrucoesClient(guia);
       case 'interacao':
-        return guia.preferenciaInteracao || 'Adicionar informações';
+        return summarizeInteracaoClient(guia);
       case 'status':
         return statusAnuncio === 'anunciado' ? 'Anunciado' : 'Não anunciado';
       case 'acessibilidade':
@@ -1154,31 +1155,7 @@ function GuiaPanel({
     return <CheckoutInstrucoesEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'interacao') {
-    const opts = [
-      'Não estarei disponível pessoalmente e prefiro me comunicar pelo aplicativo',
-      'Gosto de cumprimentar pessoalmente, mas fora isso, prefiro ficar mais na minha',
-      'Eu gosto de socializar e passar tempo com os hóspedes',
-      'Não tenho preferência, me adapto às preferências dos hóspedes',
-    ];
-    return (
-      <div>
-        <PanelTitle title="Interação com os hóspedes" />
-        <div className="space-y-2">
-          {opts.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => setGuia({ ...guia, preferenciaInteracao: o })}
-              className={`w-full rounded-2xl border p-4 text-left text-sm ${
-                guia.preferenciaInteracao === o ? 'border-slate-900' : 'border-slate-200'
-              }`}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+    return <InteracaoEditor guia={guia} setGuia={setGuia} />;
   }
   return (
     <div>
