@@ -32,6 +32,7 @@ import { LocalizacaoEditor, summarizeLocalizacaoClient } from './LocalizacaoEdit
 import { SobreAnfitriaoEditor, summarizeSobreAnfitriaoClient } from './SobreAnfitriaoEditor';
 import { CoanfitrioesEditor, summarizeCoanfitrioesClient } from './CoanfitrioesEditor';
 import { ConfigReservaEditor, summarizeConfigReservaClient } from './ConfigReservaEditor';
+import { CancelamentoEditor, summarizeCancelamentoClient } from './CancelamentoEditor';
 import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor';
 import {
   GUIA_CARDS,
@@ -312,7 +313,11 @@ export function AnfitriaoListingEditor({
       case 'regras-guia':
         return summarizeRegrasCasaClient(regras);
       case 'cancelamento':
-        return `${polCurta} · ${polLonga}`;
+        return summarizeCancelamentoClient({
+          politicaCancelamentoCurta: polCurta,
+          politicaCancelamentoLonga: polLonga,
+          opcaoNaoReembolsavel: naoReemb,
+        });
       case 'link-personalizado':
         return slug || 'Adicionar informações';
       case 'wifi':
@@ -1027,41 +1032,14 @@ function SeuEspacoPanel(props: {
 
   if (s === 'cancelamento') {
     return (
-      <div>
-        <PanelTitle title="Política de cancelamento" />
-        <label className="block text-sm">
-          Estadias de curta duração (menos de 28 noites)
-          <select
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={props.polCurta}
-            onChange={(e) => props.setPolCurta(e.target.value)}
-          >
-            <option value="flexivel">Flexível</option>
-            <option value="moderada">Moderada</option>
-            <option value="limitada">Limitada</option>
-            <option value="restrita">Restrita</option>
-          </select>
-        </label>
-        <label className="mt-4 block text-sm">
-          Estadias de longa duração (28+ noites)
-          <select
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={props.polLonga}
-            onChange={(e) => props.setPolLonga(e.target.value)}
-          >
-            <option value="restrita_longa">Restrita para estadias de longa duração</option>
-            <option value="flexivel_longa">Flexível longa duração</option>
-          </select>
-        </label>
-        <label className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
-          <span>Opção não reembolsável (~10% desconto)</span>
-          <input
-            type="checkbox"
-            checked={props.naoReemb}
-            onChange={(e) => props.setNaoReemb(e.target.checked)}
-          />
-        </label>
-      </div>
+      <CancelamentoEditor
+        polCurta={props.polCurta}
+        setPolCurta={props.setPolCurta}
+        polLonga={props.polLonga}
+        setPolLonga={props.setPolLonga}
+        naoReemb={props.naoReemb}
+        setNaoReemb={props.setNaoReemb}
+      />
     );
   }
 

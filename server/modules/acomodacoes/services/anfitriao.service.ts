@@ -49,6 +49,7 @@ import { validateListingLocalizacao } from './listing-localizacao.util';
 import { validateListingSobreAnfitriao } from './listing-sobre-anfitriao.util';
 import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
+import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
 import { validateListingSeguranca } from './listing-seguranca.util';
 import { acomodacoesService } from './acomodacoes.service';
@@ -357,6 +358,46 @@ export const anfitriaoService = {
       }
       if (Object.prototype.hasOwnProperty.call(meta, 'mensagemPreReserva')) {
         meta.mensagemPreReserva = config.value.mensagemPreReserva ?? undefined;
+      }
+    }
+
+    const updatingCancelamento =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      (Object.prototype.hasOwnProperty.call(metadataPatch, 'politicaCancelamentoCurta') ||
+        Object.prototype.hasOwnProperty.call(metadataPatch, 'politicaCancelamentoLonga') ||
+        Object.prototype.hasOwnProperty.call(metadataPatch, 'opcaoNaoReembolsavel'));
+    if (updatingCancelamento) {
+      const meta = metadataPatch as Record<string, unknown>;
+      const input: Record<string, unknown> = {};
+      if (Object.prototype.hasOwnProperty.call(meta, 'politicaCancelamentoCurta')) {
+        input.politicaCancelamentoCurta = meta.politicaCancelamentoCurta;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'politicaCancelamentoLonga')) {
+        input.politicaCancelamentoLonga = meta.politicaCancelamentoLonga;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'opcaoNaoReembolsavel')) {
+        input.opcaoNaoReembolsavel = meta.opcaoNaoReembolsavel;
+      }
+      const cancelamento = validateListingCancelamento(input);
+      if (!cancelamento.ok) {
+        return { error: cancelamento.error, message: cancelamento.message };
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'politicaCancelamentoCurta')) {
+        meta.politicaCancelamentoCurta = cancelamento.value.politicaCancelamentoCurta;
+        (patchPermitido as Record<string, unknown>).politicaCancelamentoCurta =
+          cancelamento.value.politicaCancelamentoCurta;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'politicaCancelamentoLonga')) {
+        meta.politicaCancelamentoLonga = cancelamento.value.politicaCancelamentoLonga;
+        (patchPermitido as Record<string, unknown>).politicaCancelamentoLonga =
+          cancelamento.value.politicaCancelamentoLonga;
+      }
+      if (Object.prototype.hasOwnProperty.call(meta, 'opcaoNaoReembolsavel')) {
+        meta.opcaoNaoReembolsavel = cancelamento.value.opcaoNaoReembolsavel;
+        (patchPermitido as Record<string, unknown>).opcaoNaoReembolsavel =
+          cancelamento.value.opcaoNaoReembolsavel;
       }
     }
 

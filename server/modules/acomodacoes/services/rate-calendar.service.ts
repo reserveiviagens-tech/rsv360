@@ -24,6 +24,7 @@ import {
 import { validateListingPrecosPatch } from './listing-precos.util';
 import { validateListingDescontosPatch } from './listing-descontos.util';
 import { validateListingDisponibilidadePatch } from './listing-disponibilidade.util';
+import { validateListingCancelamento } from './listing-cancelamento.util';
 import {
   avaliarPrecificacao,
   classificarTemporadaTipo,
@@ -128,23 +129,9 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-const CANCEL_POLICIES = new Set([
-  'flexivel',
-  'moderada',
-  'limitada',
-  'restrita',
-  'restrita_longa',
-  'rigorosa_longa',
-]);
-
 function clampPct(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.min(100, Math.max(0, round2(n)));
-}
-
-function normalizeCancelPolicy(value: string, fallback: string): string {
-  const v = String(value || '').toLowerCase().trim();
-  return CANCEL_POLICIES.has(v) ? v : fallback;
 }
 
 function numOrNull(v: unknown): number | null {
@@ -673,6 +660,36 @@ export const rateCalendarService = {
       };
     }
 
+    const updatingCancelamento =
+      patch.politicaCancelamentoCurta !== undefined ||
+      patch.politicaCancelamentoLonga !== undefined ||
+      patch.opcaoNaoReembolsavel !== undefined;
+    if (updatingCancelamento) {
+      const cancelamento = validateListingCancelamento({
+        ...(patch.politicaCancelamentoCurta !== undefined
+          ? { politicaCancelamentoCurta: patch.politicaCancelamentoCurta }
+          : {}),
+        ...(patch.politicaCancelamentoLonga !== undefined
+          ? { politicaCancelamentoLonga: patch.politicaCancelamentoLonga }
+          : {}),
+        ...(patch.opcaoNaoReembolsavel !== undefined
+          ? { opcaoNaoReembolsavel: patch.opcaoNaoReembolsavel }
+          : {}),
+      });
+      if (!cancelamento.ok) {
+        return { error: 'cancelamento_invalido' as const, message: cancelamento.message };
+      }
+      if (cancelamento.value.politicaCancelamentoCurta !== undefined) {
+        patch.politicaCancelamentoCurta = cancelamento.value.politicaCancelamentoCurta;
+      }
+      if (cancelamento.value.politicaCancelamentoLonga !== undefined) {
+        patch.politicaCancelamentoLonga = cancelamento.value.politicaCancelamentoLonga;
+      }
+      if (cancelamento.value.opcaoNaoReembolsavel !== undefined) {
+        patch.opcaoNaoReembolsavel = cancelamento.value.opcaoNaoReembolsavel;
+      }
+    }
+
     const set: Record<string, unknown> = { atualizadoEm: new Date() };
     if (patch.precoDiaria !== undefined) {
       set.precoDiaria = patch.precoDiaria == null ? null : String(patch.precoDiaria);
@@ -714,19 +731,13 @@ export const rateCalendarService = {
         patch.taxaHospedeExtra == null ? null : String(Math.max(0, patch.taxaHospedeExtra));
     }
     if (patch.politicaCancelamentoCurta !== undefined) {
-      set.politicaCancelamentoCurta = normalizeCancelPolicy(
-        patch.politicaCancelamentoCurta,
-        'limitada',
-      );
+      set.politicaCancelamentoCurta = patch.politicaCancelamentoCurta;
     }
     if (patch.politicaCancelamentoLonga !== undefined) {
-      set.politicaCancelamentoLonga = normalizeCancelPolicy(
-        patch.politicaCancelamentoLonga,
-        'restrita_longa',
-      );
+      set.politicaCancelamentoLonga = patch.politicaCancelamentoLonga;
     }
     if (patch.opcaoNaoReembolsavel !== undefined) {
-      set.opcaoNaoReembolsavel = Boolean(patch.opcaoNaoReembolsavel);
+      set.opcaoNaoReembolsavel = patch.opcaoNaoReembolsavel;
     }
     if (patch.precoInteligenteAtivo !== undefined) {
       set.precoInteligenteAtivo = Boolean(patch.precoInteligenteAtivo);
