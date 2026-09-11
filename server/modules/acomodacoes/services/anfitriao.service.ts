@@ -51,6 +51,7 @@ import { validateListingCoanfitrioes } from './listing-coanfitrioes.util';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
+import { validateListingGuiaChegada } from './listing-guia-chegada.util';
 import { validateListingSeguranca } from './listing-seguranca.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
@@ -415,6 +416,22 @@ export const anfitriaoService = {
       }
       const empty = Object.keys(regras.value).length === 0;
       (metadataPatch as Record<string, unknown>).regrasCasa = empty ? undefined : regras.value;
+    }
+
+    const updatingGuiaChegada =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'guiaChegada');
+    if (updatingGuiaChegada) {
+      const guia = validateListingGuiaChegada(
+        (metadataPatch as Record<string, unknown>).guiaChegada,
+      );
+      if (!guia.ok) {
+        return { error: guia.error, message: guia.message };
+      }
+      const empty = Object.keys(guia.value).length === 0;
+      (metadataPatch as Record<string, unknown>).guiaChegada = empty ? undefined : guia.value;
     }
 
     const updatingSeguranca =
