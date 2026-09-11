@@ -59,6 +59,8 @@ import { validateListingHospedagemSolidaria } from './listing-solidaria.util';
 import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
+import { validateMotivoArquivar } from './listing-arquivar.util';
+import { auditoriaEstados } from '../../../../backend/src/db/schema/auditoria';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -665,6 +667,60 @@ export const anfitriaoService = {
       .returning();
 
     return { data: updated };
+  },
+
+  async arquivarUnidade(
+    auth: AuthContext,
+    id: number,
+    opts?: { motivo?: string },
+  ): Promise<
+    | { error: 'not_found' | 'forbidden' | 'invalid_motivo'; message?: string }
+    | { data: typeof acomodacoes.$inferSelect; already_archived: boolean }
+  > {
+    const scoped = await this.obterUnidade(auth, id);
+    if ('error' in scoped) return { error: scoped.error };
+
+    const motivo = validateMotivoArquivar(opts?.motivo);
+    if (!motivo.ok) {
+      return { error: 'invalid_motivo', message: motivo.message };
+    }
+
+    const row = scoped.data;
+    if (row.ativo === false) {
+      return { data: row, already_archived: true };
+    }
+
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const nextMetadata = { ...baseMeta, statusAnuncio: 'nao_anunciado' as const };
+
+    const updated = await db.transaction(async (tx) => {
+      const [next] = await tx
+        .update(acomodacoes)
+        .set({
+          ativo: false,
+          metadata: nextMetadata,
+          atualizadoEm: new Date(),
+        })
+        .where(eq(acomodacoes.id, id))
+        .returning();
+
+      await tx.insert(auditoriaEstados).values({
+        entidade: 'acomodacao',
+        entidadeId: id,
+        de: 'ativo:true',
+        para: 'arquivado',
+        autorId: auth.userId,
+        autorRole: auth.role,
+        motivo: motivo.value ?? null,
+      });
+
+      return next;
+    });
+
+    return { data: updated, already_archived: false };
   },
 
   async definirTrilhoThumb(

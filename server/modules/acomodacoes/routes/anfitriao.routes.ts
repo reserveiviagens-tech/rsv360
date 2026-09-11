@@ -501,6 +501,40 @@ router.post('/unidades/:id/enviar-aprovacao', ...parceiroAuth, async (req, res) 
   }
 });
 
+router.post('/unidades/:id/arquivar', ...parceiroAuth, async (req, res) => {
+  try {
+    const rawMotivo = req.body?.motivo;
+    if (rawMotivo !== undefined && rawMotivo !== null && typeof rawMotivo !== 'string') {
+      return res.status(400).json({ success: false, error: 'Motivo deve ser texto' });
+    }
+    const motivo = typeof rawMotivo === 'string' ? rawMotivo : undefined;
+    const result = await anfitriaoService.arquivarUnidade(authFromReq(req), Number(req.params.id), {
+      motivo,
+    });
+    if (result.error === 'forbidden') {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    if (result.error === 'not_found') {
+      return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+    }
+    if (result.error === 'invalid_motivo') {
+      return res.status(400).json({
+        success: false,
+        error: result.message ?? 'Motivo inválido',
+      });
+    }
+    res.json({
+      success: true,
+      data: {
+        unidade: result.data,
+        already_archived: result.already_archived,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/admin/unidades/:id/aprovar', ...staffAprovacao, async (req, res) => {
   try {
     const result = await anfitriaoService.aprovarUnidade(req.user!.role ?? '', Number(req.params.id));

@@ -103,6 +103,7 @@ type Props = {
   onSaveUnit: (body: Record<string, unknown>) => Promise<void>;
   onSavePricing: (body: Record<string, unknown>) => Promise<void>;
   onEnviarAprovacao?: () => Promise<void>;
+  onArquivar?: (motivo?: string) => Promise<void>;
 };
 
 function asAmenitySet(raw: unknown): Set<string> {
@@ -151,6 +152,7 @@ export function AnfitriaoListingEditor({
   onSaveUnit,
   onSavePricing,
   onEnviarAprovacao,
+  onArquivar,
 }: Props) {
   const meta0 = useMemo(() => readMeta(unidade), [unidade]);
   const bootSection: EditorSection =
@@ -380,7 +382,7 @@ export function AnfitriaoListingEditor({
       case 'impostos':
         return summarizeImpostosClient(impostos);
       case 'remover':
-        return summarizeRemoverAnuncioClient();
+        return summarizeRemoverAnuncioClient(unidade.ativo === false);
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -801,6 +803,8 @@ export function AnfitriaoListingEditor({
               markDirty();
             }}
             onEnviarAprovacao={onEnviarAprovacao}
+            archived={unidade.ativo === false}
+            onArquivar={onArquivar}
           />
         )}
 
@@ -1247,6 +1251,8 @@ function PreferenciasPanel({
   impostos,
   setImpostos,
   onEnviarAprovacao,
+  archived,
+  onArquivar,
 }: {
   section: PreferenciasSection;
   statusAnuncio: 'anunciado' | 'nao_anunciado';
@@ -1260,6 +1266,8 @@ function PreferenciasPanel({
   impostos: ImpostosMeta;
   setImpostos: (v: ImpostosMeta) => void;
   onEnviarAprovacao?: () => Promise<void>;
+  archived?: boolean;
+  onArquivar?: (motivo?: string) => Promise<void>;
 }) {
   if (section === 'status') {
     return (
@@ -1277,7 +1285,7 @@ function PreferenciasPanel({
     return <SolidariaEditor value={solidaria} onChange={setSolidaria} />;
   }
   if (section === 'remover') {
-    return <RemoverAnuncioEditor />;
+    return <RemoverAnuncioEditor archived={archived} onArquivar={onArquivar} />;
   }
   if (section === 'idiomas') {
     return <IdiomasEditor value={idiomas} onChange={setIdiomas} />;
