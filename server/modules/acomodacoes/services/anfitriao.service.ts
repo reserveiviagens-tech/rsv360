@@ -55,6 +55,7 @@ import { validateListingGuiaChegada } from './listing-guia-chegada.util';
 import { validateListingSeguranca } from './listing-seguranca.util';
 import { validateListingStatusAnuncio } from './listing-status-anuncio.util';
 import { validateListingExigirFotoPerfil } from './listing-requisitos.util';
+import { validateListingHospedagemSolidaria } from './listing-solidaria.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -480,6 +481,21 @@ export const anfitriaoService = {
         return { error: requisitos.error, message: requisitos.message };
       }
       (metadataPatch as Record<string, unknown>).exigirFotoPerfil = requisitos.value;
+    }
+
+    const updatingHospedagemSolidaria =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'hospedagemSolidaria');
+    if (updatingHospedagemSolidaria) {
+      const solidaria = validateListingHospedagemSolidaria(
+        (metadataPatch as Record<string, unknown>).hospedagemSolidaria,
+      );
+      if (!solidaria.ok) {
+        return { error: solidaria.error, message: solidaria.message };
+      }
+      (metadataPatch as Record<string, unknown>).hospedagemSolidaria = solidaria.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

@@ -51,6 +51,7 @@ import {
   RequisitosHospedeEditor,
   summarizeRequisitosClient,
 } from './RequisitosHospedeEditor';
+import { SolidariaEditor, summarizeSolidariaClient } from './SolidariaEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -357,6 +358,8 @@ export function AnfitriaoListingEditor({
         return summarizeStatusAnuncioClient(statusAnuncio);
       case 'requisitos':
         return summarizeRequisitosClient(exigirFoto);
+      case 'solidaria':
+        return summarizeSolidariaClient(solidaria);
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -1205,15 +1208,7 @@ function PreferenciasPanel({
     return <RequisitosHospedeEditor value={exigirFoto} onChange={setExigirFoto} />;
   }
   if (section === 'solidaria') {
-    return (
-      <div>
-        <PanelTitle title="Hospedagem solidária" />
-        <label className="flex items-center justify-between rounded-xl border px-4 py-3 text-sm">
-          <span>Disponível com desconto ou cortesia para parceiros verificados</span>
-          <input type="checkbox" checked={solidaria} onChange={(e) => setSolidaria(e.target.checked)} />
-        </label>
-      </div>
-    );
+    return <SolidariaEditor value={solidaria} onChange={setSolidaria} />;
   }
   if (section === 'remover') {
     return (
