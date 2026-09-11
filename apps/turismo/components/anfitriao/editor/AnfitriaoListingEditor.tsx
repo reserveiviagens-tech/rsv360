@@ -105,6 +105,8 @@ type Props = {
   onEnviarAprovacao?: () => Promise<void>;
   onArquivar?: (motivo?: string) => Promise<void>;
   onDesarquivar?: (motivo?: string) => Promise<void>;
+  currentUserEmail?: string;
+  onRefresh?: () => void | Promise<void>;
 };
 
 function asAmenitySet(raw: unknown): Set<string> {
@@ -155,6 +157,8 @@ export function AnfitriaoListingEditor({
   onEnviarAprovacao,
   onArquivar,
   onDesarquivar,
+  currentUserEmail,
+  onRefresh,
 }: Props) {
   const meta0 = useMemo(() => readMeta(unidade), [unidade]);
   const bootSection: EditorSection =
@@ -747,6 +751,8 @@ export function AnfitriaoListingEditor({
                 markDirty();
               }
             }}
+            currentUserEmail={currentUserEmail}
+            onRefresh={onRefresh}
           />
         )}
 
@@ -965,6 +971,8 @@ function SeuEspacoPanel(props: {
   midiaJson: string;
   setMidiaJson: (v: string) => void;
   onMidiaChange: (next: unknown) => void;
+  currentUserEmail?: string;
+  onRefresh?: () => void | Promise<void>;
 }) {
   const s = props.section;
 
@@ -1160,7 +1168,13 @@ function SeuEspacoPanel(props: {
 
   if (s === 'coanfitrioes') {
     return (
-      <CoanfitrioesEditor value={props.coanfitrioes} onChange={props.setCoanfitrioes} />
+      <CoanfitrioesEditor
+        value={props.coanfitrioes}
+        onChange={props.setCoanfitrioes}
+        unidadeId={props.unitId}
+        currentUserEmail={props.currentUserEmail}
+        onRefresh={props.onRefresh}
+      />
     );
   }
 

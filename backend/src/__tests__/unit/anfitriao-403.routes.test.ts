@@ -76,7 +76,7 @@ describe('PR 24A — escopo cross-owner (403)', () => {
       expect(res.body.data.items).toHaveLength(1);
       expect(res.body.data.items[0].id).toBe(101);
       expect(mockListarMinhas).toHaveBeenCalledWith(
-        { userId: 1, role: 'anfitriao' },
+        expect.objectContaining({ userId: 1, role: 'anfitriao' }),
         1,
         20,
         { ativo: 'true' },
@@ -98,7 +98,7 @@ describe('PR 24A — escopo cross-owner (403)', () => {
         .get('/api/v1/acomodacoes/anfitriao/minhas?ativo=false')
         .set(authHeaders('anfitriao', 1));
       expect(mockListarMinhas).toHaveBeenCalledWith(
-        { userId: 1, role: 'anfitriao' },
+        expect.objectContaining({ userId: 1, role: 'anfitriao' }),
         1,
         20,
         { ativo: 'false' },
@@ -168,7 +168,7 @@ describe('PR 24A — escopo cross-owner (403)', () => {
         .set(authHeaders('anfitriao', 1))
         .send({ hotelId: 'hack', proprietarioId: 99, tipoId: 9, codigoExterno: 'X', precoDiaria: '300' });
       expect(mockAtualizarUnidade).toHaveBeenCalledWith(
-        { userId: 1, role: 'anfitriao' },
+        expect.objectContaining({ userId: 1, role: 'anfitriao' }),
         101,
         expect.objectContaining({ precoDiaria: '300', hotelId: 'hack' }),
       );
@@ -238,7 +238,10 @@ describe('PR 24A — escopo cross-owner (403)', () => {
         .get('/api/v1/acomodacoes/anfitriao/unidades/101')
         .set(authHeaders('corretor', 3));
       expect(res.status).toBe(403);
-      expect(mockObterUnidade).toHaveBeenCalledWith({ userId: 3, role: 'corretor' }, 101);
+      expect(mockObterUnidade).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 3, role: 'corretor' }),
+        101,
+      );
     });
   });
 

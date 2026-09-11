@@ -1,5 +1,11 @@
 import {
   COANFITRIOES_MAX,
+  coanfitriaoMatchesEmail,
+  findCoanfitriaoAtivoByEmail,
+  maskEmail,
+  normalizeCoanfitriaoEmail,
+  papelPermiteCalendario,
+  papelPermiteMensagens,
   summarizeCoanfitrioes,
   validateListingCoanfitrioes,
 } from '../../../../server/modules/acomodacoes/services/listing-coanfitrioes.util';
@@ -91,6 +97,57 @@ describe('listing-coanfitrioes.util', () => {
         { id: 'c1', nome: 'Ana', email: 'not-an-email', papel: 'tudo', status: 'pendente' },
       ]).ok,
     ).toBe(false);
+  });
+
+  it('normalizeCoanfitriaoEmail trims and lowercases', () => {
+    expect(normalizeCoanfitriaoEmail(' COHOST@test.local ')).toBe('cohost@test.local');
+    expect(normalizeCoanfitriaoEmail('bad')).toBeUndefined();
+  });
+
+  it('maskEmail hides local part except first char', () => {
+    expect(maskEmail('cohost@test.local')).toBe('c***@test.local');
+  });
+
+  it('coanfitriaoMatchesEmail is case-insensitive', () => {
+    const item = {
+      id: 'c1',
+      nome: 'Ana',
+      email: 'cohost@test.local',
+      papel: 'tudo' as const,
+      status: 'pendente' as const,
+    };
+    expect(coanfitriaoMatchesEmail(item, 'COHOST@test.local')).toBe(true);
+    expect(coanfitriaoMatchesEmail(item, 'other@test.local')).toBe(false);
+  });
+
+  it('findCoanfitriaoAtivoByEmail returns only active matches', () => {
+    const list = [
+      {
+        id: 'c1',
+        nome: 'Ana',
+        email: 'cohost@test.local',
+        papel: 'calendario' as const,
+        status: 'pendente' as const,
+      },
+      {
+        id: 'c2',
+        nome: 'Bob',
+        email: 'cohost@test.local',
+        papel: 'mensagens' as const,
+        status: 'ativo' as const,
+      },
+    ];
+    expect(findCoanfitriaoAtivoByEmail(list, 'cohost@test.local')?.id).toBe('c2');
+    expect(findCoanfitriaoAtivoByEmail(list, 'missing@test.local')).toBeUndefined();
+  });
+
+  it('papelPermiteCalendario and papelPermiteMensagens', () => {
+    expect(papelPermiteCalendario('calendario')).toBe(true);
+    expect(papelPermiteCalendario('tudo')).toBe(true);
+    expect(papelPermiteCalendario('mensagens')).toBe(false);
+    expect(papelPermiteMensagens('mensagens')).toBe(true);
+    expect(papelPermiteMensagens('tudo')).toBe(true);
+    expect(papelPermiteMensagens('calendario')).toBe(false);
   });
 
   it('summarizes card preview', () => {

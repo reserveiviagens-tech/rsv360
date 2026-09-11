@@ -106,7 +106,7 @@ describe('anfitriao desarquivar-bulk route', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.restored).toBe(1);
     expect(mockDesarquivarUnidadesBulk).toHaveBeenCalledWith(
-      { userId: 1, role: 'anfitriao' },
+      expect.objectContaining({ userId: 1, role: 'anfitriao' }),
       [1, 2],
       { motivo: 'retomada' },
     );
