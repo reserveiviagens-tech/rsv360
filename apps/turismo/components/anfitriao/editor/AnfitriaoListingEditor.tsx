@@ -37,6 +37,7 @@ import { LinkPersonalizadoEditor, summarizeLinkPersonalizadoClient } from './Lin
 import { CheckinCheckoutEditor, summarizeCheckinCheckoutClient } from './CheckinCheckoutEditor';
 import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor';
 import { ComoChegarEditor, summarizeComoChegarClient } from './ComoChegarEditor';
+import { MetodoCheckinEditor, summarizeMetodoCheckinClient } from './MetodoCheckinEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -330,7 +331,7 @@ export function AnfitriaoListingEditor({
       case 'wifi':
         return guia.wifiRede ? `Rede: ${guia.wifiRede}` : 'Adicionar informações';
       case 'metodo-checkin':
-        return guia.metodoCheckIn || 'Adicionar informações';
+        return summarizeMetodoCheckinClient(guia);
       case 'interacao':
         return guia.preferenciaInteracao || 'Adicionar informações';
       case 'status':
@@ -1131,49 +1132,7 @@ function GuiaPanel({
     return <ComoChegarEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'metodo-checkin') {
-    const metodos = [
-      'Fechadura inteligente',
-      'Teclado numérico',
-      'Cofre de chaves',
-      'Funcionários do prédio',
-      'Recepção presencial',
-      'Outro',
-    ];
-    return (
-      <div>
-        <PanelTitle title="Método de check-in" hint="Compartilhado 24 a 48 horas antes do check-in." />
-        <div className="space-y-2">
-          {metodos.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setGuia({ ...guia, metodoCheckIn: m })}
-              className={`w-full rounded-xl border px-3 py-3 text-left text-sm ${
-                guia.metodoCheckIn === m ? 'border-slate-900' : 'border-slate-200'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-        <label className="mt-4 block text-sm">
-          Detalhe (ex. Recepção do Hotel)
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={guia.metodoCheckInDetalhe ?? ''}
-            onChange={(e) => setGuia({ ...guia, metodoCheckInDetalhe: e.target.value })}
-          />
-        </label>
-        <label className="mt-3 block text-sm">
-          Instruções de check-in
-          <textarea
-            className="mt-1 h-28 w-full rounded-xl border px-3 py-2"
-            value={guia.instrucoesCheckIn ?? ''}
-            onChange={(e) => setGuia({ ...guia, instrucoesCheckIn: e.target.value })}
-          />
-        </label>
-      </div>
-    );
+    return <MetodoCheckinEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'wifi') {
     return (
