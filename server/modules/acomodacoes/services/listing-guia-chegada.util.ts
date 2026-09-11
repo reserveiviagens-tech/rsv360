@@ -9,6 +9,8 @@ export const INSTRUCOES_CHECKOUT_MAX = 20;
 export const INSTRUCAO_CHECKOUT_ID_MAX = 64;
 export const INSTRUCAO_CHECKOUT_TITULO_MAX = 200;
 export const INSTRUCAO_CHECKOUT_TEXTO_MAX = 4000;
+export const WIFI_REDE_MAX = 128;
+export const WIFI_SENHA_MAX = 128;
 
 export const METODO_CHECKIN_VALUES = [
   'Fechadura inteligente',
@@ -273,12 +275,20 @@ export function validateListingGuiaChegada(
     preferenciaInteracao: 'Preferência de interação',
   };
 
+  const stringMax: Record<GuiaChegadaStringKey, number> = {
+    comoChegar: GUIA_CHEGADA_TEXT_MAX,
+    wifiRede: WIFI_REDE_MAX,
+    wifiSenha: WIFI_SENHA_MAX,
+    guiaCasa: GUIA_CHEGADA_TEXT_MAX,
+    preferenciaInteracao: GUIA_CHEGADA_TEXT_MAX,
+  };
+
   for (const key of GUIA_CHEGADA_STRING_KEYS) {
     if (!Object.prototype.hasOwnProperty.call(src, key)) continue;
     const parsed = validateOptionalStringField(
       src[key],
       stringLabels[key],
-      GUIA_CHEGADA_TEXT_MAX,
+      stringMax[key],
     );
     if (!parsed.ok) return parsed;
     if (parsed.value) {
@@ -338,6 +348,16 @@ export function summarizeComoChegar(
   if (!text) return 'Adicionar informações';
   const collapsed = text.replace(/\s+/g, ' ');
   return collapsed.length <= 40 ? collapsed : `${collapsed.slice(0, 39)}…`;
+}
+
+/** Card preview for "Informações do Wi-Fi" section. Never includes password (LGPD). */
+export function summarizeWifi(
+  guia: ListingGuiaChegada | null | undefined,
+): string {
+  const rede =
+    guia && typeof guia.wifiRede === 'string' ? guia.wifiRede.trim() : '';
+  if (!rede) return 'Adicionar informações';
+  return `Rede: ${rede}`;
 }
 
 /** Card preview for "Método de check-in" section. */
