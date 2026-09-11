@@ -217,6 +217,9 @@ export function AnfitriaoListingEditor({
   const [msgPre, setMsgPre] = useState(meta0.mensagemPreReserva ?? '');
   const [regras, setRegras] = useState(meta0.regrasCasa ?? {});
   const [guia, setGuia] = useState(meta0.guiaChegada ?? {});
+  const [guiasLocais, setGuiasLocais] = useState<
+    NonNullable<EditorMeta['guiasLocais']>
+  >(meta0.guiasLocais ?? []);
   const [slug, setSlug] = useState(meta0.slugPersonalizado ?? '');
   const [statusAnuncio, setStatusAnuncio] = useState(meta0.statusAnuncio ?? 'anunciado');
   const [exigirFoto, setExigirFoto] = useState(Boolean(meta0.exigirFotoPerfil));
@@ -358,7 +361,7 @@ export function AnfitriaoListingEditor({
       case 'interacao':
         return summarizeInteracaoClient(guia);
       case 'guias-locais':
-        return summarizeGuiasLocaisClient();
+        return summarizeGuiasLocaisClient(guiasLocais);
       case 'status':
         return summarizeStatusAnuncioClient(statusAnuncio);
       case 'requisitos':
@@ -422,6 +425,7 @@ export function AnfitriaoListingEditor({
       seguranca,
       verificacaoLocal,
       idiomas,
+      guiasLocais: guiasLocais.length > 0 ? guiasLocais : undefined,
     };
 
     await onSaveUnit({
@@ -747,6 +751,11 @@ export function AnfitriaoListingEditor({
             guia={guia}
             setGuia={(v) => {
               setGuia(v);
+              markDirty();
+            }}
+            guiasLocais={guiasLocais}
+            setGuiasLocais={(v) => {
+              setGuiasLocais(v);
               markDirty();
             }}
             capacidade={capacidade}
@@ -1146,6 +1155,8 @@ function GuiaPanel({
   setRegras,
   guia,
   setGuia,
+  guiasLocais,
+  setGuiasLocais,
   capacidade,
   setCapacidade,
 }: {
@@ -1154,6 +1165,8 @@ function GuiaPanel({
   setRegras: (v: NonNullable<EditorMeta['regrasCasa']>) => void;
   guia: NonNullable<EditorMeta['guiaChegada']>;
   setGuia: (v: NonNullable<EditorMeta['guiaChegada']>) => void;
+  guiasLocais: NonNullable<EditorMeta['guiasLocais']>;
+  setGuiasLocais: (v: NonNullable<EditorMeta['guiasLocais']>) => void;
   capacidade: number;
   setCapacidade: (v: number) => void;
 }) {
@@ -1189,7 +1202,9 @@ function GuiaPanel({
     return <InteracaoEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'guias-locais') {
-    return <GuiasLocaisEditor />;
+    return (
+      <GuiasLocaisEditor guias={guiasLocais} setGuias={setGuiasLocais} />
+    );
   }
   return <PanelTitle title="Seção" hint="Em construção." />;
 }
