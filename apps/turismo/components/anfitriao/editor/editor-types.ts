@@ -169,6 +169,12 @@ export type EditorMeta = {
   idiomas?: string[];
   hospedagemSolidaria?: boolean;
   guiasLocais?: Array<{ id: string; titulo: string; conteudo: string }>;
+  impostos?: {
+    inscricaoMunicipal?: string;
+    aliquotaPct?: number;
+    isento?: boolean;
+    notas?: string;
+  };
 };
 
 export function readMeta(unidade: ListingEditorUnidade): EditorMeta {

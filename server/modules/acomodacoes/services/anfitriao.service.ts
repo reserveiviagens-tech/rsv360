@@ -58,6 +58,7 @@ import { validateListingExigirFotoPerfil } from './listing-requisitos.util';
 import { validateListingHospedagemSolidaria } from './listing-solidaria.util';
 import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
+import { validateListingImpostos } from './listing-impostos.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -528,6 +529,21 @@ export const anfitriaoService = {
         return { error: guiasLocais.error, message: guiasLocais.message };
       }
       (metadataPatch as Record<string, unknown>).guiasLocais = guiasLocais.value;
+    }
+
+    const updatingImpostos =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'impostos');
+    if (updatingImpostos) {
+      const impostos = validateListingImpostos(
+        (metadataPatch as Record<string, unknown>).impostos,
+      );
+      if (!impostos.ok) {
+        return { error: impostos.error, message: impostos.message };
+      }
+      (metadataPatch as Record<string, unknown>).impostos = impostos.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
