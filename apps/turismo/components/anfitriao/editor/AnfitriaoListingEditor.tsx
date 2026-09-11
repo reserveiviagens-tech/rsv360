@@ -1238,6 +1238,9 @@ function buildImpostosMetadata(value: ImpostosMeta): EditorMeta['impostos'] {
     payload.aliquotaPct = value.aliquotaPct;
   }
   if (value.notas?.trim()) payload.notas = value.notas.trim();
+  if (value.cnpj?.trim()) {
+    payload.cnpj = value.cnpj.replace(/\D/g, '') || undefined;
+  }
   return Object.keys(payload).length ? payload : undefined;
 }
 

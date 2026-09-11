@@ -339,6 +339,28 @@ export const fase1Api = {
       method: 'POST',
       body: JSON.stringify(body ?? {}),
     }),
+  anfitriaoExportImpostosCsv: async (ativo?: 'true' | 'false' | 'all') => {
+    const params = new URLSearchParams();
+    if (ativo) params.set('ativo', ativo);
+    const qs = params.toString();
+    const url = `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/impostos/export.csv${qs ? `?${qs}` : ''}`;
+    const res = await fetch(url, {
+      headers: {
+        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      },
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.error || json.message || res.statusText);
+    }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'impostos-anfitriao-rsv360.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+
   anfitriaoDesarquivarUnidadesBulk: (ids: number[], motivo?: string) =>
     fetchJson<{
       success: boolean;
