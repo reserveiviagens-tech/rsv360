@@ -52,6 +52,7 @@ import {
   summarizeRequisitosClient,
 } from './RequisitosHospedeEditor';
 import { SolidariaEditor, summarizeSolidariaClient } from './SolidariaEditor';
+import { IdiomasEditor, summarizeIdiomasClient } from './IdiomasEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -217,6 +218,7 @@ export function AnfitriaoListingEditor({
   const [statusAnuncio, setStatusAnuncio] = useState(meta0.statusAnuncio ?? 'anunciado');
   const [exigirFoto, setExigirFoto] = useState(Boolean(meta0.exigirFotoPerfil));
   const [solidaria, setSolidaria] = useState(Boolean(meta0.hospedagemSolidaria));
+  const [idiomas] = useState<string[]>(meta0.idiomas ?? ['Português']);
   const [polCurta, setPolCurta] = useState(
     pricing?.politicaCancelamentoCurta ?? unidade.politicaCancelamentoCurta ?? 'limitada',
   );
@@ -360,6 +362,8 @@ export function AnfitriaoListingEditor({
         return summarizeRequisitosClient(exigirFoto);
       case 'solidaria':
         return summarizeSolidariaClient(solidaria);
+      case 'idiomas':
+        return summarizeIdiomasClient(idiomas);
       case 'acessibilidade':
         return summarizeAcessibilidadeClient(acessibilidade);
       case 'localizacao':
@@ -408,7 +412,7 @@ export function AnfitriaoListingEditor({
       acessibilidade,
       seguranca,
       verificacaoLocal,
-      idiomas: meta0.idiomas ?? ['Português'],
+      idiomas,
     };
 
     await onSaveUnit({
@@ -1222,15 +1226,7 @@ function PreferenciasPanel({
     );
   }
   if (section === 'idiomas') {
-    return (
-      <div>
-        <PanelTitle title="Idiomas" />
-        <p className="text-sm">Português (padrão)</p>
-        <p className="mt-2 text-xs text-slate-500">
-          Hóspedes podem ver traduções automáticas de outros campos.
-        </p>
-      </div>
-    );
+    return <IdiomasEditor />;
   }
   if (section === 'leis') {
     return (
