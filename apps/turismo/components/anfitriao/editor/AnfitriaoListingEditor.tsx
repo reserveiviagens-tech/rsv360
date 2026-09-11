@@ -104,6 +104,7 @@ type Props = {
   onSavePricing: (body: Record<string, unknown>) => Promise<void>;
   onEnviarAprovacao?: () => Promise<void>;
   onArquivar?: (motivo?: string) => Promise<void>;
+  onDesarquivar?: (motivo?: string) => Promise<void>;
 };
 
 function asAmenitySet(raw: unknown): Set<string> {
@@ -153,6 +154,7 @@ export function AnfitriaoListingEditor({
   onSavePricing,
   onEnviarAprovacao,
   onArquivar,
+  onDesarquivar,
 }: Props) {
   const meta0 = useMemo(() => readMeta(unidade), [unidade]);
   const bootSection: EditorSection =
@@ -805,6 +807,7 @@ export function AnfitriaoListingEditor({
             onEnviarAprovacao={onEnviarAprovacao}
             archived={unidade.ativo === false}
             onArquivar={onArquivar}
+            onDesarquivar={onDesarquivar}
           />
         )}
 
@@ -1253,6 +1256,7 @@ function PreferenciasPanel({
   onEnviarAprovacao,
   archived,
   onArquivar,
+  onDesarquivar,
 }: {
   section: PreferenciasSection;
   statusAnuncio: 'anunciado' | 'nao_anunciado';
@@ -1268,6 +1272,7 @@ function PreferenciasPanel({
   onEnviarAprovacao?: () => Promise<void>;
   archived?: boolean;
   onArquivar?: (motivo?: string) => Promise<void>;
+  onDesarquivar?: (motivo?: string) => Promise<void>;
 }) {
   if (section === 'status') {
     return (
@@ -1285,7 +1290,13 @@ function PreferenciasPanel({
     return <SolidariaEditor value={solidaria} onChange={setSolidaria} />;
   }
   if (section === 'remover') {
-    return <RemoverAnuncioEditor archived={archived} onArquivar={onArquivar} />;
+    return (
+      <RemoverAnuncioEditor
+        archived={archived}
+        onArquivar={onArquivar}
+        onDesarquivar={onDesarquivar}
+      />
+    );
   }
   if (section === 'idiomas') {
     return <IdiomasEditor value={idiomas} onChange={setIdiomas} />;
