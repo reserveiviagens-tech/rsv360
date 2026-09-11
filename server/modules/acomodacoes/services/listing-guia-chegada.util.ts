@@ -11,6 +11,7 @@ export const INSTRUCAO_CHECKOUT_TITULO_MAX = 200;
 export const INSTRUCAO_CHECKOUT_TEXTO_MAX = 4000;
 export const WIFI_REDE_MAX = 128;
 export const WIFI_SENHA_MAX = 128;
+export const GUIA_CASA_MAX = 4000;
 
 export const METODO_CHECKIN_VALUES = [
   'Fechadura inteligente',
@@ -279,7 +280,7 @@ export function validateListingGuiaChegada(
     comoChegar: GUIA_CHEGADA_TEXT_MAX,
     wifiRede: WIFI_REDE_MAX,
     wifiSenha: WIFI_SENHA_MAX,
-    guiaCasa: GUIA_CHEGADA_TEXT_MAX,
+    guiaCasa: GUIA_CASA_MAX,
     preferenciaInteracao: GUIA_CHEGADA_TEXT_MAX,
   };
 
@@ -345,6 +346,17 @@ export function summarizeComoChegar(
 ): string {
   const text =
     guia && typeof guia.comoChegar === 'string' ? guia.comoChegar.trim() : '';
+  if (!text) return 'Adicionar informações';
+  const collapsed = text.replace(/\s+/g, ' ');
+  return collapsed.length <= 40 ? collapsed : `${collapsed.slice(0, 39)}…`;
+}
+
+/** Card preview for "Guia da Casa" section. */
+export function summarizeGuiaCasa(
+  guia: ListingGuiaChegada | null | undefined,
+): string {
+  const text =
+    guia && typeof guia.guiaCasa === 'string' ? guia.guiaCasa.trim() : '';
   if (!text) return 'Adicionar informações';
   const collapsed = text.replace(/\s+/g, ' ');
   return collapsed.length <= 40 ? collapsed : `${collapsed.slice(0, 39)}…`;

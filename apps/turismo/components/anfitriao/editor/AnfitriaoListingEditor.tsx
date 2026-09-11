@@ -39,6 +39,7 @@ import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor'
 import { ComoChegarEditor, summarizeComoChegarClient } from './ComoChegarEditor';
 import { MetodoCheckinEditor, summarizeMetodoCheckinClient } from './MetodoCheckinEditor';
 import { WifiEditor, summarizeWifiClient } from './WifiEditor';
+import { GuiaCasaEditor, summarizeGuiaCasaClient } from './GuiaCasaEditor';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -331,6 +332,8 @@ export function AnfitriaoListingEditor({
         return summarizeLinkPersonalizadoClient(slug);
       case 'wifi':
         return summarizeWifiClient(guia);
+      case 'guia-casa':
+        return summarizeGuiaCasaClient(guia);
       case 'metodo-checkin':
         return summarizeMetodoCheckinClient(guia);
       case 'interacao':
@@ -1139,17 +1142,7 @@ function GuiaPanel({
     return <WifiEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'guia-casa') {
-    return (
-      <div>
-        <PanelTitle title="Guia da Casa" hint="Compartilhado 24 a 48 horas antes do check-in." />
-        <textarea
-          className="h-48 w-full rounded-xl border px-3 py-2"
-          value={guia.guiaCasa ?? ''}
-          onChange={(e) => setGuia({ ...guia, guiaCasa: e.target.value })}
-          placeholder="Dicas sobre internet, TV, equipamentos…"
-        />
-      </div>
-    );
+    return <GuiaCasaEditor guia={guia} setGuia={setGuia} />;
   }
   if (section === 'checkout-instrucoes') {
     const items = guia.instrucoesCheckout ?? [];

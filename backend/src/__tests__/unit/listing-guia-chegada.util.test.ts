@@ -1,4 +1,5 @@
 import {
+  GUIA_CASA_MAX,
   GUIA_CHEGADA_TEXT_MAX,
   INSTRUCOES_CHECKIN_MAX,
   METODO_CHECKIN_DETALHE_MAX,
@@ -6,6 +7,7 @@ import {
   WIFI_REDE_MAX,
   WIFI_SENHA_MAX,
   summarizeComoChegar,
+  summarizeGuiaCasa,
   summarizeMetodoCheckin,
   summarizeWifi,
   validateListingGuiaChegada,
@@ -99,6 +101,27 @@ describe('listing-guia-chegada.util', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.message).toContain(String(WIFI_SENHA_MAX));
+    }
+  });
+
+  it('accepts valid guiaCasa with trim and control-char strip', () => {
+    expect(
+      validateListingGuiaChegada({
+        guiaCasa: '  TV na sala\u0007 e ar-condicionado no quarto  ',
+      }),
+    ).toEqual({
+      ok: true,
+      value: { guiaCasa: 'TV na sala e ar-condicionado no quarto' },
+    });
+  });
+
+  it('rejects guiaCasa over max length', () => {
+    const long = 'g'.repeat(GUIA_CASA_MAX + 1);
+    const result = validateListingGuiaChegada({ guiaCasa: long });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe('guia_chegada_invalido');
+      expect(result.message).toContain(String(GUIA_CASA_MAX));
     }
   });
 
@@ -214,6 +237,27 @@ describe('listing-guia-chegada.util', () => {
       expect(summary).toBe('Rede: rede-teste');
       expect(summary).not.toContain('senha-teste');
       expect(summary).not.toMatch(/senha/i);
+    });
+  });
+
+  describe('summarizeGuiaCasa', () => {
+    it('returns default when empty', () => {
+      expect(summarizeGuiaCasa({})).toBe('Adicionar informações');
+      expect(summarizeGuiaCasa(null)).toBe('Adicionar informações');
+    });
+
+    it('returns full text when within 40 chars', () => {
+      expect(
+        summarizeGuiaCasa({ guiaCasa: 'TV na sala e ar-condicionado no quarto' }),
+      ).toBe('TV na sala e ar-condicionado no quarto');
+    });
+
+    it('truncates long text to about 40 chars', () => {
+      const long =
+        'Use o controle remoto da TV Samsung na gaveta da mesa de cabeceira do quarto principal';
+      const summary = summarizeGuiaCasa({ guiaCasa: long });
+      expect(summary.length).toBeLessThanOrEqual(40);
+      expect(summary.endsWith('…')).toBe(true);
     });
   });
 
