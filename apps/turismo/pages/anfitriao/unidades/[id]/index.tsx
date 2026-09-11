@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import { useMemo, useState } from 'react';
 import type { GetServerSideProps } from 'next';
 import AnfitriaoRoleGuard from '../../../../components/AnfitriaoRoleGuard';
@@ -29,6 +30,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 };
 
 export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps) {
+  const router = useRouter();
   const { data, isLoading, isError, error, refetch } = useAnfitriaoUnidade(unitId);
   const atualizar = useAtualizarAnfitriaoUnidade(unitId);
   const enviar = useEnviarAprovacaoUnidade(unitId);
@@ -104,6 +106,15 @@ export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps)
     }
   }
 
+  async function onArquivar(motivo?: string) {
+    setMensagem(null);
+    const res = await fase1Api.anfitriaoArquivarUnidade(unitId, motivo ? { motivo } : {});
+    await refetch();
+    if (!res.data.already_archived) {
+      await router.push('/anfitriao/unidades');
+    }
+  }
+
   return (
     <AnfitriaoRoleGuard>
       <Head>
@@ -143,6 +154,7 @@ export default function AnfitriaoUnidadeEditorPage({ unitId, secao }: PageProps)
             onSaveUnit={onSaveUnit}
             onSavePricing={onSavePricing}
             onEnviarAprovacao={onEnviarAprovacao}
+            onArquivar={onArquivar}
           />
         )}
       </div>

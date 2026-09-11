@@ -52,6 +52,7 @@ export type ListingEditorUnidade = {
   capacidadeMax?: number | null;
   capacidadeBase?: number | null;
   statusPublicacao?: string;
+  ativo?: boolean;
   amenidades?: unknown;
   utensilios?: unknown;
   midia?: unknown;
