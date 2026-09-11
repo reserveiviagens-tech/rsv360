@@ -192,8 +192,8 @@ export function validateListingRegrasCasa(
   return { ok: true, value };
 }
 
-/** Card preview for house rules section. */
-export function summarizeRegrasCasa(
+/** Card preview for check-in / checkout (Guia tab). */
+export function summarizeCheckinCheckout(
   regras: ListingRegrasCasa | null | undefined,
 ): string {
   const checkInDe =
@@ -205,4 +205,11 @@ export function summarizeRegrasCasa(
       ? regras.checkOutAte.trim()
       : '11:00';
   return `Check-in ${checkInDe} · Checkout ${checkOutAte}`;
+}
+
+/** Card preview for house rules section. */
+export function summarizeRegrasCasa(
+  regras: ListingRegrasCasa | null | undefined,
+): string {
+  return summarizeCheckinCheckout(regras);
 }

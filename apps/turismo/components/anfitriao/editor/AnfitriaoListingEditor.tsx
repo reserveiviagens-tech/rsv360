@@ -34,6 +34,7 @@ import { CoanfitrioesEditor, summarizeCoanfitrioesClient } from './CoanfitrioesE
 import { ConfigReservaEditor, summarizeConfigReservaClient } from './ConfigReservaEditor';
 import { CancelamentoEditor, summarizeCancelamentoClient } from './CancelamentoEditor';
 import { LinkPersonalizadoEditor, summarizeLinkPersonalizadoClient } from './LinkPersonalizadoEditor';
+import { CheckinCheckoutEditor, summarizeCheckinCheckoutClient } from './CheckinCheckoutEditor';
 import { RegrasCasaEditor, summarizeRegrasCasaClient } from './RegrasCasaEditor';
 import {
   GUIA_CARDS,
@@ -310,6 +311,8 @@ export function AnfitriaoListingEditor({
         return summarizeComodidadesClient(amenities) || 'Adicionar comodidades';
       case 'config-reserva':
         return summarizeConfigReservaClient(modoReserva);
+      case 'checkin-checkout':
+        return summarizeCheckinCheckoutClient(regras);
       case 'regras':
       case 'regras-guia':
         return summarizeRegrasCasaClient(regras);
@@ -1119,35 +1122,7 @@ function GuiaPanel({
     );
   }
   if (section === 'checkin-checkout') {
-    return (
-      <div>
-        <PanelTitle title="Check-in e checkout" />
-        <label className="block text-sm">
-          Início do check-in
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={regras.checkInDe ?? '14:00'}
-            onChange={(e) => setRegras({ ...regras, checkInDe: e.target.value })}
-          />
-        </label>
-        <label className="mt-3 block text-sm">
-          Término do check-in
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={regras.checkInAte ?? 'Flexível'}
-            onChange={(e) => setRegras({ ...regras, checkInAte: e.target.value })}
-          />
-        </label>
-        <label className="mt-3 block text-sm">
-          Checkout
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2"
-            value={regras.checkOutAte ?? '11:00'}
-            onChange={(e) => setRegras({ ...regras, checkOutAte: e.target.value })}
-          />
-        </label>
-      </div>
-    );
+    return <CheckinCheckoutEditor regras={regras} setRegras={setRegras} />;
   }
   if (section === 'como-chegar') {
     return (

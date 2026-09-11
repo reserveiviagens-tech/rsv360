@@ -1,6 +1,7 @@
 import {
   REGRAS_ADICIONAIS_MAX,
   parseRegrasCasaTime,
+  summarizeCheckinCheckout,
   summarizeRegrasCasa,
   validateListingRegrasCasa,
 } from '../../../../server/modules/acomodacoes/services/listing-regras-casa.util';
@@ -117,6 +118,19 @@ describe('listing-regras-casa.util', () => {
     expect(summarizeRegrasCasa(undefined)).toBe('Check-in 14:00 · Checkout 11:00');
     expect(summarizeRegrasCasa({ checkInDe: '15:00', checkOutAte: '10:00' })).toBe(
       'Check-in 15:00 · Checkout 10:00',
+    );
+  });
+
+  it('summarizeCheckinCheckout uses defaults when times missing', () => {
+    expect(summarizeCheckinCheckout(null)).toBe('Check-in 14:00 · Checkout 11:00');
+    expect(summarizeCheckinCheckout({ checkInAte: 'Flexível' })).toBe(
+      'Check-in 14:00 · Checkout 11:00',
+    );
+  });
+
+  it('summarizeCheckinCheckout formats custom check-in and checkout', () => {
+    expect(summarizeCheckinCheckout({ checkInDe: '16:00', checkOutAte: '12:00' })).toBe(
+      'Check-in 16:00 · Checkout 12:00',
     );
   });
 });
