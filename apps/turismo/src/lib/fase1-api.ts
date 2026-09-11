@@ -174,8 +174,13 @@ export const fase1Api = {
     }>(
       `/api/v1/acomodacoes/anfitriao/desempenho${mes ? `?mes=${encodeURIComponent(mes)}` : ''}`,
     ),
-  anfitriaoMinhas: (page = 1, pageSize = 20) =>
-    fetchJson<{
+  anfitriaoMinhas: (page = 1, pageSize = 20, ativo?: 'true' | 'false' | 'all') => {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (ativo) params.set('ativo', ativo);
+    return fetchJson<{
       success: boolean;
       data: {
         items: Array<{
@@ -185,6 +190,7 @@ export const fase1Api = {
           statusPublicacao?: string;
           precoDiaria?: string | number | null;
           midia?: unknown;
+          ativo?: boolean | null;
           quartos?: number | null;
           capacidadeMax?: number | null;
           capacidadeBase?: number | null;
@@ -198,7 +204,8 @@ export const fase1Api = {
         page: number;
         pageSize: number;
       };
-    }>(`/api/v1/acomodacoes/anfitriao/minhas?page=${page}&pageSize=${pageSize}`),
+    }>(`/api/v1/acomodacoes/anfitriao/minhas?${params.toString()}`);
+  },
   anfitriaoMinhasComissoes: (page = 1) =>
     fetchJson<{
       success: boolean;

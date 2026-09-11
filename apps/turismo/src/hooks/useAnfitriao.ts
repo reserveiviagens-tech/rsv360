@@ -8,10 +8,14 @@ export function useAnfitriaoDashboard() {
   });
 }
 
-export function useAnfitriaoMinhas(page = 1, pageSize = 20) {
+export function useAnfitriaoMinhas(
+  page = 1,
+  pageSize = 20,
+  ativo?: 'true' | 'false' | 'all',
+) {
   return useQuery({
-    queryKey: ['anfitriao', 'minhas', page, pageSize],
-    queryFn: () => fase1Api.anfitriaoMinhas(page, pageSize),
+    queryKey: ['anfitriao', 'minhas', page, pageSize, ativo ?? 'default'],
+    queryFn: () => fase1Api.anfitriaoMinhas(page, pageSize, ativo),
   });
 }
 
