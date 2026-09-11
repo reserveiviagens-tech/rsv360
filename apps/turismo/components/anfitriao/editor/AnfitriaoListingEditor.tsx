@@ -221,7 +221,7 @@ export function AnfitriaoListingEditor({
   const [statusAnuncio, setStatusAnuncio] = useState(meta0.statusAnuncio ?? 'anunciado');
   const [exigirFoto, setExigirFoto] = useState(Boolean(meta0.exigirFotoPerfil));
   const [solidaria, setSolidaria] = useState(Boolean(meta0.hospedagemSolidaria));
-  const [idiomas] = useState<string[]>(meta0.idiomas ?? ['Português']);
+  const [idiomas, setIdiomas] = useState<string[]>(meta0.idiomas ?? ['Português']);
   const [polCurta, setPolCurta] = useState(
     pricing?.politicaCancelamentoCurta ?? unidade.politicaCancelamentoCurta ?? 'limitada',
   );
@@ -775,6 +775,11 @@ export function AnfitriaoListingEditor({
               setSolidaria(v);
               markDirty();
             }}
+            idiomas={idiomas}
+            setIdiomas={(v) => {
+              setIdiomas(v);
+              markDirty();
+            }}
             onEnviarAprovacao={onEnviarAprovacao}
           />
         )}
@@ -1197,6 +1202,8 @@ function PreferenciasPanel({
   setExigirFoto,
   solidaria,
   setSolidaria,
+  idiomas,
+  setIdiomas,
   onEnviarAprovacao,
 }: {
   section: PreferenciasSection;
@@ -1206,6 +1213,8 @@ function PreferenciasPanel({
   setExigirFoto: (v: boolean) => void;
   solidaria: boolean;
   setSolidaria: (v: boolean) => void;
+  idiomas: string[];
+  setIdiomas: (v: string[]) => void;
   onEnviarAprovacao?: () => Promise<void>;
 }) {
   if (section === 'status') {
@@ -1227,7 +1236,7 @@ function PreferenciasPanel({
     return <RemoverAnuncioEditor />;
   }
   if (section === 'idiomas') {
-    return <IdiomasEditor />;
+    return <IdiomasEditor value={idiomas} onChange={setIdiomas} />;
   }
   if (section === 'leis') {
     return <LeisLocaisEditor />;

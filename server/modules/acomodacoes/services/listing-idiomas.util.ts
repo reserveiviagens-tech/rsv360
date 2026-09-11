@@ -1,11 +1,29 @@
 /**
  * Listing languages on metadata (metadata.idiomas).
- * MVP: default Portuguese only; multi-language picker in phase 2.
+ * Multi-select from whitelist catalog (max 8).
  */
 
 export const IDIOMAS_MAX = 8;
 export const IDIOMA_LABEL_MAX = 40;
 export const IDIOMAS_DEFAULT = ['Português'] as const;
+
+/** Allowed language labels for host listing metadata. */
+export const IDIOMAS_CATALOG = [
+  'Português',
+  'English',
+  'Español',
+  'Français',
+  'Italiano',
+  'Deutsch',
+  '日本語',
+  '中文',
+  '한국어',
+  'العربية',
+  'Русский',
+  'Nederlands',
+] as const;
+
+export type IdiomaCatalogLabel = (typeof IDIOMAS_CATALOG)[number];
 
 export type IdiomasValidationOk = { ok: true; value: string[] };
 export type IdiomasValidationErr = {
@@ -15,6 +33,9 @@ export type IdiomasValidationErr = {
 };
 
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const CATALOG_BY_KEY = new Map(
+  IDIOMAS_CATALOG.map((label) => [label.toLowerCase(), label] as const),
+);
 
 function sanitizeLabel(raw: unknown): string {
   if (typeof raw !== 'string') return '';
@@ -45,10 +66,18 @@ export function validateListingIdiomas(raw: unknown): IdiomasValidationOk | Idio
   for (const item of raw) {
     const label = sanitizeLabel(item);
     if (!label) continue;
-    const key = label.toLowerCase();
+    const catalog = CATALOG_BY_KEY.get(label.toLowerCase());
+    if (!catalog) {
+      return {
+        ok: false,
+        error: 'idiomas_invalido',
+        message: `Idioma não permitido: ${label}`,
+      };
+    }
+    const key = catalog.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    value.push(label);
+    value.push(catalog);
   }
 
   if (value.length === 0) {
