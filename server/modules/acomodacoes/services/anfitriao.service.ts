@@ -53,6 +53,7 @@ import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
 import { validateListingGuiaChegada } from './listing-guia-chegada.util';
 import { validateListingSeguranca } from './listing-seguranca.util';
+import { validateListingStatusAnuncio } from './listing-status-anuncio.util';
 import { acomodacoesService } from './acomodacoes.service';
 import {
   applyStaffVerificacaoLocalDecision,
@@ -448,6 +449,21 @@ export const anfitriaoService = {
       }
       const empty = Object.keys(seg.value).length === 0;
       (metadataPatch as Record<string, unknown>).seguranca = empty ? undefined : seg.value;
+    }
+
+    const updatingStatusAnuncio =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'statusAnuncio');
+    if (updatingStatusAnuncio) {
+      const status = validateListingStatusAnuncio(
+        (metadataPatch as Record<string, unknown>).statusAnuncio,
+      );
+      if (!status.ok) {
+        return { error: status.error, message: status.message };
+      }
+      (metadataPatch as Record<string, unknown>).statusAnuncio = status.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
