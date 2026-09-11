@@ -6,6 +6,27 @@ export type ImpostosMeta = NonNullable<EditorMeta['impostos']>;
 
 export const IMPOSTOS_INSCRICAO_MAX = 40;
 export const IMPOSTOS_NOTAS_MAX = 500;
+const IMPOSTOS_CNPJ_LEN = 14;
+
+/** LGPD-safe preview — mirrors server maskCnpj. */
+export function maskCnpjClient(digits: string): string {
+  const d = digits.replace(/\D/g, '');
+  if (d.length !== IMPOSTOS_CNPJ_LEN) {
+    return '**.***.***/****-**';
+  }
+  return `**.***.***/****-${d.slice(12)}`;
+}
+
+function formatCnpjInput(digits: string): string {
+  const d = digits.replace(/\D/g, '').slice(0, IMPOSTOS_CNPJ_LEN);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) {
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  }
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
 
 /** Card preview — mirrors server summarizeImpostos. */
 export function summarizeImpostosClient(
@@ -35,6 +56,12 @@ export function summarizeImpostosClient(
 
   if (inscricao) {
     return 'Inscrição cadastrada';
+  }
+
+  const cnpj =
+    typeof impostos.cnpj === 'string' ? impostos.cnpj.replace(/\D/g, '') : '';
+  if (cnpj.length === IMPOSTOS_CNPJ_LEN) {
+    return `CNPJ ${maskCnpjClient(cnpj)}`;
   }
 
   return 'Adicionar informações';
@@ -69,6 +96,22 @@ export function ImpostosEditor({ value, onChange }: ImpostosEditorProps) {
       />
 
       <div className="space-y-4">
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-slate-700">CNPJ</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            value={formatCnpjInput(value.cnpj ?? '')}
+            placeholder="00.000.000/0000-00"
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, IMPOSTOS_CNPJ_LEN);
+              patch({ cnpj: digits || undefined });
+            }}
+          />
+        </label>
+
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-700">
             Inscrição municipal
