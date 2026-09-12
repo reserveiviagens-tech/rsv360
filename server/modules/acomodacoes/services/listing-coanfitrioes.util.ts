@@ -1,5 +1,7 @@
 /**
- * Co-hosts on listing metadata (metadata.coanfitrioes).
+ * Co-hosts helpers (API validation + metadata read fallback).
+ * Write path is DB table `coanfitriao_convites` only — do not dual-write `metadata.coanfitrioes`.
+ * Read path: DB first, then `metadata.coanfitrioes` fallback for pre-backfill listings.
  */
 
 export const COANFITRIOES_MAX = 10;
@@ -334,6 +336,17 @@ export function enrichMetadataWithCoanfitrioes(
       : {};
   base.coanfitrioes = list.length > 0 ? list : undefined;
   return base;
+}
+
+/** Removes coanfitrioes from a metadata object so jsonb no longer mirrors the DB table. */
+export function stripCoanfitrioesFromMetadataRecord(
+  metadata: Record<string, unknown>,
+): boolean {
+  if (!Object.prototype.hasOwnProperty.call(metadata, 'coanfitrioes')) {
+    return false;
+  }
+  delete metadata.coanfitrioes;
+  return true;
 }
 
 /** Card preview for co-hosts section. */

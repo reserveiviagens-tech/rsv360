@@ -65,6 +65,7 @@ import {
   papelPermiteMensagens,
   enrichMetadataWithCoanfitrioes,
   readCoanfitrioesFromMetadata,
+  stripCoanfitrioesFromMetadataRecord,
   validateListingCoanfitrioes,
   type CoanfitriaoPapel,
   type ListingCoanfitriao,
@@ -223,22 +224,25 @@ async function syncConjuntosRegrasToDb(
   );
 }
 
-async function syncCoanfitrioesToMetadata(
+/**
+ * Cutover: stop dual-writing coanfitrioes into acomodacoes.metadata.
+ * Clears any stale metadata mirror so DB (`coanfitriao_convites`) is the write source of truth.
+ * Read path still falls back to metadata when the table has no rows (pre-backfill).
+ */
+async function clearCoanfitrioesMetadataMirror(
   unidadeId: number,
   row: typeof acomodacoes.$inferSelect,
-  list: ListingCoanfitriao[],
 ): Promise<void> {
   const baseMeta =
     row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-      ? (row.metadata as Record<string, unknown>)
+      ? { ...(row.metadata as Record<string, unknown>) }
       : {};
-  const nextMetadata = {
-    ...baseMeta,
-    coanfitrioes: list.length > 0 ? list : undefined,
-  };
+  if (!stripCoanfitrioesFromMetadataRecord(baseMeta)) {
+    return;
+  }
   await db
     .update(acomodacoes)
-    .set({ metadata: nextMetadata, atualizadoEm: new Date() })
+    .set({ metadata: baseMeta, atualizadoEm: new Date() })
     .where(eq(acomodacoes.id, unidadeId));
 }
 
@@ -1993,7 +1997,7 @@ export const anfitriaoService = {
     }
 
     const list = await listCoanfitrioesFromDb(unidadeId);
-    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+    await clearCoanfitrioesMetadataMirror(unidadeId, row);
 
     let emailStatus: InviteDispatchStatus = 'skipped';
     try {
@@ -2051,7 +2055,7 @@ export const anfitriaoService = {
       .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
     const list = await listCoanfitrioesFromDb(unidadeId);
-    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+    await clearCoanfitrioesMetadataMirror(unidadeId, row);
 
     return { data: list };
   },
@@ -2088,7 +2092,7 @@ export const anfitriaoService = {
       .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
     const list = await listCoanfitrioesFromDb(unidadeId);
-    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+    await clearCoanfitrioesMetadataMirror(unidadeId, row);
 
     let emailStatus: InviteDispatchStatus = 'skipped';
     try {
@@ -2160,7 +2164,7 @@ export const anfitriaoService = {
       .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
     const list = await listCoanfitrioesFromDb(unidadeId);
-    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+    await clearCoanfitrioesMetadataMirror(unidadeId, row);
 
     return { data: list };
   },
@@ -2207,7 +2211,7 @@ export const anfitriaoService = {
       .where(eq(coanfitriaoConvites.id, target.id));
 
     const list = await listCoanfitrioesFromDb(target.acomodacaoId);
-    await syncCoanfitrioesToMetadata(target.acomodacaoId, row, list);
+    await clearCoanfitrioesMetadataMirror(target.acomodacaoId, row);
 
     return {
       data: {
@@ -2242,7 +2246,7 @@ export const anfitriaoService = {
       .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
     const list = await listCoanfitrioesFromDb(unidadeId);
-    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+    await clearCoanfitrioesMetadataMirror(unidadeId, row);
 
     return { data: list };
   },
