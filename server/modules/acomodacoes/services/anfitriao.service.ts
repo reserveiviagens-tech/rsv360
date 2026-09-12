@@ -62,6 +62,8 @@ import {
   normalizeCoanfitriaoEmail,
   papelPermiteCalendario,
   papelPermiteMensagens,
+  enrichMetadataWithCoanfitrioes,
+  readCoanfitrioesFromMetadata,
   validateListingCoanfitrioes,
   type CoanfitriaoPapel,
   type ListingCoanfitriao,
@@ -118,15 +120,6 @@ export interface AuthContext {
   email?: string;
 }
 
-function readCoanfitrioesFromMetadata(metadata: unknown): ListingCoanfitriao[] {
-  if (metadata == null || typeof metadata !== 'object' || Array.isArray(metadata)) {
-    return [];
-  }
-  const raw = (metadata as Record<string, unknown>).coanfitrioes;
-  const validated = validateListingCoanfitrioes(raw);
-  return validated.ok ? validated.value : [];
-}
-
 function isPgUniqueViolation(err: unknown): boolean {
   const e = err as { code?: string; message?: string };
   return e?.code === '23505' || /unique/i.test(e?.message ?? '');
@@ -154,7 +147,7 @@ async function countNonRevogadoCoanfitrioesFromDb(acomodacaoId: number): Promise
   return rows.length;
 }
 
-async function resolveCoanfitrioesForRbac(
+export async function resolveCoanfitrioesForRead(
   acomodacaoId: number,
   metadata: unknown,
 ): Promise<ListingCoanfitriao[]> {
@@ -162,6 +155,9 @@ async function resolveCoanfitrioesForRbac(
   if (fromDb.length > 0) return fromDb;
   return readCoanfitrioesFromMetadata(metadata);
 }
+
+/** @deprecated Use resolveCoanfitrioesForRead — same DB-first rule for RBAC and read paths. */
+export const resolveCoanfitrioesForRbac = resolveCoanfitrioesForRead;
 
 export async function listConjuntosRegrasFromDb(acomodacaoId: number): Promise<ConjuntoRegras[]> {
   const rows = await db
@@ -379,10 +375,13 @@ export const anfitriaoService = {
     if (!ok) return { error: 'forbidden' };
 
     const conjuntos = await resolveConjuntosRegrasForRead(row.id, row.metadata);
+    const coanfitrioes = await resolveCoanfitrioesForRead(row.id, row.metadata);
+    let metadata = enrichMetadataWithConjuntosRegras(row.metadata, conjuntos);
+    metadata = enrichMetadataWithCoanfitrioes(metadata, coanfitrioes);
     return {
       data: {
         ...row,
-        metadata: enrichMetadataWithConjuntosRegras(row.metadata, conjuntos),
+        metadata,
       },
     };
   },

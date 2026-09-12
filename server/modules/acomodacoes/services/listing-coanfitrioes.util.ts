@@ -256,6 +256,27 @@ export function validateListingCoanfitrioes(
   return { ok: true, value };
 }
 
+export function readCoanfitrioesFromMetadata(metadata: unknown): ListingCoanfitriao[] {
+  if (metadata == null || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return [];
+  }
+  const raw = (metadata as Record<string, unknown>).coanfitrioes;
+  const validated = validateListingCoanfitrioes(raw);
+  return validated.ok ? validated.value : [];
+}
+
+export function enrichMetadataWithCoanfitrioes(
+  metadata: unknown,
+  list: ListingCoanfitriao[],
+): Record<string, unknown> {
+  const base =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+  base.coanfitrioes = list.length > 0 ? list : undefined;
+  return base;
+}
+
 /** Card preview for co-hosts section. */
 export function summarizeCoanfitrioes(
   value: ListingCoanfitriao[] | null | undefined,
