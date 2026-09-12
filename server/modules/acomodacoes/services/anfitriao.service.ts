@@ -93,6 +93,11 @@ import {
   resolveAtivoFilter,
   type AtivoFilter,
 } from './listing-ativo-filter.util';
+import {
+  annotateAcessoComo,
+  buildCoanfitriaoAtivoEmailScope,
+  combineOwnerAndCoanfitriaoScope,
+} from './anfitriao-listar-escopo.util';
 import { auditoriaEstados } from '../../../../backend/src/db/schema/auditoria';
 import { acomodacoesService } from './acomodacoes.service';
 import {
@@ -312,9 +317,21 @@ export const anfitriaoService = {
     const proprietariosCarteira =
       BROKER_ROLES.has(auth.role) ? await proprietariosNaCarteira(auth.userId) : [];
 
-    const whereScope: SQL = STAFF_ROLES.has(auth.role)
+    const isStaff = STAFF_ROLES.has(auth.role);
+    const ownerScope: SQL = isStaff
       ? sql`true`
       : escopoProprietarios(auth, proprietariosCarteira);
+
+    let whereScope: SQL = ownerScope;
+    if (!isStaff) {
+      const email = normalizeCoanfitriaoEmail(auth.email);
+      if (email) {
+        whereScope = combineOwnerAndCoanfitriaoScope(
+          ownerScope,
+          buildCoanfitriaoAtivoEmailScope(email),
+        );
+      }
+    }
 
     const ativoFilter = resolveAtivoFilter(opts?.ativo);
     const ativoWhere = ativoFilterWhere(ativoFilter);
@@ -334,7 +351,20 @@ export const anfitriaoService = {
         .where(whereClause),
     ]);
 
-    return { items: rows, total: countRow[0]?.count ?? 0, page, pageSize };
+    let ownedIds = new Set<number>();
+    if (isStaff) {
+      ownedIds = new Set(rows.map((r) => r.id));
+    } else if (rows.length > 0) {
+      const ids = rows.map((r) => r.id);
+      const ownedRows = await db
+        .select({ id: acomodacoes.id })
+        .from(acomodacoes)
+        .where(and(ownerScope, inArray(acomodacoes.id, ids)));
+      ownedIds = new Set(ownedRows.map((r) => r.id));
+    }
+
+    const items = annotateAcessoComo(rows, ownedIds, isStaff);
+    return { items, total: countRow[0]?.count ?? 0, page, pageSize };
   },
 
   async obterUnidade(
@@ -964,6 +994,9 @@ export const anfitriaoService = {
   > {
     const scoped = await this.obterUnidade(auth, id);
     if ('error' in scoped) return { error: scoped.error };
+    if (!(await podeGerenciarUnidade(auth, scoped.data))) {
+      return { error: 'forbidden' };
+    }
 
     const motivo = validateMotivoDesarquivar(opts?.motivo);
     if (!motivo.ok) {
@@ -2065,8 +2098,9 @@ export const anfitriaoService = {
   ): Promise<string> {
     const ativo = resolveAtivoFilter(opts?.ativo);
     const { items } = await this.listarMinhas(auth, 1, 5000, { ativo });
+    const exportable = items.filter((unit) => unit.acessoComo !== 'coanfitriao');
     return buildImpostosExportCsv(
-      items.map((unit) => ({
+      exportable.map((unit) => ({
         id: unit.id,
         titulo: unit.titulo,
         hotelId: unit.hotelId,
