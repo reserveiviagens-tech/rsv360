@@ -143,6 +143,7 @@ export type EditorMeta = {
     email?: string;
     papel: 'calendario' | 'mensagens' | 'tudo';
     status: 'pendente' | 'ativo' | 'revogado';
+    expiresAt?: string;
   }>;
   guiaChegada?: {
     comoChegar?: string;

@@ -1,5 +1,6 @@
 const mockConvidar = jest.fn();
 const mockRevogar = jest.fn();
+const mockReenviar = jest.fn();
 const mockAceitar = jest.fn();
 const mockAceitarPorToken = jest.fn();
 const mockRemover = jest.fn();
@@ -8,6 +9,7 @@ jest.mock('../../../../server/modules/acomodacoes/services/anfitriao.service', (
   anfitriaoService: {
     convidarCoanfitriao: (...args: unknown[]) => mockConvidar(...args),
     revogarCoanfitriao: (...args: unknown[]) => mockRevogar(...args),
+    reenviarConviteCoanfitriao: (...args: unknown[]) => mockReenviar(...args),
     aceitarConviteCoanfitriao: (...args: unknown[]) => mockAceitar(...args),
     aceitarConvitePorToken: (...args: unknown[]) => mockAceitarPorToken(...args),
     removerCoanfitriao: (...args: unknown[]) => mockRemover(...args),
@@ -198,5 +200,57 @@ describe('anfitriao coanfitrioes routes', () => {
       { userId: 99, role: 'anfitriao', email: 'cohost@test.local' },
       'invite-token-uuid',
     );
+  });
+
+  it('POST reenviar returns 200 when service succeeds', async () => {
+    mockReenviar.mockResolvedValue({
+      data: [
+        {
+          id: 'c1',
+          nome: 'Maria',
+          email: 'cohost@test.local',
+          papel: 'tudo',
+          status: 'pendente',
+          expiresAt: '2026-06-15T10:00:00.000Z',
+        },
+      ],
+      emailStatus: 'sent',
+    });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/unidades/101/coanfitrioes/c1/reenviar')
+      .set(authHeaders('anfitriao', 1, 'owner@test.local'))
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(mockReenviar).toHaveBeenCalledWith(
+      { userId: 1, role: 'anfitriao', email: 'owner@test.local' },
+      101,
+      'c1',
+    );
+    expect(res.body.emailStatus).toBe('sent');
+  });
+
+  it('POST aceitar with expired invite returns 410', async () => {
+    mockAceitar.mockResolvedValue({ error: 'expired' });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/unidades/101/coanfitrioes/c1/aceitar')
+      .set(authHeaders('anfitriao', 99, 'cohost@test.local'));
+
+    expect(res.status).toBe(410);
+    expect(res.body.error).toMatch(/expirado/i);
+  });
+
+  it('POST aceitar-token with expired invite returns 410', async () => {
+    mockAceitarPorToken.mockResolvedValue({ error: 'expired' });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/coanfitrioes/aceitar-token')
+      .set(authHeaders('anfitriao', 99, 'cohost@test.local'))
+      .send({ token: 'expired-token' });
+
+    expect(res.status).toBe(410);
+    expect(res.body.error).toMatch(/expirado/i);
   });
 });

@@ -396,6 +396,15 @@ export const fase1Api = {
       `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/revogar`,
       { method: 'POST', body: '{}' },
     ),
+  anfitriaoReenviarCoanfitriao: (id: number, coId: string) =>
+    fetchJson<{
+      success: boolean;
+      data: unknown[];
+      emailStatus?: 'sent' | 'skipped' | 'failed';
+    }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/reenviar`,
+      { method: 'POST', body: '{}' },
+    ),
   anfitriaoAceitarCoanfitriao: (id: number, coId: string) =>
     fetchJson<{ success: boolean; data: unknown[] }>(
       `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/aceitar`,

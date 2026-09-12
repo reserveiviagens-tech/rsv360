@@ -675,6 +675,9 @@ router.post('/coanfitrioes/aceitar-token', ...parceiroAuth, async (req, res) => 
       if (result.error === 'forbidden') {
         return res.status(403).json({ success: false, error: 'Convite inválido ou sem permissão' });
       }
+      if (result.error === 'expired') {
+        return res.status(410).json({ success: false, error: 'Convite expirado' });
+      }
       return res.status(404).json({ success: false, error: 'Convite não encontrado' });
     }
     res.json({ success: true, data: result.data });
@@ -727,6 +730,38 @@ router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
   }
 });
 
+router.post('/unidades/:id/coanfitrioes/:coId/reenviar', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await anfitriaoService.reenviarConviteCoanfitriao(
+      authFromReq(req),
+      Number(req.params.id),
+      String(req.params.coId),
+    );
+    if ('error' in result) {
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Coanfitrião não encontrado' });
+      }
+      if (result.error === 'invalid_status') {
+        return res.status(400).json({
+          success: false,
+          error: 'Somente convites pendentes podem ser reenviados',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível reenviar convite' });
+    }
+    res.json({
+      success: true,
+      data: result.data,
+      ...(result.emailStatus ? { emailStatus: result.emailStatus } : {}),
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/unidades/:id/coanfitrioes/:coId/revogar', ...parceiroAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.revogarCoanfitriao(
@@ -765,6 +800,9 @@ router.post('/unidades/:id/coanfitrioes/:coId/aceitar', ...parceiroAuth, async (
       }
       if (result.error === 'forbidden') {
         return res.status(403).json({ success: false, error: 'Convite inválido ou sem permissão' });
+      }
+      if (result.error === 'expired') {
+        return res.status(410).json({ success: false, error: 'Convite expirado' });
       }
       return res.status(400).json({ success: false, error: 'Não foi possível aceitar convite' });
     }

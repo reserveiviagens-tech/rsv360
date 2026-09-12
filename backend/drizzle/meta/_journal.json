@@ -379,6 +379,13 @@
       "when": 1788562000000,
       "tag": "0053_conjuntos_regras_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1788563000000,
+      "tag": "0054_coanfitriao_convites_expires_at",
+      "breakpoints": true
     }
   ]
 }
