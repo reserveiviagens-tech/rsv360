@@ -158,4 +158,16 @@ describe('anfitriao coanfitrioes routes', () => {
 
     expect(res.status).toBe(400);
   });
+
+  it('POST convidar with duplicate active email -> 409', async () => {
+    mockConvidar.mockResolvedValue({ error: 'already_invited' });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/unidades/101/coanfitrioes')
+      .set(authHeaders('anfitriao', 1, 'owner@test.local'))
+      .send({ nome: 'Maria', email: 'cohost@test.local', papel: 'tudo' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/convite/i);
+  });
 });
