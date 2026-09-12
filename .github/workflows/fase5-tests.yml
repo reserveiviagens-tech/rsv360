@@ -245,6 +245,26 @@ jobs:
       - name: Clear rate limits after auth probe
         run: |
           docker compose exec -T postgres psql -U rsv360 -d rsv_360_ecosystem -c "DELETE FROM auth_rate_limits;" || true
+      - name: Assert Fase 1 propostas route is mounted (not 404)
+        run: |
+          # Auth works even when registerMigracaoFase1Modules fails (caught in backend/app.js).
+          # Expect 401 (no/invalid token) — never 404 Route not found.
+          code=$(curl -s -o /tmp/propostas-probe.json -w "%{http_code}" -X POST \
+            http://localhost:3002/api/v1/propostas \
+            -H 'Content-Type: application/json' \
+            -d '{"titulo":"probe"}' || echo "000")
+          echo "POST /api/v1/propostas → HTTP $code"
+          cat /tmp/propostas-probe.json || true
+          if [ "$code" = "404" ]; then
+            echo "Fase 1 modules missing — dumping backend boot logs" >&2
+            docker compose logs backend --tail 120
+            exit 1
+          fi
+          if [ "$code" = "000" ]; then
+            echo "Backend unreachable" >&2
+            docker compose logs backend --tail 80
+            exit 1
+          fi
       - name: Playwright Fase 5
         run: npm run test:e2e:fase5
         env:

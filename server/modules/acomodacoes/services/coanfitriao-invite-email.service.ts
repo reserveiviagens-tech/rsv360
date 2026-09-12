@@ -1,6 +1,7 @@
-import { CommunicationProviderFactory } from '../../communication/providers/factory';
 import { maskEmail } from './listing-coanfitrioes.util';
 import type { CoanfitriaoPapel } from './listing-coanfitrioes.util';
+
+/** Lazy-load mailer so acomodações boot does not pull communication providers at import time. */
 
 const PAPEL_LABELS: Record<CoanfitriaoPapel, string> = {
   calendario: 'Calendário e disponibilidade',
@@ -101,6 +102,7 @@ export async function enviarConviteCoanfitriaoEmail(
   const subject = 'Convite para coanfitrião — RSV 360°';
 
   try {
+    const { CommunicationProviderFactory } = await import('../../communication/providers/factory');
     const provider = CommunicationProviderFactory.getProvider('default', 'email');
     if (!provider?.email) {
       return { ok: false, skipped: true, error: 'email_provider_ausente' };
