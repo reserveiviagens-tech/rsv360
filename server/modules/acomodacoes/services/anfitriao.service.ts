@@ -79,6 +79,7 @@ import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
 import { validateListingLeis } from './listing-leis.util';
+import { validateListingConjuntosRegras } from './listing-conjuntos-regras.util';
 import { buildImpostosExportCsv } from './listing-impostos-export.util';
 import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
 import {
@@ -691,6 +692,21 @@ export const anfitriaoService = {
         return { error: leis.error, message: leis.message };
       }
       (metadataPatch as Record<string, unknown>).leis = leis.value;
+    }
+
+    const updatingConjuntosRegras =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'conjuntosRegras');
+    if (updatingConjuntosRegras) {
+      const conjuntos = validateListingConjuntosRegras(
+        (metadataPatch as Record<string, unknown>).conjuntosRegras,
+      );
+      if (!conjuntos.ok) {
+        return { error: conjuntos.error, message: conjuntos.message };
+      }
+      (metadataPatch as Record<string, unknown>).conjuntosRegras = conjuntos.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

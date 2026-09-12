@@ -23,6 +23,7 @@ import { CompareAnunciosModal } from '../../../../components/anfitriao/CompareAn
 import { SelectionContextAlert } from '../../../../components/anfitriao/SelectionContextAlert';
 import { AnfitriaoHostNav } from '../../../../components/anfitriao/AnfitriaoHostNav';
 import { AnfitriaoPropertySwitcher } from '../../../../components/anfitriao/AnfitriaoPropertySwitcher';
+import type { ConjuntoRegrasView } from '../../../../components/anfitriao/ConjuntosRegrasPanel';
 import { fase1Api } from '@/lib/fase1-api';
 import { useAuth } from '@/src/context/AuthContext';
 import { parseRouteId } from '@/src/lib/parse-route-id';
@@ -80,6 +81,7 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(true);
   const [lastSelected, setLastSelected] = useState<string | null>(null);
+  const [conjuntosRegras, setConjuntosRegras] = useState<ConjuntoRegrasView[]>([]);
 
   const [form, setForm] = useState<PricingForm>({
     formBase: '',
@@ -198,6 +200,7 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
         })(),
         formPermitirPedidosMesmoDia: pd.permitirPedidosMesmoDia !== false,
       }));
+      setConjuntosRegras(data.conjuntosRegras ?? []);
       setDias(
         data.dias.map((d) => ({
           data: d.data,
@@ -261,6 +264,53 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
         d?.precoEfetivo != null ? String(d.precoEfetivo) : d?.precoOverride || '',
       dayNote: note,
     });
+  }
+
+  const applyRange = useMemo(() => {
+    if (multiDates.length === 0) return null;
+    const sorted = [...multiDates].sort();
+    return { de: sorted[0]!, ate: sorted[sorted.length - 1]! };
+  }, [multiDates]);
+
+  async function saveConjuntosRegras(next: ConjuntoRegrasView[]) {
+    if (!id || !isMaster) return;
+    setBusy(true);
+    setErro(null);
+    try {
+      await fase1Api.atualizarAnfitriaoUnidade(id, {
+        metadata: { conjuntosRegras: next },
+      });
+      setConjuntosRegras(next);
+      setMsg('Conjuntos de regras salvos');
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyConjuntoRegras(conjuntoId: string, de: string, ate: string) {
+    if (!id || !isMaster) return;
+    setBusy(true);
+    setErro(null);
+    try {
+      const res = await fase1Api.anfitriaoAplicarConjuntoRegras(id, conjuntoId, { de, ate });
+      const d = res.data;
+      if (d.precoInteligenteAtivo) {
+        setMsg(
+          `Conjunto aplicado parcialmente: ${d.diasBloqueados} bloqueio(s); preços ignorados (Preço Inteligente ativo).`,
+        );
+      } else {
+        setMsg(
+          `Conjunto aplicado: ${d.precosAplicados} preço(s), ${d.diasBloqueados} bloqueio(s) em ${d.diasNoIntervalo} dia(s).`,
+        );
+      }
+      await load();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const meuPrecoCompare = useMemo(() => {
@@ -732,6 +782,15 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
                   onSaveBasePrice={() => void saveBaseFromFlow()}
                   onSaveCustom={() => void saveCustomFromFlow()}
                   onOpenCompare={() => setCompareOpen(true)}
+                  conjuntosRegras={conjuntosRegras}
+                  smartPricingAtivo={form.formSmartAtivo}
+                  applyRange={applyRange}
+                  onApplyConjunto={(cid, de, ate) => void applyConjuntoRegras(cid, de, ate)}
+                  onManageConjuntos={() => {
+                    setMultiDates([]);
+                    setLastSelected(null);
+                    setPanel('conjuntos-regras');
+                  }}
                 />
               ) : (
                 <RateCalendarDrawer
@@ -759,6 +818,10 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
                   onSyncIcalImport={() => void syncIcalImport()}
                   precoSugerido={dicaPreco}
                   ganhoBuscasPct={dicaGanho}
+                  conjuntosRegras={conjuntosRegras}
+                  applyRange={applyRange}
+                  onSaveConjuntosRegras={saveConjuntosRegras}
+                  onApplyConjuntoRegras={applyConjuntoRegras}
                 />
               )}
             </aside>

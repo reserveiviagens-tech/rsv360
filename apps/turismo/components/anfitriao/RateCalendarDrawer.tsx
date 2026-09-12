@@ -11,12 +11,17 @@ import {
   smartPriceSuggestions,
 } from './date-range-utils';
 import { PrecoInteligenteHelpModal } from './PrecoInteligenteHelpModal';
+import {
+  ConjuntosRegrasPanel,
+  type ConjuntoRegrasView,
+} from './ConjuntosRegrasPanel';
 
 export type DrawerPanel =
   | 'menu'
   | 'precos'
   | 'taxas'
   | 'descontos'
+  | 'conjuntos-regras'
   | 'disponibilidade'
   | 'disp-min-noites'
   | 'disp-max-noites'
@@ -102,6 +107,10 @@ type Props = {
   onSyncIcalImport?: () => void;
   precoSugerido?: number;
   ganhoBuscasPct?: number;
+  conjuntosRegras?: ConjuntoRegrasView[];
+  applyRange?: { de: string; ate: string } | null;
+  onSaveConjuntosRegras?: (next: ConjuntoRegrasView[]) => void | Promise<void>;
+  onApplyConjuntoRegras?: (conjuntoId: string, de: string, ate: string) => void | Promise<void>;
 };
 
 const NOTE_MAX = 100;
@@ -373,6 +382,10 @@ export function RateCalendarDrawer({
   onSyncIcalImport,
   precoSugerido = 199,
   ganhoBuscasPct = 26,
+  conjuntosRegras = [],
+  applyRange = null,
+  onSaveConjuntosRegras,
+  onApplyConjuntoRegras,
 }: Props) {
   const [smartHelpOpen, setSmartHelpOpen] = useState(false);
   const [baseBreakdownOpen, setBaseBreakdownOpen] = useState(true);
@@ -934,6 +947,12 @@ export function RateCalendarDrawer({
           onClick={() => onPanel('disponibilidade')}
         />
         <SettingCard
+          title="Conjuntos de regras"
+          subtitle="Presets nomeados de preço e disponibilidade"
+          chevron
+          onClick={() => onPanel('conjuntos-regras')}
+        />
+        <SettingCard
           title="Cancelamentos"
           subtitle="Políticas e opção não reembolsável"
           chevron
@@ -1185,6 +1204,32 @@ export function RateCalendarDrawer({
             Salvar descontos
           </button>
         )}
+      </div>
+    );
+  }
+
+  if (panel === 'conjuntos-regras') {
+    return (
+      <div className="space-y-3">
+        <PanelHeader
+          title="Conjuntos de regras"
+          onBack={() => onPanel('menu')}
+          hint="Salve presets e aplique a um intervalo de datas no calendário."
+        />
+        <ConjuntosRegrasPanel
+          conjuntos={conjuntosRegras}
+          isMaster={isMaster}
+          busy={busy}
+          smartPricingAtivo={form.formSmartAtivo}
+          applyRange={applyRange}
+          onBack={() => onPanel('menu')}
+          onSave={async (next) => {
+            if (onSaveConjuntosRegras) await onSaveConjuntosRegras(next);
+          }}
+          onApply={async (conjuntoId, de, ate) => {
+            if (onApplyConjuntoRegras) await onApplyConjuntoRegras(conjuntoId, de, ate);
+          }}
+        />
       </div>
     );
   }
