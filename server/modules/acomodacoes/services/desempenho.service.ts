@@ -5,6 +5,13 @@ import {
   type Oportunidade,
   type OppUnitInput,
 } from './oportunidades.engine';
+import {
+  avaliarQualidadePortfolio,
+  gerarDicasQualidade,
+  type QualidadeCategoria,
+  type QualidadeCategoriaResumo,
+  type QualidadeUnitInput,
+} from './qualidade.engine';
 
 function daysInclusive(de: string, ate: string): number {
   const a = new Date(`${de}T12:00:00`);
@@ -45,9 +52,14 @@ export type DesempenhoMetrics = {
     ocupacaoPct: number | null;
   };
   qualidade: {
-    anunciosCompletos: number;
-    anunciosIncompletos: number;
     scoreMedio: number | null;
+    categorias: QualidadeCategoriaResumo[];
+    porUnidade: Array<{
+      id: number;
+      titulo: string;
+      score: number;
+      categorias: QualidadeCategoria[];
+    }>;
     dicas: string[];
   };
   conversao: {
@@ -108,17 +120,7 @@ export const desempenhoService = {
         ? Math.round((noitesReservadas / noitesDisponiveisEstimadas) * 1000) / 10
         : null;
 
-    const incompletos = items.filter(
-      (i) => i.statusPublicacao === 'rascunho' || !i.dadosCompletos,
-    ).length;
-    const completos = items.length - incompletos;
-    const scoreMedio =
-      items.length > 0 ? Math.round((completos / items.length) * 1000) / 10 : null;
-
     const dicas: string[] = [];
-    if (incompletos > 0) {
-      dicas.push('Complete os anúncios em rascunho para melhorar a visibilidade na Reservei Viagens.');
-    }
     if ((ocupacaoPct ?? 0) < 30 && items.length > 0) {
       dicas.push('Revise preços e disponibilidade no calendário de tarifas para atrair mais reservas.');
     }
@@ -177,6 +179,33 @@ export const desempenhoService = {
     const oportunidades = avaliarOportunidades(oppUnits);
     const oportunidadesResumo = resumoOportunidades(oportunidades);
 
+    const qualidadeUnits: QualidadeUnitInput[] = items.map((u) => {
+      const row = u as typeof u & Record<string, unknown>;
+      const base = oppUnits.find((o) => o.id === u.id);
+      return {
+        ...(base ?? {
+          id: u.id,
+          titulo: u.titulo,
+          statusPublicacao: String(u.statusPublicacao),
+          dadosCompletos: u.dadosCompletos,
+          amenidades: u.amenidades,
+          midia: u.midia,
+          precoDiaria: u.precoDiaria,
+          metadata: u.metadata,
+        }),
+        capacidadeMax: u.capacidadeMax,
+        tipoId: u.tipoId,
+        minNoites: typeof row.minNoites === 'number' ? row.minNoites : base?.minNoites ?? null,
+        maxNoites: typeof row.maxNoites === 'number' ? row.maxNoites : base?.maxNoites ?? null,
+        periodoDisponibilidadeMeses:
+          typeof row.periodoDisponibilidadeMeses === 'number'
+            ? row.periodoDisponibilidadeMeses
+            : base?.periodoDisponibilidadeMeses ?? null,
+      };
+    });
+    const qualidadeAgg = avaliarQualidadePortfolio(qualidadeUnits);
+    dicas.push(...gerarDicasQualidade(qualidadeAgg));
+
     return {
       periodo: { de, ate, mes: ym },
       resumo: {
@@ -189,9 +218,9 @@ export const desempenhoService = {
         ocupacaoPct,
       },
       qualidade: {
-        anunciosCompletos: completos,
-        anunciosIncompletos: incompletos,
-        scoreMedio,
+        scoreMedio: qualidadeAgg.scoreMedio,
+        categorias: qualidadeAgg.categorias,
+        porUnidade: qualidadeAgg.porUnidade,
         dicas,
       },
       conversao: {
