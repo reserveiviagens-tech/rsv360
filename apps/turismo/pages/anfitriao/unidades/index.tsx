@@ -33,6 +33,7 @@ type Unidade = {
   amenidades?: unknown;
   utensilios?: unknown;
   eletrodomesticos?: unknown;
+  acessoComo?: 'proprietario' | 'coanfitriao';
 };
 
 const ATIVO_TABS: { value: AtivoTab; label: string }[] = [
@@ -74,7 +75,6 @@ export default function AnfitriaoUnidadesPage() {
   const filtered = useMemo(() => filterUnitsBySearch(items, query), [items, query]);
   const isArchivedTab = ativoFilter === 'false';
   const selectionCount = selectedIds.size;
-  const visibleIds = useMemo(() => filtered.map((u) => u.id), [filtered]);
 
   function toggleSelection(id: number) {
     setSelectedIds((prev) => {
@@ -86,7 +86,11 @@ export default function AnfitriaoUnidadesPage() {
   }
 
   function selectAllVisible() {
-    setSelectedIds(new Set(visibleIds));
+    setSelectedIds(
+      new Set(
+        filtered.filter((u) => u.acessoComo !== 'coanfitriao').map((u) => u.id),
+      ),
+    );
   }
 
   function clearSelection() {
@@ -145,6 +149,9 @@ export default function AnfitriaoUnidadesPage() {
             <h1 className="text-2xl font-bold text-slate-900">Anúncios</h1>
             <p className="text-sm text-slate-600">
               Busque por nome, quartos, hóspedes ou características (piscina, wifi, pet…)
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Unidades em que você é coanfitrião ativo também aparecem aqui.
             </p>
           </div>
 
@@ -274,13 +281,15 @@ export default function AnfitriaoUnidadesPage() {
               const src = thumb ? compactThumbUrl(thumb, 320) : unitThumbPlaceholder();
               const interno = nomeInternoOf(u);
               const arquivado = u.ativo === false;
+              const isCoanfitriao = u.acessoComo === 'coanfitriao';
+              const canSelectForBulk = isArchivedTab && !isCoanfitriao;
               const checked = selectedIds.has(u.id);
               return (
                 <div
                   key={u.id}
                   className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-slate-400"
                 >
-                  {isArchivedTab && (
+                  {canSelectForBulk && (
                     <div className="absolute left-3 top-3 z-10">
                       <input
                         type="checkbox"
@@ -306,11 +315,18 @@ export default function AnfitriaoUnidadesPage() {
                     <div className="p-3">
                       <div className="flex items-start justify-between gap-2">
                         <p className="truncate font-semibold text-slate-900">{u.titulo}</p>
-                        {arquivado ? (
-                          <span className="shrink-0 rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
-                            Arquivado
-                          </span>
-                        ) : null}
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          {isCoanfitriao ? (
+                            <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600">
+                              Coanfitrião
+                            </span>
+                          ) : null}
+                          {arquivado ? (
+                            <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
+                              Arquivado
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       {interno ? (
                         <p className="truncate text-xs text-slate-500">Interno: {interno}</p>
