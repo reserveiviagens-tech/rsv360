@@ -107,6 +107,10 @@ type Props = {
   onSyncIcalImport?: () => void;
   precoSugerido?: number;
   ganhoBuscasPct?: number;
+  guestRating?: number | null;
+  guestReviews?: number;
+  descontoAvaliacaoElegivel?: boolean;
+  descontoAvaliacaoHint?: string | null;
   conjuntosRegras?: ConjuntoRegrasView[];
   applyRange?: { de: string; ate: string } | null;
   onSaveConjuntosRegras?: (next: ConjuntoRegrasView[]) => void | Promise<void>;
@@ -382,6 +386,10 @@ export function RateCalendarDrawer({
   onSyncIcalImport,
   precoSugerido = 199,
   ganhoBuscasPct = 26,
+  guestRating = null,
+  guestReviews = 0,
+  descontoAvaliacaoElegivel = false,
+  descontoAvaliacaoHint = null,
   conjuntosRegras = [],
   applyRange = null,
   onSaveConjuntosRegras,
@@ -1162,6 +1170,17 @@ export function RateCalendarDrawer({
           <p className="text-sm text-slate-500">
             Nota mínima e quantidade de avaliações do hóspede
           </p>
+          {descontoAvaliacaoHint ? (
+            <p
+              className={`rounded-xl px-3 py-2 text-sm ${
+                descontoAvaliacaoElegivel
+                  ? 'bg-emerald-50 text-emerald-800'
+                  : 'bg-slate-50 text-slate-600'
+              }`}
+            >
+              {descontoAvaliacaoHint}
+            </p>
+          ) : null}
           <label className="block text-sm">
             Percentual
             <input

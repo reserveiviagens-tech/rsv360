@@ -25,6 +25,48 @@ export type HostDiscountContext = {
   guestReviews?: number | null;
 };
 
+/** Minimal review aggregate input (matches anfitriao-reviews.service). */
+export type ReviewAggInput = {
+  media: number | null;
+  total: number;
+};
+
+export type GuestReviewPricingFields = {
+  guestRating: number | null;
+  guestReviews: number;
+};
+
+/** Maps guest feedback aggregate to rate-calendar / pricing context fields. */
+export function mapReviewAggToGuestPricingFields(
+  agg: ReviewAggInput | null | undefined,
+): GuestReviewPricingFields {
+  if (!agg) {
+    return { guestRating: null, guestReviews: 0 };
+  }
+  const total =
+    Number.isFinite(agg.total) && agg.total > 0 ? Math.max(0, Math.floor(agg.total)) : 0;
+  const guestRating =
+    total > 0 && agg.media != null && Number.isFinite(agg.media) ? agg.media : null;
+  return { guestRating, guestReviews: total };
+}
+
+export function isDescontoAvaliacaoElegivel(
+  policy: Pick<
+    HostDiscountPolicy,
+    'descontoAvaliacaoPct' | 'descontoAvaliacaoMinNota' | 'descontoAvaliacaoMinReviews'
+  >,
+  guestRating: number | null | undefined,
+  guestReviews: number | null | undefined,
+): boolean {
+  const reviews = guestReviews ?? 0;
+  return (
+    policy.descontoAvaliacaoPct > 0 &&
+    guestRating != null &&
+    guestRating >= policy.descontoAvaliacaoMinNota &&
+    reviews >= policy.descontoAvaliacaoMinReviews
+  );
+}
+
 export function resolverDescontoHospede(
   policy: HostDiscountPolicy,
   ctx: HostDiscountContext,

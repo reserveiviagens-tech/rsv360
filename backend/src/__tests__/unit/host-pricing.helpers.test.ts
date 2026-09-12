@@ -1,5 +1,7 @@
 import {
   clampSmartPrice,
+  isDescontoAvaliacaoElegivel,
+  mapReviewAggToGuestPricingFields,
   normalizeMinNoitesPorCheckin,
   resolverDescontoHospede,
   resolverMinNoitesCheckin,
@@ -39,6 +41,51 @@ describe('host-pricing.helpers (Fase C RSV360°)', () => {
     );
     expect(r.regra).toBe('ultima_hora');
     expect(r.pct).toBe(10);
+  });
+
+  it('mapReviewAggToGuestPricingFields maps aggregate to pricing context', () => {
+    expect(mapReviewAggToGuestPricingFields({ media: 4.9, total: 5 })).toEqual({
+      guestRating: 4.9,
+      guestReviews: 5,
+    });
+    expect(mapReviewAggToGuestPricingFields({ media: null, total: 0 })).toEqual({
+      guestRating: null,
+      guestReviews: 0,
+    });
+    expect(mapReviewAggToGuestPricingFields(null)).toEqual({
+      guestRating: null,
+      guestReviews: 0,
+    });
+  });
+
+  it('isDescontoAvaliacaoElegivel respects policy thresholds', () => {
+    const policy = {
+      descontoAvaliacaoPct: 15,
+      descontoAvaliacaoMinNota: 4.8,
+      descontoAvaliacaoMinReviews: 3,
+    };
+    expect(isDescontoAvaliacaoElegivel(policy, 4.9, 5)).toBe(true);
+    expect(isDescontoAvaliacaoElegivel(policy, 4.5, 5)).toBe(false);
+    expect(isDescontoAvaliacaoElegivel(policy, 5, 2)).toBe(false);
+    expect(isDescontoAvaliacaoElegivel(policy, null, 0)).toBe(false);
+    expect(
+      isDescontoAvaliacaoElegivel({ ...policy, descontoAvaliacaoPct: 0 }, 5, 5),
+    ).toBe(false);
+  });
+
+  it('applies avaliacao discount when guest rating qualifies', () => {
+    const r = resolverDescontoHospede(
+      { ...basePolicy, descontoNovoAnuncioPct: 0, descontoAntecipadaPct: 0 },
+      {
+        noites: 2,
+        diasAntecedencia: 10,
+        reservasConfirmadasAnuncio: 10,
+        guestRating: 4.9,
+        guestReviews: 4,
+      },
+    );
+    expect(r.regra).toBe('avaliacao');
+    expect(r.pct).toBe(15);
   });
 
   it('chooses highest matching discount (no stack)', () => {
