@@ -651,6 +651,16 @@ export const fase1Api = {
         }>;
         canEditPricing: boolean;
         canApplyDiscount: boolean;
+        conjuntosRegras?: Array<{
+          id: string;
+          nome: string;
+          cor: string;
+          precoPorNoite?: number;
+          ajustePct?: number;
+          minNoites?: number;
+          maxNoites?: number;
+          checkinDiasBloqueados?: number[];
+        }>;
       };
     }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/rate-calendar?de=${de}&ate=${ate}`),
 
@@ -668,6 +678,31 @@ export const fase1Api = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+
+  anfitriaoAplicarConjuntoRegras: (
+    id: number,
+    conjuntoId: string,
+    body: { de: string; ate: string },
+  ) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        ok: boolean;
+        conjuntoId: string;
+        de: string;
+        ate: string;
+        diasNoIntervalo: number;
+        diasBloqueados: number;
+        precosAplicados: number;
+        precoInteligenteAtivo?: boolean;
+      };
+    }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/conjuntos-regras/${encodeURIComponent(conjuntoId)}/aplicar`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
 
   anfitriaoIcalToken: (id: number, opts?: { regenerate?: boolean }) =>
     fetchJson<{ success: boolean; data: { icalToken: string; regenerated?: boolean } }>(

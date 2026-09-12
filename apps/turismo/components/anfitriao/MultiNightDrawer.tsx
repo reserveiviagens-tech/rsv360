@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CalendarioDiaView } from './AnfitriaoMonthCalendar';
 import { moneyBr, hostPayoutBreakdown, summarizeSelection } from './date-range-utils';
+import type { ConjuntoRegrasView } from './ConjuntosRegrasPanel';
 
 export type MultiNightPanel =
   | 'overview'
@@ -32,6 +33,11 @@ type Props = {
   onSaveBasePrice: () => void;
   onSaveCustom: () => void;
   onOpenCompare: () => void;
+  conjuntosRegras?: ConjuntoRegrasView[];
+  smartPricingAtivo?: boolean;
+  applyRange?: { de: string; ate: string } | null;
+  onApplyConjunto?: (conjuntoId: string, de: string, ate: string) => void;
+  onManageConjuntos?: () => void;
 };
 
 const CANCEL_OPTIONS = [
@@ -62,8 +68,14 @@ export function MultiNightDrawer({
   onSaveBasePrice,
   onSaveCustom,
   onOpenCompare,
+  conjuntosRegras = [],
+  smartPricingAtivo = false,
+  applyRange = null,
+  onApplyConjunto,
+  onManageConjuntos,
 }: Props) {
   const summary = useMemo(() => summarizeSelection(dates, dias), [dates, dias]);
+  const [applyConjuntoId, setApplyConjuntoId] = useState('');
   const [availAction, setAvailAction] = useState<'disponibilizar' | 'bloquear' | null>(null);
   const [editPrice, setEditPrice] = useState('');
   const [editingPrice, setEditingPrice] = useState(false);
@@ -475,6 +487,50 @@ export function MultiNightDrawer({
           <p className="mt-1 text-base text-slate-400 line-through">{baseRangeLabel}</p>
         )}
       </button>
+
+      {isMaster && conjuntosRegras.length > 0 && applyRange && onApplyConjunto && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-4 space-y-2">
+          <p className="text-sm font-semibold text-slate-900">Aplicar conjunto de regras</p>
+          {smartPricingAtivo && (
+            <p className="text-xs text-amber-800">
+              Preço Inteligente ativo — apenas bloqueios de check-in serão aplicados.
+            </p>
+          )}
+          <p className="text-xs text-slate-500">
+            {applyRange.de} → {applyRange.ate}
+          </p>
+          <select
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            value={applyConjuntoId}
+            disabled={busy}
+            onChange={(e) => setApplyConjuntoId(e.target.value)}
+          >
+            <option value="">Escolha um conjunto…</option>
+            {conjuntosRegras.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="w-full rounded-xl bg-emerald-700 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+            disabled={busy || !applyConjuntoId}
+            onClick={() => onApplyConjunto(applyConjuntoId, applyRange.de, applyRange.ate)}
+          >
+            Aplicar
+          </button>
+          {onManageConjuntos && (
+            <button
+              type="button"
+              className="text-xs font-medium text-slate-600 underline"
+              onClick={onManageConjuntos}
+            >
+              Gerenciar conjuntos
+            </button>
+          )}
+        </div>
+      )}
 
       <button
         type="button"

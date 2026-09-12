@@ -342,6 +342,24 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Use endpoints de coanfitriões',
       });
     }
+    if (result.error === 'conjuntos_regras_invalido') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Conjuntos de regras inválidos',
+      });
+    }
+    if ('error' in result && result.error) {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : String(result.error),
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
@@ -1318,6 +1336,74 @@ router.put('/unidades/:id/pricing-defaults', ...masterAuth, async (req, res) => 
     res.status(400).json({ success: false, error: (error as Error).message });
   }
 });
+
+router.post(
+  '/unidades/:id/conjuntos-regras/:conjuntoId/aplicar',
+  ...masterAuth,
+  async (req, res) => {
+    try {
+      const de = String(req.body?.de ?? '');
+      const ate = String(req.body?.ate ?? '');
+      const result = await rateCalendarService.aplicarConjuntoRegras(
+        authFromReq(req),
+        Number(req.params.id),
+        String(req.params.conjuntoId),
+        { de, ate },
+      );
+      if ('error' in result) {
+        if (result.error === 'forbidden') {
+          return res.status(403).json({ success: false, error: 'Acesso negado' });
+        }
+        if (result.error === 'not_found') {
+          return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+        }
+        if (result.error === 'conjunto_not_found') {
+          return res.status(404).json({
+            success: false,
+            error:
+              'message' in result && typeof result.message === 'string'
+                ? result.message
+                : 'Conjunto não encontrado',
+          });
+        }
+        if (result.error === 'range_exceeded') {
+          return res.status(400).json({
+            success: false,
+            error:
+              'message' in result && typeof result.message === 'string'
+                ? result.message
+                : 'Intervalo excede o máximo permitido',
+          });
+        }
+        if (result.error === 'invalid_dates') {
+          return res.status(400).json({
+            success: false,
+            error:
+              'message' in result && typeof result.message === 'string'
+                ? result.message
+                : 'Datas inválidas',
+          });
+        }
+        if (result.error === 'day_reserved') {
+          return res.status(403).json({
+            success: false,
+            error: 'Dia reservado não pode ser alterado',
+          });
+        }
+        return res.status(400).json({
+          success: false,
+          error:
+            'message' in result && typeof result.message === 'string'
+              ? result.message
+              : result.error,
+        });
+      }
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(400).json({ success: false, error: (error as Error).message });
+    }
+  },
+);
 
 router.post('/unidades/:id/aplicar-desconto', ...parceiroAuth, async (req, res) => {
   try {

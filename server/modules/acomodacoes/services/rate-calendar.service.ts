@@ -42,10 +42,15 @@ import {
   toIcalDate,
 } from './ical.util';
 import { randomBytes } from 'crypto';
+import { readConjuntosRegrasFromMetadata } from './listing-conjuntos-regras.util';
+import { enumerateDatesInclusive } from './anfitriao-reservas.util';
+import { isDataValida } from './anfitriao-bulk.util';
 
 const STAFF_ROLES = new Set(['admin', 'manager']);
 const MASTER_ROLES = new Set(['admin', 'manager', 'anfitriao']);
 const BROKER_ROLES = new Set(['corretor', 'agente', 'promotor']);
+const CONJUNTO_APPLY_MAX_DAYS = 90;
+const BULK_CHUNK = 50;
 
 export type ResolverPrecoDiaInput = {
   acomodacaoId: number;
@@ -123,6 +128,16 @@ function matchTemporadaDia(
     nome: match.nome,
     tipo: classificarTemporadaTipo(match.slug || match.nome),
   };
+}
+
+function weekdayFromIso(isoDate: string): number {
+  return new Date(`${isoDate}T12:00:00.000Z`).getUTCDay();
+}
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
 }
 
 function round2(n: number): number {
@@ -527,7 +542,134 @@ export const rateCalendarService = {
         ate,
         canEditPricing: MASTER_ROLES.has(auth.role),
         canApplyDiscount: BROKER_ROLES.has(auth.role) || STAFF_ROLES.has(auth.role),
+        conjuntosRegras: readConjuntosRegrasFromMetadata(unit.metadata),
       },
+    };
+  },
+
+  async aplicarConjuntoRegras(
+    auth: AuthContext,
+    acomodacaoId: number,
+    conjuntoId: string,
+    body: { de: string; ate: string },
+  ) {
+    if (!MASTER_ROLES.has(auth.role)) {
+      return { error: 'forbidden' as const };
+    }
+
+    const de = String(body.de ?? '').trim().slice(0, 10);
+    const ate = String(body.ate ?? '').trim().slice(0, 10);
+    if (!de || !ate || !isDataValida(de) || !isDataValida(ate)) {
+      return { error: 'invalid_dates' as const, message: 'Datas inválidas (use YYYY-MM-DD)' };
+    }
+    if (de > ate) {
+      return { error: 'invalid_dates' as const, message: 'de não pode ser posterior a ate' };
+    }
+
+    const datas = enumerateDatesInclusive(de, ate);
+    if (datas.length === 0) {
+      return { error: 'invalid_dates' as const, message: 'Intervalo de datas inválido' };
+    }
+    if (datas.length > CONJUNTO_APPLY_MAX_DAYS) {
+      return {
+        error: 'range_exceeded' as const,
+        message: `Máximo ${CONJUNTO_APPLY_MAX_DAYS} dias por aplicação`,
+      };
+    }
+
+    const unitResult = await anfitriaoService.obterUnidade(auth, acomodacaoId);
+    if ('error' in unitResult) return unitResult;
+
+    const unit = unitResult.data;
+    const conjuntos = readConjuntosRegrasFromMetadata(unit.metadata);
+    const conjunto = conjuntos.find((c) => c.id === conjuntoId);
+    if (!conjunto) {
+      return { error: 'conjunto_not_found' as const, message: 'Conjunto de regras não encontrado' };
+    }
+
+    const precoInteligenteAtivo = Boolean(unit.precoInteligenteAtivo);
+    let diasBloqueados = 0;
+    let precosAplicados = 0;
+
+    const blockedDays =
+      conjunto.checkinDiasBloqueados?.length ?
+        datas.filter((data) => conjunto.checkinDiasBloqueados!.includes(weekdayFromIso(data)))
+      : [];
+
+    for (const part of chunkArray(blockedDays, BULK_CHUNK)) {
+      if (part.length === 0) continue;
+      const r = await anfitriaoService.bulkBloquearDatas(auth, acomodacaoId, part);
+      if ('error' in r) return r;
+      diasBloqueados += part.length;
+    }
+
+    const hasPriceRule =
+      conjunto.precoPorNoite != null ||
+      (conjunto.ajustePct != null && conjunto.ajustePct !== 0);
+
+    if (hasPriceRule && !precoInteligenteAtivo) {
+      const weekendPrice =
+        unit.precoFimSemana != null ? Number(unit.precoFimSemana) : null;
+      const priceByDate = new Map<string, number>();
+
+      for (const data of datas) {
+        if (conjunto.precoPorNoite != null) {
+          priceByDate.set(data, conjunto.precoPorNoite);
+          continue;
+        }
+        const resolved = await this.resolverPrecoDia({
+          acomodacaoId,
+          data,
+          actorRole: auth.role,
+        });
+        let ref = resolved.precoBase;
+        if (
+          resolved.weekendApplied &&
+          weekendPrice != null &&
+          Number.isFinite(weekendPrice)
+        ) {
+          ref = weekendPrice;
+        } else if (resolved.override == null) {
+          ref = resolved.precoEfetivo;
+        }
+        const pct = conjunto.ajustePct ?? 0;
+        priceByDate.set(data, round2(Math.max(0, ref * (1 + pct / 100))));
+      }
+
+      const byPrice = new Map<number, string[]>();
+      for (const data of datas) {
+        const preco = priceByDate.get(data);
+        if (preco == null) continue;
+        const list = byPrice.get(preco) ?? [];
+        list.push(data);
+        byPrice.set(preco, list);
+      }
+      for (const [preco, dateList] of byPrice) {
+        for (const part of chunkArray(dateList, BULK_CHUNK)) {
+          const r = await anfitriaoService.ajustarPrecoDatas(auth, acomodacaoId, part, preco);
+          if ('error' in r) return r;
+          precosAplicados += part.length;
+        }
+      }
+    }
+
+    return {
+      ok: true as const,
+      conjuntoId,
+      de,
+      ate,
+      diasNoIntervalo: datas.length,
+      diasBloqueados,
+      precosAplicados,
+      precoInteligenteAtivo: hasPriceRule && precoInteligenteAtivo ? true : undefined,
+      regrasEstadia:
+        conjunto.minNoites != null || conjunto.maxNoites != null
+          ? {
+              minNoites: conjunto.minNoites,
+              maxNoites: conjunto.maxNoites,
+              nota: 'Regras de estadia ficam no preset; ajuste manual em Disponibilidade se necessário.',
+            }
+          : undefined,
     };
   },
 
