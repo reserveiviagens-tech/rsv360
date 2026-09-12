@@ -37,6 +37,9 @@ export type ListingLocalizacao = {
   cidade?: string;
   uf?: string;
   cep?: string;
+  /** Reference pin for web GPS verification (metadata-only). */
+  lat?: number;
+  lng?: number;
   mostrarExata?: boolean;
   caracteristicas?: LocalizacaoCaracteristicaId[];
   descricaoBairro?: string;
@@ -86,6 +89,17 @@ function normalizeCep(raw: unknown): string | undefined {
   if (!digits) return undefined;
   if (digits.length === 8) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
   return digits;
+}
+
+function normalizeCoord(raw: unknown, min: number, max: number): number | undefined {
+  const n =
+    typeof raw === 'number'
+      ? raw
+      : typeof raw === 'string'
+        ? Number.parseFloat(raw)
+        : Number.NaN;
+  if (!Number.isFinite(n) || n < min || n > max) return undefined;
+  return Math.round(n * 1e6) / 1e6;
 }
 
 function normalizeIdList(
@@ -162,6 +176,30 @@ export function validateListingLocalizacao(
       };
     }
     value.cep = cep;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(src, 'lat') && src.lat != null && src.lat !== '') {
+    const lat = normalizeCoord(src.lat, -90, 90);
+    if (lat == null) {
+      return {
+        ok: false,
+        error: 'localizacao_invalida',
+        message: 'Latitude inválida',
+      };
+    }
+    value.lat = lat;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(src, 'lng') && src.lng != null && src.lng !== '') {
+    const lng = normalizeCoord(src.lng, -180, 180);
+    if (lng == null) {
+      return {
+        ok: false,
+        error: 'localizacao_invalida',
+        message: 'Longitude inválida',
+      };
+    }
+    value.lng = lng;
   }
 
   if (Object.prototype.hasOwnProperty.call(src, 'mostrarExata')) {

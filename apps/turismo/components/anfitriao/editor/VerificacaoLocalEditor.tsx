@@ -3,11 +3,20 @@
 import { useRef, useState } from 'react';
 import { useUploadAcessibilidadeFoto } from '@/hooks/useAnfitriao';
 
+export type VerificacaoLocalGeoEvidence = {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+  capturedAt: string;
+};
+
 export type VerificacaoLocalMeta = {
-  metodo?: 'app' | 'terceiro' | 'videos' | null;
+  metodo?: 'app' | 'terceiro' | 'videos' | 'web_gps' | null;
   status?: 'pendente' | 'enviado' | 'aprovado' | 'rejeitado';
   codigo?: string;
   evidencias?: Array<{ url: string; tipo: 'foto' | 'video'; enviadoEm?: string }>;
+  evidenciaGeo?: VerificacaoLocalGeoEvidence;
+  distanciaMetros?: number;
   notas?: string;
   enviadoEm?: string;
   revisadoEm?: string;
@@ -19,11 +28,24 @@ type Props = {
   onChange: (next: VerificacaoLocalMeta) => void;
 };
 
-const METODOS: Array<{ id: NonNullable<VerificacaoLocalMeta['metodo']>; label: string; hint: string }> = [
+type MetodoId = NonNullable<VerificacaoLocalMeta['metodo']>;
+
+const METODOS: Array<{
+  id: MetodoId;
+  label: string;
+  hint: string;
+  disabled?: boolean;
+}> = [
+  {
+    id: 'web_gps',
+    label: 'Confirmar localização no navegador',
+    hint: 'Use o GPS do dispositivo no endereço do anúncio (até 500 m de tolerância).',
+  },
   {
     id: 'app',
     label: 'Verificar pelo app Reservei',
-    hint: 'Use o app no local da propriedade (quando disponível).',
+    hint: 'Em breve — use a verificação pelo navegador.',
+    disabled: true,
   },
   {
     id: 'terceiro',
@@ -37,12 +59,22 @@ const METODOS: Array<{ id: NonNullable<VerificacaoLocalMeta['metodo']>; label: s
   },
 ];
 
+function geoErrorMessage(code: number): string {
+  if (code === 1) return 'Permita o acesso à localização no navegador.';
+  if (code === 2) return 'Não foi possível obter sua posição. Tente novamente.';
+  if (code === 3) return 'Tempo esgotado ao obter GPS. Tente novamente.';
+  return 'Falha ao obter localização.';
+}
+
 export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const upload = useUploadAcessibilidadeFoto(unitId);
   const [err, setErr] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoOk, setGeoOk] = useState<string | null>(null);
   const evidencias = value.evidencias ?? [];
   const status = value.status ?? 'pendente';
+  const metodo = value.metodo ?? 'web_gps';
 
   async function onFile(file: File | null) {
     if (!file) return;
@@ -67,18 +99,60 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
     }
   }
 
-  function enviarRevisao() {
-    if ((value.metodo === 'videos' || !value.metodo) && evidencias.length < 1) {
-      setErr('Adicione ao menos uma evidência (foto ou vídeo).');
+  function confirmarLocalizacaoNavegador() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setErr('Seu navegador não suporta geolocalização.');
+      setGeoOk(null);
       return;
     }
-    if (value.metodo === 'terceiro' && !String(value.codigo ?? '').trim()) {
+    setErr(null);
+    setGeoOk(null);
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoLoading(false);
+        const evidenciaGeo: VerificacaoLocalGeoEvidence = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          ...(Number.isFinite(pos.coords.accuracy)
+            ? { accuracy: Math.round(pos.coords.accuracy) }
+            : {}),
+          capturedAt: new Date().toISOString(),
+        };
+        onChange({
+          ...value,
+          metodo: 'web_gps',
+          evidenciaGeo,
+          evidencias: undefined,
+          codigo: undefined,
+        });
+        setGeoOk('Localização capturada. Envie para revisão e salve o anúncio.');
+      },
+      (geoErr) => {
+        setGeoLoading(false);
+        setErr(geoErrorMessage(geoErr.code));
+      },
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+    );
+  }
+
+  function enviarRevisao() {
+    if (metodo === 'web_gps') {
+      if (!value.evidenciaGeo) {
+        setErr('Confirme a localização no navegador antes de enviar.');
+        return;
+      }
+    } else if ((metodo === 'videos' || !metodo) && evidencias.length < 1) {
+      setErr('Adicione ao menos uma evidência (foto ou vídeo).');
+      return;
+    } else if (metodo === 'terceiro' && !String(value.codigo ?? '').trim()) {
       setErr('Informe o código enviado à outra pessoa.');
       return;
     }
     setErr(null);
     onChange({
       ...value,
+      metodo,
       status: 'enviado',
       enviadoEm: new Date().toISOString(),
     });
@@ -105,9 +179,22 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
           <button
             key={m.id}
             type="button"
-            onClick={() => onChange({ ...value, metodo: m.id })}
-            className={`w-full rounded-2xl border p-4 text-left ${
-              value.metodo === m.id ? 'border-slate-900' : 'border-slate-200'
+            disabled={m.disabled || status === 'enviado' || status === 'aprovado'}
+            onClick={() => {
+              if (m.disabled) return;
+              setErr(null);
+              setGeoOk(null);
+              onChange({
+                ...value,
+                metodo: m.id,
+                ...(m.id === 'web_gps'
+                  ? { evidencias: undefined, codigo: undefined }
+                  : {}),
+                ...(m.id !== 'web_gps' ? { evidenciaGeo: undefined, distanciaMetros: undefined } : {}),
+              });
+            }}
+            className={`w-full rounded-2xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+              metodo === m.id ? 'border-slate-900' : 'border-slate-200'
             }`}
           >
             <p className="text-sm font-semibold">{m.label}</p>
@@ -116,7 +203,36 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
         ))}
       </div>
 
-      {value.metodo === 'terceiro' && (
+      {metodo === 'web_gps' && (
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <p className="text-sm font-medium">GPS do navegador</p>
+          <p className="text-xs text-slate-500">
+            Você precisa estar no endereço cadastrado (com pin na seção Localização).
+          </p>
+          {value.evidenciaGeo ? (
+            <p className="mt-2 text-xs text-teal-800">
+              Captura registrada
+              {value.evidenciaGeo.accuracy != null
+                ? ` · precisão ~${value.evidenciaGeo.accuracy} m`
+                : ''}
+              {value.distanciaMetros != null ? ` · ${value.distanciaMetros} m do pin` : ''}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            disabled={
+              geoLoading || status === 'enviado' || status === 'aprovado'
+            }
+            onClick={confirmarLocalizacaoNavegador}
+          >
+            {geoLoading ? 'Obtendo localização…' : 'Confirmar localização no navegador'}
+          </button>
+          {geoOk ? <p className="mt-2 text-sm text-teal-700">{geoOk}</p> : null}
+        </div>
+      )}
+
+      {metodo === 'terceiro' && (
         <label className="block text-sm">
           Código de verificação
           <input
@@ -134,7 +250,7 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
         </label>
       )}
 
-      {(value.metodo === 'videos' || value.metodo === 'app' || value.metodo == null) && (
+      {(metodo === 'videos' || metodo == null) && (
         <div className="rounded-2xl border border-slate-200 p-4">
           <p className="text-sm font-medium">Evidências</p>
           <p className="text-xs text-slate-500">Fotos ou vídeos curtos (máx. 6).</p>
