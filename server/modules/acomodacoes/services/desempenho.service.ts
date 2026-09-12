@@ -12,6 +12,11 @@ import {
   type QualidadeCategoriaResumo,
   type QualidadeUnitInput,
 } from './qualidade.engine';
+import {
+  aggregateReviewsForAcomodacoes,
+  getGuestFeedbackReviewsStatus,
+} from './anfitriao-reviews.service';
+import { roundReviewMedia } from './anfitriao-reviews.util';
 
 function daysInclusive(de: string, ate: string): number {
   const a = new Date(`${de}T12:00:00`);
@@ -81,6 +86,17 @@ export type DesempenhoMetrics = {
     pendentes: number;
     concluidas: number;
     pctNaoConcluidas: number;
+  };
+  avaliacoesHospedes: {
+    disponivel: boolean;
+    mediaGeral: number | null;
+    totalAvaliacoes: number;
+    porUnidade: Array<{
+      acomodacaoId: number;
+      titulo?: string;
+      media: number | null;
+      total: number;
+    }>;
   };
 };
 
@@ -206,6 +222,37 @@ export const desempenhoService = {
     const qualidadeAgg = avaliarQualidadePortfolio(qualidadeUnits);
     dicas.push(...gerarDicasQualidade(qualidadeAgg));
 
+    const idsEscopo = items.map((u) => u.id);
+    const reviewsStatus = await getGuestFeedbackReviewsStatus();
+    const reviewAggs = await aggregateReviewsForAcomodacoes(idsEscopo);
+    const reviewsByUnit = new Map(reviewAggs.map((r) => [r.acomodacaoId, r]));
+
+    let totalAvaliacoes = 0;
+    let weightedSum = 0;
+    for (const agg of reviewAggs) {
+      totalAvaliacoes += agg.total;
+      if (agg.media != null && agg.total > 0) {
+        weightedSum += agg.media * agg.total;
+      }
+    }
+    const mediaGeral =
+      totalAvaliacoes > 0 ? roundReviewMedia(weightedSum / totalAvaliacoes) : null;
+
+    const avaliacoesHospedes = {
+      disponivel: reviewsStatus.disponivel,
+      mediaGeral,
+      totalAvaliacoes,
+      porUnidade: items.map((u) => {
+        const agg = reviewsByUnit.get(u.id);
+        return {
+          acomodacaoId: u.id,
+          titulo: u.titulo,
+          media: agg?.media ?? null,
+          total: agg?.total ?? 0,
+        };
+      }),
+    };
+
     return {
       periodo: { de, ate, mes: ym },
       resumo: {
@@ -233,6 +280,7 @@ export const desempenhoService = {
       porUnidade,
       oportunidades,
       oportunidadesResumo,
+      avaliacoesHospedes,
     };
   },
 

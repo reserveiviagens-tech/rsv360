@@ -72,6 +72,17 @@ type DesempenhoData = {
     concluidas: number;
     pctNaoConcluidas: number;
   };
+  avaliacoesHospedes?: {
+    disponivel: boolean;
+    mediaGeral: number | null;
+    totalAvaliacoes: number;
+    porUnidade: Array<{
+      acomodacaoId: number;
+      titulo?: string;
+      media: number | null;
+      total: number;
+    }>;
+  };
 };
 
 type Opp = {
@@ -326,15 +337,36 @@ export default function AnfitriaoDesempenhoPage() {
                       {data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : '—'}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-medium text-slate-600">
-                      Avaliações de hóspedes — ainda não disponíveis neste painel
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Notas e comentários de estadia não estão integrados ao RSV360° nesta versão.
-                      A completude acima mede apenas metadados do anúncio.
-                    </p>
-                  </div>
+                  {data.avaliacoesHospedes?.disponivel &&
+                  (data.avaliacoesHospedes.totalAvaliacoes ?? 0) > 0 ? (
+                    <div className="rounded-2xl border bg-white p-4">
+                      <p className="text-sm text-slate-500">Avaliações de hóspedes</p>
+                      <p className="mt-2 text-2xl font-bold">
+                        {data.avaliacoesHospedes.mediaGeral != null
+                          ? `${data.avaliacoesHospedes.mediaGeral}`
+                          : '—'}
+                        <span className="ml-1 text-base font-normal text-slate-500">/ 5</span>
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {data.avaliacoesHospedes.totalAvaliacoes} avaliação
+                        {data.avaliacoesHospedes.totalAvaliacoes === 1 ? '' : 'ões'} no escopo do
+                        anfitrião
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-600">
+                        {data.avaliacoesHospedes?.disponivel
+                          ? 'Ainda não há avaliações de hóspedes'
+                          : 'Avaliações de hóspedes — ainda não disponíveis neste painel'}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {data.avaliacoesHospedes?.disponivel
+                          ? 'Quando hóspedes enviarem feedback após a estadia, a média aparecerá aqui.'
+                          : 'Notas e comentários de estadia não estão integrados ao RSV360° nesta versão. A completude acima mede apenas metadados do anúncio.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {data.qualidade.categorias.map((cat) => (
@@ -470,9 +502,9 @@ export default function AnfitriaoDesempenhoPage() {
               <div className="space-y-4">
                 <h2 className="text-xl font-bold">Anfitrião Destaque</h2>
                 <p className="text-sm text-slate-600">
-                  Indicadores disponíveis hoje: completude do anúncio, volume de reservas e ocupação.
-                  Avaliações de hóspedes, taxa de resposta e cancelamentos do anfitrião ainda não entram
-                  neste painel.
+                  Indicadores disponíveis hoje: completude do anúncio, volume de reservas, ocupação
+                  {data.avaliacoesHospedes?.disponivel ? ' e avaliações de hóspedes' : ''}. Taxa de
+                  resposta e cancelamentos do anfitrião ainda não entram neste painel.
                 </p>
                 <ul className="space-y-3">
                   {[
@@ -481,6 +513,23 @@ export default function AnfitriaoDesempenhoPage() {
                       'Percentual de metadados preenchidos (não é nota de hóspedes)',
                       data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : null,
                     ],
+                    ...(data.avaliacoesHospedes?.disponivel &&
+                    (data.avaliacoesHospedes.totalAvaliacoes ?? 0) > 0
+                      ? [
+                          [
+                            'Média de avaliações de hóspedes',
+                            'Nota geral agregada (sem nomes ou comentários)',
+                            data.avaliacoesHospedes.mediaGeral != null
+                              ? `${data.avaliacoesHospedes.mediaGeral} / 5`
+                              : null,
+                          ] as const,
+                          [
+                            'Total de avaliações',
+                            'Feedback recebido no escopo das suas unidades',
+                            data.avaliacoesHospedes.totalAvaliacoes,
+                          ] as const,
+                        ]
+                      : []),
                     [
                       'Anúncios ≥ 80% completude',
                       'Unidades com cadastro quase completo',
