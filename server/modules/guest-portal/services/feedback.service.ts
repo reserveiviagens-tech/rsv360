@@ -1,4 +1,5 @@
 import { portalRepository } from '../db/portal.repository';
+import { resolveAcomodacaoIdFromBooking } from './booking-acomodacao.util';
 
 export class FeedbackService {
   constructor(private repository = portalRepository) {}
@@ -14,8 +15,11 @@ export class FeedbackService {
       throw new Error('Avaliação geral ou subavaliações são obrigatórias');
     }
 
+    const acomodacaoId = await resolveAcomodacaoIdFromBooking(booking);
+
     const feedback = await this.repository.insertFeedback({
       booking_id: bookingId,
+      acomodacao_id: acomodacaoId,
       overall_rating: overallRating,
       cleanliness: this.toNumber(data.cleanliness),
       comfort: this.toNumber(data.comfort),
