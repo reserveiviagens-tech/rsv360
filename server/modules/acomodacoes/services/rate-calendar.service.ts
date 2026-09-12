@@ -17,11 +17,14 @@ import {
 } from './anfitriao.service';
 import {
   clampSmartPrice,
+  mapReviewAggToGuestPricingFields,
   normalizeMinNoitesPorCheckin,
   parseWeekdayList,
+  isDescontoAvaliacaoElegivel,
   sugerirPrecoCompetitivo,
   type MinNoitesPorCheckin,
 } from './host-pricing.helpers';
+import { aggregateReviewsForAcomodacoes } from './anfitriao-reviews.service';
 import { validateListingPrecosPatch } from './listing-precos.util';
 import { validateListingDescontosPatch } from './listing-descontos.util';
 import { validateListingDisponibilidadePatch } from './listing-disponibilidade.util';
@@ -183,6 +186,8 @@ export type PricingDefaultsView = {
   descontoAvaliacaoPct: number;
   descontoAvaliacaoMinNota: number;
   descontoAvaliacaoMinReviews: number;
+  guestRating: number | null;
+  guestReviews: number;
   tempoPreparacaoNoites: number;
   tempoPreparacaoHoras: number;
   periodoDisponibilidadeMeses: number;
@@ -265,6 +270,8 @@ function mapPricingDefaults(unit: Record<string, unknown>): PricingDefaultsView 
     descontoAvaliacaoPct: Number(unit.descontoAvaliacaoPct ?? 0) || 0,
     descontoAvaliacaoMinNota: Number(unit.descontoAvaliacaoMinNota ?? 4.8) || 4.8,
     descontoAvaliacaoMinReviews: Number(unit.descontoAvaliacaoMinReviews ?? 3) || 3,
+    guestRating: null,
+    guestReviews: 0,
     tempoPreparacaoNoites: Number(unit.tempoPreparacaoNoites ?? 0) || 0,
     tempoPreparacaoHoras: Number(unit.tempoPreparacaoHoras ?? 0) || 0,
     periodoDisponibilidadeMeses: Number(unit.periodoDisponibilidadeMeses ?? 12) || 0,
@@ -425,6 +432,8 @@ export const rateCalendarService = {
     if ('error' in cal) return cal;
 
     const pricingDefaults = mapPricingDefaults(unit as Record<string, unknown>);
+    const [reviewAgg] = await aggregateReviewsForAcomodacoes([acomodacaoId]);
+    Object.assign(pricingDefaults, mapReviewAggToGuestPricingFields(reviewAgg));
     let cidadeEmp: string | null = 'Caldas Novas';
     if (unit.hotelId) {
       const [emp] = await db
@@ -526,6 +535,11 @@ export const rateCalendarService = {
     }
 
     const dica = sugerirPrecoCompetitivo(pricingDefaults.precoDiaria);
+    const descontoAvaliacaoElegivel = isDescontoAvaliacaoElegivel(
+      pricingDefaults,
+      pricingDefaults.guestRating,
+      pricingDefaults.guestReviews,
+    );
 
     return {
       data: {
@@ -536,6 +550,19 @@ export const rateCalendarService = {
           precoSugerido: dica.precoSugerido,
           ganhoBuscasPct: dica.ganhoBuscasPct,
           mensagem: `Seu anúncio poderia aparecer em até ${dica.ganhoBuscasPct}% mais buscas com um preço de R$${dica.precoSugerido}.`,
+          descontoAvaliacao:
+            pricingDefaults.descontoAvaliacaoPct > 0
+              ? {
+                  elegivel: descontoAvaliacaoElegivel,
+                  guestRating: pricingDefaults.guestRating,
+                  guestReviews: pricingDefaults.guestReviews,
+                  mensagem: descontoAvaliacaoElegivel
+                    ? `Nota ${pricingDefaults.guestRating} (${pricingDefaults.guestReviews} avaliações) — critérios atendidos para desconto por avaliação.`
+                    : pricingDefaults.guestRating != null && pricingDefaults.guestReviews > 0
+                      ? `Nota ${pricingDefaults.guestRating} (${pricingDefaults.guestReviews} avaliações) — ainda abaixo dos critérios configurados.`
+                      : 'Sem avaliações de hóspedes vinculadas a esta unidade.',
+                }
+              : undefined,
         },
         dias,
         de,

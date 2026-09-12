@@ -67,6 +67,10 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
   const [teto, setTeto] = useState(10);
   const [dicaPreco, setDicaPreco] = useState(199);
   const [dicaGanho, setDicaGanho] = useState(26);
+  const [guestRating, setGuestRating] = useState<number | null>(null);
+  const [guestReviews, setGuestReviews] = useState(0);
+  const [descontoAvaliacaoHint, setDescontoAvaliacaoHint] = useState<string | null>(null);
+  const [descontoAvaliacaoElegivel, setDescontoAvaliacaoElegivel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -145,7 +149,14 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
       if (data.dicas) {
         setDicaPreco(data.dicas.precoSugerido);
         setDicaGanho(data.dicas.ganhoBuscasPct);
+        setDescontoAvaliacaoHint(data.dicas.descontoAvaliacao?.mensagem ?? null);
+        setDescontoAvaliacaoElegivel(Boolean(data.dicas.descontoAvaliacao?.elegivel));
+      } else {
+        setDescontoAvaliacaoHint(null);
+        setDescontoAvaliacaoElegivel(false);
       }
+      setGuestRating(pd.guestRating ?? null);
+      setGuestReviews(pd.guestReviews ?? 0);
       setForm((prev) => ({
         ...prev,
         formBase: pd.precoDiaria != null ? String(pd.precoDiaria) : '',
@@ -803,6 +814,10 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
                   onSyncIcalImport={() => void syncIcalImport()}
                   precoSugerido={dicaPreco}
                   ganhoBuscasPct={dicaGanho}
+                  guestRating={guestRating}
+                  guestReviews={guestReviews}
+                  descontoAvaliacaoElegivel={descontoAvaliacaoElegivel}
+                  descontoAvaliacaoHint={descontoAvaliacaoHint}
                   conjuntosRegras={conjuntosRegras}
                   applyRange={applyRange}
                   onSaveConjuntosRegras={saveConjuntosRegras}

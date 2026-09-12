@@ -622,6 +622,8 @@ export const fase1Api = {
           descontoAvaliacaoPct?: number;
           descontoAvaliacaoMinNota?: number;
           descontoAvaliacaoMinReviews?: number;
+          guestRating?: number | null;
+          guestReviews?: number;
           tempoPreparacaoNoites?: number;
           tempoPreparacaoHoras?: number;
           periodoDisponibilidadeMeses?: number;
@@ -633,6 +635,12 @@ export const fase1Api = {
           precoSugerido: number;
           ganhoBuscasPct: number;
           mensagem: string;
+          descontoAvaliacao?: {
+            elegivel: boolean;
+            guestRating: number | null;
+            guestReviews: number;
+            mensagem: string;
+          };
         };
         dias: Array<{
           data: string;
