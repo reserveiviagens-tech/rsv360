@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { resolveUnitThumbUrl, compactThumbUrl, unitThumbPlaceholder } from '../unit-thumb';
+import { resolveUnitThumbUrl } from '../unit-thumb';
 import {
   AcessibilidadeEditor,
   normalizeAcessibilidadeItems,
@@ -60,6 +60,8 @@ import {
   type ImpostosMeta,
 } from './ImpostosEditor';
 import { RemoverAnuncioEditor, summarizeRemoverAnuncioClient } from './RemoverAnuncioEditor';
+import { buildGuestPreviewModel } from './build-guest-preview-model';
+import { GuestListingPreview } from './GuestListingPreview';
 import {
   GUIA_CARDS,
   PREF_CARDS,
@@ -472,8 +474,39 @@ export function AnfitriaoListingEditor({
     setDirty(false);
   }
 
-  const thumb = resolveUnitThumbUrl(unidade.midia);
-  const previewSrc = thumb ? compactThumbUrl(thumb, 640) : unitThumbPlaceholder();
+  const guestPreviewModel = useMemo(
+    () =>
+      buildGuestPreviewModel({
+        titulo,
+        preco,
+        capacidade,
+        descAnuncio,
+        amenities,
+        tipoProp,
+        localizacao,
+        midiaJson,
+        midiaFallback: unidade.midia,
+        savedSlug: meta0.slugPersonalizado,
+        savedStatusAnuncio: meta0.statusAnuncio,
+        statusPublicacao: unidade.statusPublicacao,
+        ativo: unidade.ativo,
+      }),
+    [
+      titulo,
+      preco,
+      capacidade,
+      descAnuncio,
+      amenities,
+      tipoProp,
+      localizacao,
+      midiaJson,
+      unidade.midia,
+      unidade.statusPublicacao,
+      unidade.ativo,
+      meta0.slugPersonalizado,
+      meta0.statusAnuncio,
+    ],
+  );
 
   return (
     <div className="relative flex min-h-[70vh] flex-col lg:flex-row">
@@ -836,51 +869,12 @@ export function AnfitriaoListingEditor({
         </div>
       </main>
 
-      {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/40">
-          <div className="flex h-full w-full max-w-md flex-col bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <p className="font-semibold">Sua estadia</p>
-              <button type="button" onClick={() => setPreviewOpen(false)} aria-label="Fechar">
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={previewSrc} alt="" className="h-48 w-full rounded-2xl object-cover" />
-              <h2 className="mt-4 text-xl font-bold">{titulo || 'Anúncio'}</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 border-y border-slate-100 py-3 text-sm">
-                <div>
-                  <p className="text-slate-500">Check-in</p>
-                  <p className="font-semibold">{regras.checkInDe ?? '14:00'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Checkout</p>
-                  <p className="font-semibold">{regras.checkOutAte ?? '11:00'}</p>
-                </div>
-              </div>
-              <ul className="mt-4 space-y-3 text-sm">
-                <li>
-                  <strong>Como chegar</strong>
-                  <p className="text-slate-500">{localizacao.endereco || guia.comoChegar || '—'}</p>
-                </li>
-                <li>
-                  <strong>Como entrar</strong>
-                  <p className="text-slate-500">{guia.metodoCheckIn || 'Informações de check-in'}</p>
-                </li>
-                <li>
-                  <strong>Guia da Casa</strong>
-                  <p className="text-slate-500">Instruções e Regras da Casa</p>
-                </li>
-                <li>
-                  <strong>Informações de checkout</strong>
-                  <p className="text-slate-500">Como fazer o checkout</p>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
+      {previewOpen ? (
+        <GuestListingPreview
+          model={guestPreviewModel}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
