@@ -135,9 +135,19 @@ export const fase1Api = {
           ocupacaoPct: number | null;
         };
         qualidade: {
-          anunciosCompletos: number;
-          anunciosIncompletos: number;
           scoreMedio: number | null;
+          categorias: Array<{ id: string; label: string; pct: number }>;
+          porUnidade: Array<{
+            id: number;
+            titulo: string;
+            score: number;
+            categorias: Array<{
+              id: string;
+              label: string;
+              pct: number;
+              checks: Array<{ id: string; ok: boolean; label: string }>;
+            }>;
+          }>;
           dicas: string[];
         };
         conversao: {

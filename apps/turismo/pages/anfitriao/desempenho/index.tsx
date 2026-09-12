@@ -27,9 +27,19 @@ type DesempenhoData = {
     ocupacaoPct: number | null;
   };
   qualidade: {
-    anunciosCompletos: number;
-    anunciosIncompletos: number;
     scoreMedio: number | null;
+    categorias: Array<{ id: string; label: string; pct: number }>;
+    porUnidade: Array<{
+      id: number;
+      titulo: string;
+      score: number;
+      categorias: Array<{
+        id: string;
+        label: string;
+        pct: number;
+        checks: Array<{ id: string; ok: boolean; label: string }>;
+      }>;
+    }>;
     dicas: string[];
   };
   conversao: {
@@ -293,52 +303,97 @@ export default function AnfitriaoDesempenhoPage() {
 
             {!loading && data && nav === 'qualidade' && (
               <div className="space-y-4">
-                <h2 className="text-xl font-bold">Qualidade geral</h2>
+                <div>
+                  <h2 className="text-xl font-bold">Completude do anúncio</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Score baseado em metadados do anúncio — não substitui avaliações de hóspedes.
+                  </p>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border bg-white p-4">
-                    <p className="text-sm text-slate-500">Avaliações de 5 estrelas</p>
+                    <p className="text-sm text-slate-500">Completude média</p>
                     <p className="mt-2 text-2xl font-bold">
                       {data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : '—'}
                     </p>
                   </div>
                   <div className="rounded-2xl border bg-white p-4">
-                    <p className="text-sm text-slate-500">Avaliação geral</p>
-                    <p className="mt-2 text-2xl font-bold">—</p>
+                    <p className="text-sm text-slate-500">Avaliações de hóspedes</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-400">Em breve</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Notas e comentários aparecerão quando hóspedes avaliarem a estadia.
+                    </p>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500">
-                  A avaliação média aparecerá assim que um hóspede deixar um comentário.
-                </p>
-                <ul className="space-y-2">
-                  {data.qualidade.dicas.map((d) => (
-                    <li key={d} className="rounded-xl border bg-white px-4 py-3 text-sm">
-                      {d}
-                    </li>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {data.qualidade.categorias.map((cat) => (
+                    <div key={cat.id} className="rounded-2xl border bg-white p-4">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-slate-800">{cat.label}</p>
+                        <span className="text-sm font-bold text-slate-900">{cat.pct}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-teal-500 transition-all"
+                          style={{ width: `${Math.min(100, Math.max(0, cat.pct))}%` }}
+                        />
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
+                {data.qualidade.dicas.length > 0 && (
+                  <ul className="space-y-2">
+                    {data.qualidade.dicas.map((d) => (
+                      <li key={d} className="rounded-xl border bg-white px-4 py-3 text-sm">
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <div className="overflow-x-auto rounded-2xl border bg-white">
                   <table className="min-w-full text-left text-sm">
                     <thead className="border-b bg-slate-50">
                       <tr>
-                        <th className="px-4 py-3">Nome do anúncio</th>
-                        <th className="px-4 py-3">Alterar</th>
-                        <th className="px-4 py-3">Taxa</th>
+                        <th className="px-4 py-3">Anúncio</th>
+                        <th className="px-4 py-3">Completude</th>
+                        <th className="px-4 py-3">Categorias</th>
+                        <th className="px-4 py-3" />
                       </tr>
                     </thead>
                     <tbody>
-                      {data.porUnidade.map((u) => (
-                        <tr key={u.acomodacaoId} className="border-b last:border-0">
+                      {data.qualidade.porUnidade.map((u) => (
+                        <tr key={u.id} className="border-b last:border-0">
+                          <td className="px-4 py-3 font-medium">{u.titulo}</td>
+                          <td className="px-4 py-3">
+                            <span className="font-semibold">{u.score}%</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {u.categorias.map((c) => (
+                                <span
+                                  key={c.id}
+                                  title={c.label}
+                                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                                    c.pct >= 80
+                                      ? 'bg-teal-50 text-teal-800'
+                                      : c.pct >= 50
+                                        ? 'bg-amber-50 text-amber-800'
+                                        : 'bg-slate-100 text-slate-600'
+                                  }`}
+                                >
+                                  {c.pct}%
+                                </span>
+                              ))}
+                            </div>
+                          </td>
                           <td className="px-4 py-3">
                             <Link
-                              href={`/anfitriao/unidades/${u.acomodacaoId}`}
-                              className="font-medium underline"
+                              href={`/anfitriao/unidades/${u.id}`}
+                              className="underline"
                               prefetch={false}
                             >
-                              {u.titulo}
+                              Editar
                             </Link>
                           </td>
-                          <td className="px-4 py-3">—</td>
-                          <td className="px-4 py-3">0%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -408,8 +463,16 @@ export default function AnfitriaoDesempenhoPage() {
                 </p>
                 <ul className="space-y-3">
                   {[
-                    ['Nota geral', 'Meta ≥ 4,8', data.qualidade.scoreMedio],
-                    ['Anúncios completos', 'Todos publicados/completos', data.qualidade.anunciosCompletos],
+                    [
+                      'Completude média',
+                      'Metadados do anúncio',
+                      data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : null,
+                    ],
+                    [
+                      'Anúncios ≥ 80% completude',
+                      'Prontos para destaque',
+                      data.qualidade.porUnidade.filter((u) => u.score >= 80).length,
+                    ],
                     ['Reservas no período', 'Volume ativo', data.resumo.reservas],
                     ['Ocupação', 'Saúde do inventário', data.resumo.ocupacaoPct],
                   ].map(([label, hint, val]) => (
