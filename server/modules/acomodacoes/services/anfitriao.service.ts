@@ -78,6 +78,7 @@ import { validateListingHospedagemSolidaria } from './listing-solidaria.util';
 import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
+import { validateListingLeis } from './listing-leis.util';
 import { buildImpostosExportCsv } from './listing-impostos-export.util';
 import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
 import {
@@ -675,6 +676,21 @@ export const anfitriaoService = {
         return { error: impostos.error, message: impostos.message };
       }
       (metadataPatch as Record<string, unknown>).impostos = impostos.value;
+    }
+
+    const updatingLeis =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'leis');
+    if (updatingLeis) {
+      const leis = validateListingLeis(
+        (metadataPatch as Record<string, unknown>).leis,
+      );
+      if (!leis.ok) {
+        return { error: leis.error, message: leis.message };
+      }
+      (metadataPatch as Record<string, unknown>).leis = leis.value;
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');

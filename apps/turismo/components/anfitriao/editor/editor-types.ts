@@ -177,6 +177,12 @@ export type EditorMeta = {
     notas?: string;
     cnpj?: string;
   };
+  leis?: {
+    declaracaoAceita?: boolean;
+    licencaNumero?: string;
+    zoneamento?: string;
+    notas?: string;
+  };
 };
 
 export function readMeta(unidade: ListingEditorUnidade): EditorMeta {
