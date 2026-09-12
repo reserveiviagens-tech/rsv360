@@ -496,6 +496,10 @@ export function AnfitriaoListingEditor({
         savedStatusAnuncio: meta0.statusAnuncio,
         statusPublicacao: unidade.statusPublicacao,
         ativo: unidade.ativo,
+        modoReserva,
+        quartos: unidade.quartos,
+        mensagemPreReserva: msgPre,
+        localVerificado: verificacaoLocal.status === 'aprovado',
       }),
     [
       titulo,
@@ -509,8 +513,12 @@ export function AnfitriaoListingEditor({
       unidade.midia,
       unidade.statusPublicacao,
       unidade.ativo,
+      unidade.quartos,
       meta0.slugPersonalizado,
       meta0.statusAnuncio,
+      modoReserva,
+      msgPre,
+      verificacaoLocal.status,
     ],
   );
 

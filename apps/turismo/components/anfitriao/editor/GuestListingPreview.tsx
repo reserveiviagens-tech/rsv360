@@ -17,6 +17,8 @@ export function GuestListingPreview({ model, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
+  const showGallery = model.galleryUrls.length > 1;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/40"
@@ -24,85 +26,141 @@ export function GuestListingPreview({ model, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex h-full w-full max-w-lg flex-col bg-white shadow-xl"
+        className="flex h-full w-full max-w-3xl flex-col bg-stone-50 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="guest-preview-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 py-3">
           <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
             Pré-visualização (rascunho)
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-stone-600 hover:bg-stone-100"
             aria-label="Fechar pré-visualização"
           >
             ✕
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-200">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={model.heroUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent" />
-          </div>
-
-          <div className="space-y-4 px-4 py-5">
-            <div>
-              <h2 id="guest-preview-title" className="text-xl font-bold text-slate-900">
-                {model.titulo}
-              </h2>
-              {model.metaLine ? (
-                <p className="mt-1.5 text-sm text-slate-600">{model.metaLine}</p>
-              ) : null}
-            </div>
-
-            {model.precoLabel ? (
-              <p className="text-2xl font-semibold text-slate-900">
-                {model.precoLabel}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-500">Preço não definido</p>
-            )}
-
-            {model.descricaoExcerpt ? (
-              <section>
-                <h3 className="text-sm font-semibold text-slate-900">Sobre o espaço</h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                  {model.descricaoExcerpt}
-                </p>
-              </section>
-            ) : null}
-
-            {model.amenityChips.length > 0 ? (
-              <section>
-                <h3 className="text-sm font-semibold text-slate-900">Comodidades</h3>
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {model.amenityChips.map((chip) => (
-                    <li
-                      key={chip.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700"
-                    >
-                      <span aria-hidden>{chip.icon}</span>
-                      {chip.label}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+        <div className="relative min-h-[22vh] shrink-0 overflow-hidden bg-stone-900">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={model.heroUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-90"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/30 to-transparent" />
+          <div className="relative flex min-h-[22vh] flex-col justify-end px-4 pb-6 pt-10">
+            <p className="text-xs font-medium tracking-wide text-amber-200/90 sm:text-sm">
+              Reservei Viagens
+            </p>
+            <h2
+              id="guest-preview-title"
+              className="mt-1.5 max-w-2xl text-xl font-semibold tracking-tight text-white sm:text-2xl"
+            >
+              {model.titulo}
+            </h2>
+            {model.locationLine ? (
+              <p className="mt-1.5 text-sm text-stone-200">{model.locationLine}</p>
             ) : null}
           </div>
         </div>
 
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid gap-6 px-4 py-6 sm:grid-cols-[1.4fr_0.8fr] sm:px-5">
+            <section className="min-w-0 space-y-6">
+              {model.descricaoExcerpt ? (
+                <div>
+                  <h3 className="text-base font-semibold text-stone-900">Sobre o espaço</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
+                    {model.descricaoExcerpt}
+                  </p>
+                </div>
+              ) : null}
+
+              {model.enderecoPublico ? (
+                <div>
+                  <h3 className="text-base font-semibold text-stone-900">Endereço</h3>
+                  <p className="mt-1 text-sm text-stone-700">{model.enderecoPublico}</p>
+                </div>
+              ) : null}
+
+              {showGallery ? (
+                <div>
+                  <h3 className="text-base font-semibold text-stone-900">Fotos</h3>
+                  <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {model.galleryUrls.slice(0, 6).map((src) => (
+                      <li key={src} className="aspect-[4/3] overflow-hidden rounded-lg bg-stone-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="h-full w-full object-cover" />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {model.amenityChips.length > 0 ? (
+                <div>
+                  <h3 className="text-base font-semibold text-stone-900">Comodidades</h3>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {model.amenityChips.map((chip) => (
+                      <li
+                        key={chip.id}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700"
+                      >
+                        <span aria-hidden>{chip.icon}</span>
+                        {chip.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </section>
+
+            <aside className="sticky top-0 h-fit self-start rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+              {model.precoLabel ? (
+                <p className="text-2xl font-semibold text-stone-900">
+                  {model.precoLabel.replace(' / noite', '')}
+                  <span className="text-sm font-normal text-stone-500"> / noite</span>
+                </p>
+              ) : (
+                <p className="text-sm text-stone-600">Consulte valores na cotação</p>
+              )}
+
+              <ul className="mt-4 space-y-2 text-sm text-stone-700">
+                {model.capacidadeLabel ? <li>{model.capacidadeLabel}</li> : null}
+                {model.quartosLabel ? <li>{model.quartosLabel}</li> : null}
+                {model.modoReservaLabel ? <li>{model.modoReservaLabel}</li> : null}
+                {model.localVerificado ? <li>Localização verificada</li> : null}
+              </ul>
+
+              {model.mensagemPreReserva ? (
+                <p className="mt-4 rounded-lg bg-stone-50 p-3 text-xs text-stone-600">
+                  {model.mensagemPreReserva}
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                disabled
+                className="mt-6 flex w-full cursor-not-allowed items-center justify-center rounded-xl bg-stone-300 px-4 py-3 text-sm font-medium text-stone-600"
+                aria-disabled="true"
+              >
+                Solicitar cotação
+              </button>
+              <p className="mt-3 text-center text-xs text-stone-500">
+                Pré-visualização — ação indisponível no rascunho
+              </p>
+            </aside>
+          </div>
+        </div>
+
         {model.publicPageUrl ? (
-          <div className="border-t border-slate-200 px-4 py-3">
+          <div className="shrink-0 border-t border-stone-200 bg-white px-4 py-3">
             <a
               href={model.publicPageUrl}
               target="_blank"
@@ -111,7 +169,7 @@ export function GuestListingPreview({ model, onClose }: Props) {
             >
               Abrir página pública
             </a>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-stone-500">
               Link da versão publicada salva no servidor (pode diferir do rascunho atual).
             </p>
           </div>
