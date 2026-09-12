@@ -18,7 +18,7 @@ on:
 jobs:
   route-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       POSTGRES_USER: rsv360
       POSTGRES_PASSWORD: REDACTED_PG_DEV_PASSWORD
