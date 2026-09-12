@@ -897,10 +897,11 @@ export const anfitriaoService = {
         row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
           ? (row.metadata as Record<string, unknown>)
           : {};
-      nextMetadata.verificacaoLocal = sanitizeVerificacaoLocalHostPatch(
-        baseMeta,
-        nextMetadata.verificacaoLocal,
-      );
+      const verPatch = sanitizeVerificacaoLocalHostPatch(baseMeta, nextMetadata.verificacaoLocal);
+      if (!verPatch.ok) {
+        return { error: verPatch.error, message: verPatch.message };
+      }
+      nextMetadata.verificacaoLocal = verPatch.value;
     }
 
     if (nextMetadata && updatingConjuntosRegras) {
@@ -1267,6 +1268,25 @@ export const anfitriaoService = {
           enviadoEm: typeof ver.enviadoEm === 'string' ? ver.enviadoEm : null,
           revisadoEm: typeof ver.revisadoEm === 'string' ? ver.revisadoEm : null,
           motivoRejeicao: typeof ver.motivoRejeicao === 'string' ? ver.motivoRejeicao : null,
+          distanciaMetros:
+            typeof ver.distanciaMetros === 'number' && Number.isFinite(ver.distanciaMetros)
+              ? Math.round(ver.distanciaMetros)
+              : null,
+          evidenciaGeo:
+            ver.evidenciaGeo &&
+            typeof ver.evidenciaGeo === 'object' &&
+            !Array.isArray(ver.evidenciaGeo)
+              ? {
+                  capturedAt:
+                    typeof (ver.evidenciaGeo as Record<string, unknown>).capturedAt === 'string'
+                      ? (ver.evidenciaGeo as Record<string, unknown>).capturedAt
+                      : null,
+                  accuracy:
+                    typeof (ver.evidenciaGeo as Record<string, unknown>).accuracy === 'number'
+                      ? Math.round((ver.evidenciaGeo as Record<string, unknown>).accuracy as number)
+                      : null,
+                }
+              : null,
           evidencias: Array.isArray(ver.evidencias) ? ver.evidencias.slice(0, 6) : [],
         },
       };

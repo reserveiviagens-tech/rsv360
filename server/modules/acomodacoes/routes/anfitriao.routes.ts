@@ -375,6 +375,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Conjuntos de regras inválidos',
       });
     }
+    if (result.error === 'verificacao_local_invalida') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Verificação de localização inválida',
+      });
+    }
     if ('error' in result && result.error) {
       return res.status(400).json({
         success: false,

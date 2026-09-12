@@ -78,4 +78,23 @@ describe('listing-localizacao.util', () => {
     ).toBe('Caldas, GO · 1 detalhe');
     expect(summarizeLocalizacao({})).toBeNull();
   });
+
+  it('accepts lat/lng coordinates', () => {
+    const r = validateListingLocalizacao({
+      cidade: 'Caldas Novas',
+      uf: 'GO',
+      lat: -17.7539,
+      lng: -48.6183,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.lat).toBeCloseTo(-17.7539, 4);
+      expect(r.value.lng).toBeCloseTo(-48.6183, 4);
+    }
+  });
+
+  it('rejects invalid lat/lng', () => {
+    expect(validateListingLocalizacao({ lat: 999 }).ok).toBe(false);
+    expect(validateListingLocalizacao({ lng: 999 }).ok).toBe(false);
+  });
 });

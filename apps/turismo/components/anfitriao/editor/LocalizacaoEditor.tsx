@@ -212,6 +212,21 @@ export function LocalizacaoEditor({ value, onChange }: Props) {
             onChange={(e) => onChange({ ...value, mostrarExata: e.target.checked })}
           />
         </label>
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <p className="text-sm font-medium">Pin do anúncio</p>
+          <p className="text-xs text-slate-500">
+            Necessário para verificação pelo navegador. Use no endereço da propriedade.
+          </p>
+          {value.lat != null && value.lng != null ? (
+            <p className="mt-2 text-xs text-teal-800">Pin definido · salve o anúncio para persistir</p>
+          ) : (
+            <p className="mt-2 text-xs text-amber-800">Pin ainda não definido</p>
+          )}
+          <PinGpsButton
+            disabled={false}
+            onCaptured={(lat, lng) => onChange({ ...value, lat, lng })}
+          />
+        </div>
         <div
           className="flex h-40 items-center justify-center rounded-2xl bg-slate-100 text-sm text-slate-500"
           aria-hidden
@@ -376,6 +391,54 @@ export function LocalizacaoEditor({ value, onChange }: Props) {
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+function PinGpsButton({
+  disabled,
+  onCaptured,
+}: {
+  disabled: boolean;
+  onCaptured: (lat: number, lng: number) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  function capture() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setErr('Geolocalização não disponível neste navegador.');
+      return;
+    }
+    setErr(null);
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLoading(false);
+        onCaptured(
+          Math.round(pos.coords.latitude * 1e6) / 1e6,
+          Math.round(pos.coords.longitude * 1e6) / 1e6,
+        );
+      },
+      () => {
+        setLoading(false);
+        setErr('Não foi possível obter o pin. Permita a localização e tente novamente.');
+      },
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 disabled:opacity-40"
+        disabled={disabled || loading}
+        onClick={capture}
+      >
+        {loading ? 'Obtendo pin…' : 'Usar minha localização como pin'}
+      </button>
+      {err ? <p className="mt-2 text-xs text-red-600">{err}</p> : null}
     </div>
   );
 }

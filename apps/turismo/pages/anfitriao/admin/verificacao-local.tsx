@@ -18,6 +18,8 @@ type VerifItem = {
     status: string;
     metodo: string | null;
     enviadoEm: string | null;
+    distanciaMetros?: number | null;
+    evidenciaGeo?: { capturedAt?: string | null; accuracy?: number | null } | null;
     evidencias: Array<{ url?: string; tipo?: string }>;
     motivoRejeicao?: string | null;
   };
@@ -119,8 +121,13 @@ export default function StaffVerificacaoLocalPage() {
                     </Link>
                     <p className="mt-1 text-xs text-slate-500">
                       Hotel {item.hotelId ?? '—'} · status {item.verificacaoLocal.status}
+                      {item.verificacaoLocal.metodo ? ` · ${item.verificacaoLocal.metodo}` : ''}
                       {item.verificacaoLocal.enviadoEm
                         ? ` · enviado ${item.verificacaoLocal.enviadoEm.slice(0, 10)}`
+                        : ''}
+                      {item.verificacaoLocal.metodo === 'web_gps' &&
+                      item.verificacaoLocal.distanciaMetros != null
+                        ? ` · ${item.verificacaoLocal.distanciaMetros} m do pin`
                         : ''}
                     </p>
                   </div>
@@ -151,6 +158,16 @@ export default function StaffVerificacaoLocalPage() {
                     </div>
                   ) : null}
                 </div>
+                {item.verificacaoLocal.metodo === 'web_gps' &&
+                item.verificacaoLocal.evidenciaGeo?.capturedAt ? (
+                  <p className="mt-2 text-xs text-slate-600">
+                    GPS web capturado em{' '}
+                    {item.verificacaoLocal.evidenciaGeo.capturedAt.slice(0, 19).replace('T', ' ')}
+                    {item.verificacaoLocal.evidenciaGeo.accuracy != null
+                      ? ` · precisão ~${item.verificacaoLocal.evidenciaGeo.accuracy} m`
+                      : ''}
+                  </p>
+                ) : null}
                 {item.verificacaoLocal.evidencias?.length ? (
                   <ul className="mt-3 flex flex-wrap gap-2">
                     {item.verificacaoLocal.evidencias.map((ev, idx) =>

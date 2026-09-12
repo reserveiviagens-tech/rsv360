@@ -125,6 +125,8 @@ export type EditorMeta = {
     cidade?: string;
     uf?: string;
     cep?: string;
+    lat?: number;
+    lng?: number;
     mostrarExata?: boolean;
     caracteristicas?: string[];
     descricaoBairro?: string;
@@ -158,10 +160,17 @@ export type EditorMeta = {
     preferenciaInteracao?: string;
   };
   verificacaoLocal?: {
-    metodo?: 'app' | 'terceiro' | 'videos' | null;
+    metodo?: 'app' | 'terceiro' | 'videos' | 'web_gps' | null;
     status?: 'pendente' | 'enviado' | 'aprovado' | 'rejeitado';
     codigo?: string;
     evidencias?: Array<{ url: string; tipo: 'foto' | 'video'; enviadoEm?: string }>;
+    evidenciaGeo?: {
+      lat: number;
+      lng: number;
+      accuracy?: number;
+      capturedAt: string;
+    };
+    distanciaMetros?: number;
     notas?: string;
     enviadoEm?: string;
     revisadoEm?: string;
