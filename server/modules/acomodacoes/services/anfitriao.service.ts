@@ -63,6 +63,10 @@ import {
   type CoanfitriaoPapel,
   type ListingCoanfitriao,
 } from './listing-coanfitrioes.util';
+import {
+  enviarConviteCoanfitriaoEmail,
+  papelToLabel,
+} from './coanfitriao-invite-email.service';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
@@ -1795,9 +1799,6 @@ export const anfitriaoService = {
 
     let emailStatus: 'sent' | 'skipped' | 'failed' = 'skipped';
     try {
-      const { enviarConviteCoanfitriaoEmail, papelToLabel } = await import(
-        './coanfitriao-invite-email.service'
-      );
       const emailResult = await enviarConviteCoanfitriaoEmail({
         destinatarioEmail: email,
         nomeConvidado: nome,

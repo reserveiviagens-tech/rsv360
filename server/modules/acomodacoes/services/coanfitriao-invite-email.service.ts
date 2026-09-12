@@ -1,7 +1,10 @@
 import { maskEmail } from './listing-coanfitrioes.util';
 import type { CoanfitriaoPapel } from './listing-coanfitrioes.util';
 
-/** Lazy-load mailer so acomodações boot does not pull communication providers at import time. */
+/**
+ * Co-host invite email — standalone SMTP/SendGrid send (no CommunicationProviderFactory).
+ * Keeps acomodações module boot free of communication provider graph.
+ */
 
 const PAPEL_LABELS: Record<CoanfitriaoPapel, string> = {
   calendario: 'Calendário e disponibilidade',
@@ -84,10 +87,78 @@ export type EnviarConviteCoanfitriaoEmailOpts = {
   papelLabel: string;
 };
 
+function getEmailFrom(): string {
+  const from =
+    process.env.SMTP_FROM ||
+    process.env.EMAIL_FROM ||
+    process.env.SENDGRID_FROM_EMAIL ||
+    process.env.SMTP_USER ||
+    'noreply@rsv360.com';
+  if (from.includes('<')) return from;
+  return `RSV 360° <${from}>`;
+}
+
+function isEmailConfigured(): boolean {
+  return Boolean(
+    process.env.SENDGRID_API_KEY || (process.env.SMTP_HOST && process.env.SMTP_PASS),
+  );
+}
+
+async function sendViaSendGrid(to: string, subject: string, html: string): Promise<void> {
+  const key = process.env.SENDGRID_API_KEY;
+  if (!key) throw new Error('sendgrid_missing');
+  const fromEmail =
+    process.env.SENDGRID_FROM_EMAIL ||
+    process.env.EMAIL_FROM ||
+    process.env.SMTP_FROM ||
+    'noreply@rsv360.com';
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: fromEmail.replace(/^.*<|>.*$/g, '').trim() || 'noreply@rsv360.com' },
+      subject,
+      content: [{ type: 'text/html', value: html }],
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`sendgrid_${response.status}:${body.slice(0, 120)}`);
+  }
+}
+
+async function sendViaSmtp(to: string, subject: string, html: string): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nodemailer = require('nodemailer') as typeof import('nodemailer');
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const secure =
+    process.env.SMTP_SECURE === 'true' || String(process.env.SMTP_PORT) === '465';
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port,
+    secure,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  await transporter.sendMail({
+    from: getEmailFrom(),
+    to,
+    subject,
+    html,
+  });
+}
+
 export async function enviarConviteCoanfitriaoEmail(
   opts: EnviarConviteCoanfitriaoEmailOpts,
 ): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
-  if (!process.env.SENDGRID_API_KEY && !(process.env.SMTP_HOST && process.env.SMTP_PASS)) {
+  if (!isEmailConfigured()) {
     return { ok: false, skipped: true, error: 'email_provider_ausente' };
   }
 
@@ -102,15 +173,10 @@ export async function enviarConviteCoanfitriaoEmail(
   const subject = 'Convite para coanfitrião — RSV 360°';
 
   try {
-    const { CommunicationProviderFactory } = await import('../../communication/providers/factory');
-    const provider = CommunicationProviderFactory.getProvider('default', 'email');
-    if (!provider?.email) {
-      return { ok: false, skipped: true, error: 'email_provider_ausente' };
-    }
-    const result = await provider.email.sendEmail(opts.destinatarioEmail, subject, html);
-    if (!result.success) {
-      console.warn('[coanfitriao] convite e-mail falhou:', masked, result.error ?? 'unknown');
-      return { ok: false, error: result.error ?? 'send_failed' };
+    if (process.env.SENDGRID_API_KEY) {
+      await sendViaSendGrid(opts.destinatarioEmail, subject, html);
+    } else {
+      await sendViaSmtp(opts.destinatarioEmail, subject, html);
     }
     return { ok: true };
   } catch (err) {
