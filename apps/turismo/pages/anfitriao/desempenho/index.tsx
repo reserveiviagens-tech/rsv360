@@ -125,9 +125,9 @@ export default function AnfitriaoDesempenhoPage() {
   const pending = opps.filter((o) => !o.done);
   const done = opps.filter((o) => o.done);
   const pendingPct = data?.oportunidadesResumo?.pctNaoConcluidas ?? 0;
-  const peerPct = Math.min(95, Math.max(40, pendingPct - 8));
-  const allPct = Math.min(90, Math.max(35, pendingPct - 15));
-  const yoursPct = Math.max(0, 100 - pendingPct);
+  const concluidasPct = Math.max(0, 100 - pendingPct);
+  const oportunidadesPendentes = data?.oportunidadesResumo?.pendentes ?? pending.length;
+  const oportunidadesConcluidas = data?.oportunidadesResumo?.concluidas ?? done.length;
 
   function downloadCsv() {
     const token =
@@ -212,25 +212,35 @@ export default function AnfitriaoDesempenhoPage() {
 
             {!loading && data && nav === 'oportunidades' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    {pendingPct}% das suas oportunidades ainda não foram concluídas.
-                  </h2>
-                  <div className="mt-4 grid max-w-md grid-cols-3 gap-2 text-center text-xs">
-                    {[
-                      ['Anúncios parecidos', peerPct],
-                      ['Todos os anúncios', allPct],
-                      ['Seus anúncios', yoursPct],
-                    ].map(([label, pct]) => (
-                      <div key={String(label)} className="rounded-xl bg-white p-3 ring-1 ring-slate-200">
-                        <div
-                          className="mx-auto mb-2 w-full rounded bg-teal-500"
-                          style={{ height: `${Math.max(8, Number(pct) / 2)}px` }}
-                        />
-                        <p className="font-medium text-slate-700">{label}</p>
-                        <p className="text-slate-500">{pct}%</p>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      {pendingPct}% das suas oportunidades ainda não foram concluídas.
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {oportunidadesPendentes} pendente{oportunidadesPendentes === 1 ? '' : 's'} ·{' '}
+                      {oportunidadesConcluidas} concluída{oportunidadesConcluidas === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <div className="max-w-md rounded-2xl border bg-white p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-slate-800">Oportunidades concluídas</p>
+                      <span className="text-sm font-bold text-slate-900">{concluidasPct}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-teal-500 transition-all"
+                        style={{ width: `${Math.min(100, Math.max(0, concluidasPct))}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-w-md rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-medium text-slate-600">
+                      Comparativo com outros anúncios ainda não está disponível neste painel.
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Os percentuais acima refletem apenas as ações sugeridas para os seus anúncios.
+                    </p>
                   </div>
                 </div>
 
