@@ -2,6 +2,7 @@ import {
   COANFITRIOES_MAX,
   coanfitriaoMatchesEmail,
   findCoanfitriaoAtivoByEmail,
+  mapConviteRowToListingCoanfitriao,
   maskEmail,
   normalizeCoanfitriaoEmail,
   papelPermiteCalendario,
@@ -148,6 +149,24 @@ describe('listing-coanfitrioes.util', () => {
     expect(papelPermiteMensagens('mensagens')).toBe(true);
     expect(papelPermiteMensagens('tudo')).toBe(true);
     expect(papelPermiteMensagens('calendario')).toBe(false);
+  });
+
+  it('mapConviteRowToListingCoanfitriao maps DB row to API shape', () => {
+    expect(
+      mapConviteRowToListingCoanfitriao({
+        id: 'c1',
+        nome: 'Maria',
+        email: 'cohost@test.local',
+        papel: 'tudo',
+        status: 'pendente',
+      }),
+    ).toEqual({
+      id: 'c1',
+      nome: 'Maria',
+      email: 'cohost@test.local',
+      papel: 'tudo',
+      status: 'pendente',
+    });
   });
 
   it('summarizes card preview', () => {

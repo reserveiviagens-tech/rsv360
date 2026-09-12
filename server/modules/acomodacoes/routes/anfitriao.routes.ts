@@ -333,6 +333,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Recursos de acessibilidade inválidos',
       });
     }
+    if (result.error === 'use_dedicated_endpoints') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Use endpoints de coanfitriões',
+      });
+    }
     res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
@@ -657,17 +666,11 @@ router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
       if (result.error === 'invalid_papel') {
         return res.status(400).json({ success: false, error: 'Papel inválido' });
       }
-      if (result.error === 'duplicate_email') {
+      if (result.error === 'already_invited') {
         return res.status(409).json({ success: false, error: 'Convite já existe para este e-mail' });
       }
       if (result.error === 'coanfitrioes_max') {
         return res.status(400).json({ success: false, error: 'Limite de coanfitriões atingido' });
-      }
-      if (result.error === 'coanfitrioes_invalido') {
-        return res.status(400).json({
-          success: false,
-          error: result.message ?? 'Lista de coanfitriões inválida',
-        });
       }
       return res.status(400).json({ success: false, error: 'Não foi possível convidar' });
     }
@@ -690,12 +693,6 @@ router.post('/unidades/:id/coanfitrioes/:coId/revogar', ...parceiroAuth, async (
       }
       if (result.error === 'not_found') {
         return res.status(404).json({ success: false, error: 'Coanfitrião não encontrado' });
-      }
-      if (result.error === 'coanfitrioes_invalido') {
-        return res.status(400).json({
-          success: false,
-          error: result.message ?? 'Lista de coanfitriões inválida',
-        });
       }
       return res.status(400).json({ success: false, error: 'Não foi possível revogar' });
     }
@@ -721,12 +718,6 @@ router.post('/unidades/:id/coanfitrioes/:coId/aceitar', ...parceiroAuth, async (
       }
       if (result.error === 'forbidden') {
         return res.status(403).json({ success: false, error: 'Convite inválido ou sem permissão' });
-      }
-      if (result.error === 'coanfitrioes_invalido') {
-        return res.status(400).json({
-          success: false,
-          error: result.message ?? 'Lista de coanfitriões inválida',
-        });
       }
       return res.status(400).json({ success: false, error: 'Não foi possível aceitar convite' });
     }
@@ -754,12 +745,6 @@ router.delete('/unidades/:id/coanfitrioes/:coId', ...parceiroAuth, async (req, r
         return res.status(409).json({
           success: false,
           error: 'Somente convites pendentes ou revogados podem ser removidos',
-        });
-      }
-      if (result.error === 'coanfitrioes_invalido') {
-        return res.status(400).json({
-          success: false,
-          error: result.message ?? 'Lista de coanfitriões inválida',
         });
       }
       return res.status(400).json({ success: false, error: 'Não foi possível remover' });

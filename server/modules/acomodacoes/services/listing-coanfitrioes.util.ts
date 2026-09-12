@@ -21,6 +21,25 @@ export type ListingCoanfitriao = {
   status: CoanfitriaoStatus;
 };
 
+/** Row shape from coanfitriao_convites table (mapping helper input). */
+export type CoanfitriaoConviteRow = {
+  id: string;
+  nome: string;
+  email: string;
+  papel: string;
+  status: string;
+};
+
+export function mapConviteRowToListingCoanfitriao(row: CoanfitriaoConviteRow): ListingCoanfitriao {
+  return {
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    papel: row.papel as CoanfitriaoPapel,
+    status: row.status as CoanfitriaoStatus,
+  };
+}
+
 export type CoanfitrioesValidationOk = { ok: true; value: ListingCoanfitriao[] };
 export type CoanfitrioesValidationErr = {
   ok: false;

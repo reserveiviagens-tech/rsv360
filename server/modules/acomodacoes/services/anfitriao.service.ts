@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../lib/db';
 import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
+import { coanfitriaoConvites } from '../../../../backend/src/db/schema/coanfitriao-convites';
 import { carteiraCorretor } from '../../../../backend/src/db/schema/carteira-corretor';
 import {
   disponibilidadeAcomodacao,
@@ -54,6 +55,7 @@ import {
   COANFITRIOES_PAPEIS,
   coanfitriaoMatchesEmail,
   findCoanfitriaoAtivoByEmail,
+  mapConviteRowToListingCoanfitriao,
   normalizeCoanfitriaoEmail,
   papelPermiteCalendario,
   papelPermiteMensagens,
@@ -106,6 +108,61 @@ function readCoanfitrioesFromMetadata(metadata: unknown): ListingCoanfitriao[] {
   return validated.ok ? validated.value : [];
 }
 
+function isPgUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; message?: string };
+  return e?.code === '23505' || /unique/i.test(e?.message ?? '');
+}
+
+export async function listCoanfitrioesFromDb(acomodacaoId: number): Promise<ListingCoanfitriao[]> {
+  const rows = await db
+    .select()
+    .from(coanfitriaoConvites)
+    .where(eq(coanfitriaoConvites.acomodacaoId, acomodacaoId))
+    .orderBy(coanfitriaoConvites.invitedAt);
+  return rows.map(mapConviteRowToListingCoanfitriao);
+}
+
+async function countNonRevogadoCoanfitrioesFromDb(acomodacaoId: number): Promise<number> {
+  const rows = await db
+    .select({ id: coanfitriaoConvites.id })
+    .from(coanfitriaoConvites)
+    .where(
+      and(
+        eq(coanfitriaoConvites.acomodacaoId, acomodacaoId),
+        inArray(coanfitriaoConvites.status, ['pendente', 'ativo']),
+      ),
+    );
+  return rows.length;
+}
+
+async function resolveCoanfitrioesForRbac(
+  acomodacaoId: number,
+  metadata: unknown,
+): Promise<ListingCoanfitriao[]> {
+  const fromDb = await listCoanfitrioesFromDb(acomodacaoId);
+  if (fromDb.length > 0) return fromDb;
+  return readCoanfitrioesFromMetadata(metadata);
+}
+
+async function syncCoanfitrioesToMetadata(
+  unidadeId: number,
+  row: typeof acomodacoes.$inferSelect,
+  list: ListingCoanfitriao[],
+): Promise<void> {
+  const baseMeta =
+    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+  const nextMetadata = {
+    ...baseMeta,
+    coanfitrioes: list.length > 0 ? list : undefined,
+  };
+  await db
+    .update(acomodacoes)
+    .set({ metadata: nextMetadata, atualizadoEm: new Date() })
+    .where(eq(acomodacoes.id, unidadeId));
+}
+
 async function proprietariosNaCarteira(corretorId: number): Promise<number[]> {
   const rows = await db
     .select({ proprietarioId: carteiraCorretor.proprietarioId })
@@ -133,7 +190,7 @@ export async function podeGerenciarUnidade(
 export async function podeVerUnidade(auth: AuthContext, row: typeof acomodacoes.$inferSelect) {
   if (await podeGerenciarUnidade(auth, row)) return true;
   if (auth.email) {
-    const cohosts = readCoanfitrioesFromMetadata(row.metadata);
+    const cohosts = await resolveCoanfitrioesForRbac(row.id, row.metadata);
     if (findCoanfitriaoAtivoByEmail(cohosts, auth.email)) return true;
   }
   return false;
@@ -145,7 +202,8 @@ export async function podeEditarCalendarioUnidade(
 ) {
   if (await podeGerenciarUnidade(auth, row)) return true;
   if (!auth.email) return false;
-  const cohost = findCoanfitriaoAtivoByEmail(readCoanfitrioesFromMetadata(row.metadata), auth.email);
+  const cohosts = await resolveCoanfitrioesForRbac(row.id, row.metadata);
+  const cohost = findCoanfitriaoAtivoByEmail(cohosts, auth.email);
   return cohost != null && papelPermiteCalendario(cohost.papel);
 }
 
@@ -155,7 +213,8 @@ export async function podeEditarMensagensUnidade(
 ) {
   if (await podeGerenciarUnidade(auth, row)) return true;
   if (!auth.email) return false;
-  const cohost = findCoanfitriaoAtivoByEmail(readCoanfitrioesFromMetadata(row.metadata), auth.email);
+  const cohosts = await resolveCoanfitrioesForRbac(row.id, row.metadata);
+  const cohost = findCoanfitriaoAtivoByEmail(cohosts, auth.email);
   return cohost != null && papelPermiteMensagens(cohost.papel);
 }
 
@@ -393,14 +452,10 @@ export const anfitriaoService = {
       !Array.isArray(metadataPatch) &&
       Object.prototype.hasOwnProperty.call(metadataPatch, 'coanfitrioes');
     if (updatingCoanfitrioes) {
-      const cohosts = validateListingCoanfitrioes(
-        (metadataPatch as Record<string, unknown>).coanfitrioes,
-      );
-      if (!cohosts.ok) {
-        return { error: cohosts.error, message: cohosts.message };
-      }
-      (metadataPatch as Record<string, unknown>).coanfitrioes =
-        cohosts.value.length > 0 ? cohosts.value : undefined;
+      return {
+        error: 'use_dedicated_endpoints' as const,
+        message: 'Use endpoints de coanfitriões',
+      };
     }
 
     const updatingConfigReserva =
@@ -1706,41 +1761,39 @@ export const anfitriaoService = {
     }
     const papel = papelRaw as CoanfitriaoPapel;
 
-    const list = readCoanfitrioesFromMetadata(row.metadata);
-    if (list.length >= COANFITRIOES_MAX) return { error: 'coanfitrioes_max' as const };
+    let activeCount = await countNonRevogadoCoanfitrioesFromDb(unidadeId);
+    if (activeCount === 0) {
+      activeCount = readCoanfitrioesFromMetadata(row.metadata).filter(
+        (item) => item.status === 'pendente' || item.status === 'ativo',
+      ).length;
+    }
+    if (activeCount >= COANFITRIOES_MAX) return { error: 'coanfitrioes_max' as const };
 
-    const duplicate = list.some(
-      (item) =>
-        item.email &&
-        coanfitriaoMatchesEmail(item, email) &&
-        (item.status === 'ativo' || item.status === 'pendente'),
-    );
-    if (duplicate) return { error: 'duplicate_email' as const };
+    const id = randomUUID();
+    const token = randomUUID();
 
-    const nextList: ListingCoanfitriao[] = [
-      ...list,
-      { id: randomUUID(), nome, email, papel, status: 'pendente' },
-    ];
-    const validated = validateListingCoanfitrioes(nextList);
-    if (!validated.ok) {
-      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
+    try {
+      await db.insert(coanfitriaoConvites).values({
+        id,
+        acomodacaoId: unidadeId,
+        nome,
+        email,
+        papel,
+        status: 'pendente',
+        invitedByUserId: auth.userId,
+        token,
+      });
+    } catch (err) {
+      if (isPgUniqueViolation(err)) {
+        return { error: 'already_invited' as const };
+      }
+      throw err;
     }
 
-    const baseMeta =
-      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : {};
-    const nextMetadata = {
-      ...baseMeta,
-      coanfitrioes: validated.value,
-    };
+    const list = await listCoanfitrioesFromDb(unidadeId);
+    await syncCoanfitrioesToMetadata(unidadeId, row, list);
 
-    await db
-      .update(acomodacoes)
-      .set({ metadata: nextMetadata, atualizadoEm: new Date() })
-      .where(eq(acomodacoes.id, unidadeId));
-
-    return { data: validated.value };
+    return { data: list };
   },
 
   async revogarCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
@@ -1752,31 +1805,23 @@ export const anfitriaoService = {
     if (!row) return { error: 'not_found' as const };
     if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
 
-    const list = readCoanfitrioesFromMetadata(row.metadata);
-    const idx = list.findIndex((item) => item.id === coId);
-    if (idx < 0) return { error: 'not_found' as const };
+    const [target] = await db
+      .select()
+      .from(coanfitriaoConvites)
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)))
+      .limit(1);
+    if (!target) return { error: 'not_found' as const };
 
-    const nextList = list.map((item, i) =>
-      i === idx ? { ...item, status: 'revogado' as const } : item,
-    );
-    const validated = validateListingCoanfitrioes(nextList);
-    if (!validated.ok) {
-      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
-    }
-
-    const baseMeta =
-      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : {};
+    const now = new Date();
     await db
-      .update(acomodacoes)
-      .set({
-        metadata: { ...baseMeta, coanfitrioes: validated.value },
-        atualizadoEm: new Date(),
-      })
-      .where(eq(acomodacoes.id, unidadeId));
+      .update(coanfitriaoConvites)
+      .set({ status: 'revogado', revokedAt: now, updatedAt: now })
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
-    return { data: validated.value };
+    const list = await listCoanfitrioesFromDb(unidadeId);
+    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+
+    return { data: list };
   },
 
   async aceitarConviteCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
@@ -1790,38 +1835,29 @@ export const anfitriaoService = {
       .limit(1);
     if (!row) return { error: 'not_found' as const };
 
-    const list = readCoanfitrioesFromMetadata(row.metadata);
-    const target = list.find((item) => item.id === coId);
+    const [target] = await db
+      .select()
+      .from(coanfitriaoConvites)
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)))
+      .limit(1);
     if (
       !target ||
       target.status !== 'pendente' ||
-      !target.email ||
-      !coanfitriaoMatchesEmail(target, authEmail)
+      !coanfitriaoMatchesEmail(mapConviteRowToListingCoanfitriao(target), authEmail)
     ) {
       return { error: 'forbidden' as const };
     }
 
-    const nextList = list.map((item) =>
-      item.id === coId ? { ...item, status: 'ativo' as const } : item,
-    );
-    const validated = validateListingCoanfitrioes(nextList);
-    if (!validated.ok) {
-      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
-    }
-
-    const baseMeta =
-      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : {};
+    const now = new Date();
     await db
-      .update(acomodacoes)
-      .set({
-        metadata: { ...baseMeta, coanfitrioes: validated.value },
-        atualizadoEm: new Date(),
-      })
-      .where(eq(acomodacoes.id, unidadeId));
+      .update(coanfitriaoConvites)
+      .set({ status: 'ativo', acceptedAt: now, updatedAt: now })
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
-    return { data: validated.value };
+    const list = await listCoanfitrioesFromDb(unidadeId);
+    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+
+    return { data: list };
   },
 
   async removerCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
@@ -1833,34 +1869,24 @@ export const anfitriaoService = {
     if (!row) return { error: 'not_found' as const };
     if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
 
-    const list = readCoanfitrioesFromMetadata(row.metadata);
-    const target = list.find((item) => item.id === coId);
+    const [target] = await db
+      .select()
+      .from(coanfitriaoConvites)
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)))
+      .limit(1);
     if (!target) return { error: 'not_found' as const };
     if (target.status !== 'pendente' && target.status !== 'revogado') {
       return { error: 'invalid_status' as const };
     }
 
-    const nextList = list.filter((item) => item.id !== coId);
-    const validated = validateListingCoanfitrioes(nextList);
-    if (!validated.ok) {
-      return { error: 'coanfitrioes_invalido' as const, message: validated.message };
-    }
-
-    const baseMeta =
-      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : {};
-    const nextMetadata = {
-      ...baseMeta,
-      coanfitrioes: validated.value.length > 0 ? validated.value : undefined,
-    };
-
     await db
-      .update(acomodacoes)
-      .set({ metadata: nextMetadata, atualizadoEm: new Date() })
-      .where(eq(acomodacoes.id, unidadeId));
+      .delete(coanfitriaoConvites)
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
 
-    return { data: validated.value };
+    const list = await listCoanfitrioesFromDb(unidadeId);
+    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+
+    return { data: list };
   },
 
   async exportImpostosCsv(

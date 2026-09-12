@@ -351,6 +351,13 @@
       "when": 1788558000000,
       "tag": "0049_notifications_hub",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1788559000000,
+      "tag": "0050_coanfitriao_convites",
+      "breakpoints": true
     }
   ]
 }
