@@ -316,11 +316,13 @@ export default function AnfitriaoDesempenhoPage() {
                       {data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : '—'}
                     </p>
                   </div>
-                  <div className="rounded-2xl border bg-white p-4">
-                    <p className="text-sm text-slate-500">Avaliações de hóspedes</p>
-                    <p className="mt-2 text-2xl font-bold text-slate-400">Em breve</p>
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-medium text-slate-600">
+                      Avaliações de hóspedes — ainda não disponíveis neste painel
+                    </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Notas e comentários aparecerão quando hóspedes avaliarem a estadia.
+                      Notas e comentários de estadia não estão integrados ao RSV360° nesta versão.
+                      A completude acima mede apenas metadados do anúncio.
                     </p>
                   </div>
                 </div>
@@ -458,23 +460,28 @@ export default function AnfitriaoDesempenhoPage() {
               <div className="space-y-4">
                 <h2 className="text-xl font-bold">Anfitrião Destaque</h2>
                 <p className="text-sm text-slate-600">
-                  Critérios Reservei (configuráveis): nota, taxa de resposta em 24h, cancelamentos do
-                  anfitrião e volume de estadias.
+                  Indicadores disponíveis hoje: completude do anúncio, volume de reservas e ocupação.
+                  Avaliações de hóspedes, taxa de resposta e cancelamentos do anfitrião ainda não entram
+                  neste painel.
                 </p>
                 <ul className="space-y-3">
                   {[
                     [
-                      'Completude média',
-                      'Metadados do anúncio',
+                      'Completude média do anúncio',
+                      'Percentual de metadados preenchidos (não é nota de hóspedes)',
                       data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : null,
                     ],
                     [
                       'Anúncios ≥ 80% completude',
-                      'Prontos para destaque',
+                      'Unidades com cadastro quase completo',
                       data.qualidade.porUnidade.filter((u) => u.score >= 80).length,
                     ],
-                    ['Reservas no período', 'Volume ativo', data.resumo.reservas],
-                    ['Ocupação', 'Saúde do inventário', data.resumo.ocupacaoPct],
+                    ['Reservas no período', 'Volume ativo no mês selecionado', data.resumo.reservas],
+                    [
+                      'Ocupação',
+                      'Noites reservadas ÷ noites disponíveis (est.)',
+                      data.resumo.ocupacaoPct != null ? `${data.resumo.ocupacaoPct}%` : null,
+                    ],
                   ].map(([label, hint, val]) => (
                     <li key={String(label)} className="rounded-2xl border bg-white px-4 py-3">
                       <div className="flex justify-between gap-2">
