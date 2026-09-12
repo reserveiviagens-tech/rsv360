@@ -6,6 +6,24 @@ export const COANFITRIOES_MAX = 10;
 export const COANFITRIOES_NOME_MAX = 120;
 export const COANFITRIOES_EMAIL_MAX = 254;
 export const COANFITRIOES_ID_MAX = 64;
+export const COANFITRIAO_INVITE_TTL_DAYS = 14;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export function computeInviteExpiresAt(from: Date = new Date()): Date {
+  return new Date(from.getTime() + COANFITRIAO_INVITE_TTL_DAYS * MS_PER_DAY);
+}
+
+/** Legacy rows without expiresAt are treated as not expired. */
+export function isInviteExpired(
+  expiresAt: Date | string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (expiresAt == null) return false;
+  const expiry = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+  if (Number.isNaN(expiry.getTime())) return false;
+  return expiry.getTime() <= now.getTime();
+}
 
 export const COANFITRIOES_PAPEIS = ['calendario', 'mensagens', 'tudo'] as const;
 export const COANFITRIOES_STATUS = ['pendente', 'ativo', 'revogado'] as const;
@@ -19,6 +37,7 @@ export type ListingCoanfitriao = {
   email?: string;
   papel: CoanfitriaoPapel;
   status: CoanfitriaoStatus;
+  expiresAt?: string;
 };
 
 /** Row shape from coanfitriao_convites table (mapping helper input). */
@@ -28,16 +47,25 @@ export type CoanfitriaoConviteRow = {
   email: string;
   papel: string;
   status: string;
+  expiresAt?: Date | string | null;
 };
 
 export function mapConviteRowToListingCoanfitriao(row: CoanfitriaoConviteRow): ListingCoanfitriao {
-  return {
+  const mapped: ListingCoanfitriao = {
     id: row.id,
     nome: row.nome,
     email: row.email,
     papel: row.papel as CoanfitriaoPapel,
     status: row.status as CoanfitriaoStatus,
   };
+  if (row.expiresAt != null) {
+    const expiry =
+      row.expiresAt instanceof Date ? row.expiresAt : new Date(row.expiresAt);
+    if (!Number.isNaN(expiry.getTime())) {
+      mapped.expiresAt = expiry.toISOString();
+    }
+  }
+  return mapped;
 }
 
 export type CoanfitrioesValidationOk = { ok: true; value: ListingCoanfitriao[] };

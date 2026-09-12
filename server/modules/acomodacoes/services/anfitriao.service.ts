@@ -55,7 +55,9 @@ import {
   COANFITRIOES_NOME_MAX,
   COANFITRIOES_PAPEIS,
   coanfitriaoMatchesEmail,
+  computeInviteExpiresAt,
   findCoanfitriaoAtivoByEmail,
+  isInviteExpired,
   mapConviteRowToListingCoanfitriao,
   normalizeCoanfitriaoEmail,
   papelPermiteCalendario,
@@ -1910,6 +1912,7 @@ export const anfitriaoService = {
 
     const id = randomUUID();
     const token = randomUUID();
+    const expiresAt = computeInviteExpiresAt();
 
     try {
       await db.insert(coanfitriaoConvites).values({
@@ -1921,6 +1924,7 @@ export const anfitriaoService = {
         status: 'pendente',
         invitedByUserId: auth.userId,
         token,
+        expiresAt,
       });
     } catch (err) {
       if (isPgUniqueViolation(err)) {
@@ -1977,6 +1981,57 @@ export const anfitriaoService = {
     return { data: list };
   },
 
+  async reenviarConviteCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, unidadeId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+    if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
+
+    const [target] = await db
+      .select()
+      .from(coanfitriaoConvites)
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)))
+      .limit(1);
+    if (!target) return { error: 'not_found' as const };
+    if (target.status !== 'pendente') return { error: 'invalid_status' as const };
+
+    const now = new Date();
+    const token = randomUUID();
+    const expiresAt = computeInviteExpiresAt(now);
+
+    await db
+      .update(coanfitriaoConvites)
+      .set({
+        token,
+        expiresAt,
+        invitedAt: now,
+        updatedAt: now,
+      })
+      .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)));
+
+    const list = await listCoanfitrioesFromDb(unidadeId);
+    await syncCoanfitrioesToMetadata(unidadeId, row, list);
+
+    let emailStatus: 'sent' | 'skipped' | 'failed' = 'skipped';
+    try {
+      const emailResult = await enviarConviteCoanfitriaoEmail({
+        destinatarioEmail: target.email,
+        nomeConvidado: target.nome,
+        nomeUnidade: row.titulo,
+        token,
+        papelLabel: papelToLabel(target.papel as CoanfitriaoPapel),
+      });
+      emailStatus = emailResult.skipped ? 'skipped' : emailResult.ok ? 'sent' : 'failed';
+    } catch {
+      emailStatus = 'failed';
+    }
+
+    return { data: list, emailStatus };
+  },
+
   async aceitarConviteCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
     const authEmail = normalizeCoanfitriaoEmail(auth.email);
     if (!authEmail) return { error: 'email_required' as const };
@@ -1993,8 +2048,13 @@ export const anfitriaoService = {
       .from(coanfitriaoConvites)
       .where(and(eq(coanfitriaoConvites.acomodacaoId, unidadeId), eq(coanfitriaoConvites.id, coId)))
       .limit(1);
+    if (!target) {
+      return { error: 'forbidden' as const };
+    }
+    if (target.status === 'pendente' && isInviteExpired(target.expiresAt)) {
+      return { error: 'expired' as const };
+    }
     if (
-      !target ||
       target.status !== 'pendente' ||
       !coanfitriaoMatchesEmail(mapConviteRowToListingCoanfitriao(target), authEmail)
     ) {
@@ -2031,10 +2091,13 @@ export const anfitriaoService = {
       )
       .limit(1);
 
-    if (
-      !target ||
-      !coanfitriaoMatchesEmail(mapConviteRowToListingCoanfitriao(target), authEmail)
-    ) {
+    if (!target) {
+      return { error: 'forbidden' as const };
+    }
+    if (isInviteExpired(target.expiresAt)) {
+      return { error: 'expired' as const };
+    }
+    if (!coanfitriaoMatchesEmail(mapConviteRowToListingCoanfitriao(target), authEmail)) {
       return { error: 'forbidden' as const };
     }
 

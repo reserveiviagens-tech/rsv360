@@ -46,6 +46,13 @@ function emailsMatch(a?: string, b?: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
+function isInviteExpiredClient(expiresAt?: string): boolean {
+  if (!expiresAt) return false;
+  const expiry = new Date(expiresAt);
+  if (Number.isNaN(expiry.getTime())) return false;
+  return expiry.getTime() <= Date.now();
+}
+
 export function summarizeCoanfitrioesClient(value: CoanfitrioesValue | undefined): string | null {
   if (!Array.isArray(value) || value.length === 0) return null;
   const active = value.filter((c) => c.status !== 'revogado').length;
@@ -210,6 +217,33 @@ export function CoanfitrioesEditor({
     setAdding(false);
   }
 
+  async function handleResend(coId: string) {
+    setActionError(null);
+    setEmailNotice(null);
+    if (!useApi) return;
+    setBusy(true);
+    try {
+      const res = await fase1Api.anfitriaoReenviarCoanfitriao(unidadeId, coId);
+      onChange(res.data as CoanfitrioesValue);
+      if (res.emailStatus === 'skipped') {
+        setEmailNotice(
+          'Convite reenviado. E-mail não enviado — configure SMTP ou SendGrid no servidor.',
+        );
+      } else if (res.emailStatus === 'failed') {
+        setEmailNotice(
+          'Convite atualizado, mas o e-mail não pôde ser enviado. Peça ao convidado para aceitar pelo painel.',
+        );
+      } else if (res.emailStatus === 'sent') {
+        setEmailNotice('Convite reenviado por e-mail.');
+      }
+      await refreshFromServer();
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleRevoke(coId: string) {
     setActionError(null);
     if (useApi) {
@@ -301,8 +335,10 @@ export function CoanfitrioesEditor({
       ) : (
         <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
           {list.map((item) => {
+            const expired = item.status === 'pendente' && isInviteExpiredClient(item.expiresAt);
             const canAccept =
               item.status === 'pendente' &&
+              !expired &&
               currentUserEmail &&
               item.email &&
               emailsMatch(item.email, currentUserEmail);
@@ -327,8 +363,21 @@ export function CoanfitrioesEditor({
                     <p className="mt-1 text-xs font-medium text-slate-500">
                       {STATUS_LABEL[item.status]}
                     </p>
+                    {expired ? (
+                      <p className="mt-1 text-xs text-slate-400">Convite expirado — reenvie para renovar</p>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
+                    {item.status === 'pendente' && useApi ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                        onClick={() => void handleResend(item.id)}
+                      >
+                        {busy ? 'Enviando…' : 'Reenviar convite'}
+                      </button>
+                    ) : null}
                     {canAccept ? (
                       <button
                         type="button"

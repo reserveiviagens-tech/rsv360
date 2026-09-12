@@ -14,6 +14,7 @@ export const coanfitriaoConvites = pgTable('coanfitriao_convites', {
   invitedByUserId: integer('invited_by_user_id').references(() => users.id),
   token: varchar('token', { length: 64 }).notNull(),
   invitedAt: timestamp('invited_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
