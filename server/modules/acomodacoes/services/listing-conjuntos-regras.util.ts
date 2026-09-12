@@ -328,6 +328,26 @@ export function readConjuntosRegrasFromMetadata(metadata: unknown): ConjuntoRegr
   return validated.value;
 }
 
+/** Removes conjuntosRegras from a metadata patch so it is not persisted to jsonb (DB-only write path). */
+export function stripConjuntosRegrasFromMetadataPatch(
+  metadataPatch: Record<string, unknown>,
+): void {
+  delete metadataPatch.conjuntosRegras;
+}
+
+/** Injects resolved conjuntos into metadata for API responses (read path enrichment). */
+export function enrichMetadataWithConjuntosRegras(
+  metadata: unknown,
+  list: ConjuntoRegras[],
+): Record<string, unknown> {
+  const base =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+  base.conjuntosRegras = list.length > 0 ? list : undefined;
+  return base;
+}
+
 /** Resolve token or hex to display hex. */
 export function resolveConjuntoCorHex(cor: string): string {
   const normalized = cor.trim().toLowerCase();

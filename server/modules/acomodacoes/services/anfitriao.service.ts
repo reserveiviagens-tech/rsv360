@@ -85,8 +85,10 @@ import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
 import { validateListingLeis } from './listing-leis.util';
 import {
+  enrichMetadataWithConjuntosRegras,
   mapConjuntoRegrasRowToConjuntoRegras,
   readConjuntosRegrasFromMetadata,
+  stripConjuntosRegrasFromMetadataPatch,
   validateListingConjuntosRegras,
   type ConjuntoRegras,
 } from './listing-conjuntos-regras.util';
@@ -201,18 +203,6 @@ async function syncConjuntosRegrasToDb(
       atualizadoEm: now,
     })),
   );
-}
-
-function enrichMetadataWithConjuntosRegras(
-  metadata: unknown,
-  list: ConjuntoRegras[],
-): Record<string, unknown> {
-  const base =
-    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
-      ? { ...(metadata as Record<string, unknown>) }
-      : {};
-  base.conjuntosRegras = list.length > 0 ? list : undefined;
-  return base;
 }
 
 async function syncCoanfitrioesToMetadata(
@@ -806,8 +796,9 @@ export const anfitriaoService = {
       if (!conjuntos.ok) {
         return { error: conjuntos.error, message: conjuntos.message };
       }
+      // Write path: conjuntos_regras table only; metadata kept as read fallback until ops confirm backfill.
       await syncConjuntosRegrasToDb(id, conjuntos.value);
-      (metadataPatch as Record<string, unknown>).conjuntosRegras = conjuntos.value;
+      stripConjuntosRegrasFromMetadataPatch(metadataPatch as Record<string, unknown>);
     }
 
     const updatingCapacidadeMax = Object.prototype.hasOwnProperty.call(patch, 'capacidadeMax');
@@ -895,6 +886,10 @@ export const anfitriaoService = {
       );
     }
 
+    if (nextMetadata && updatingConjuntosRegras) {
+      stripConjuntosRegrasFromMetadataPatch(nextMetadata);
+    }
+
     const [updated] = await db
       .update(acomodacoes)
       .set({
@@ -906,7 +901,12 @@ export const anfitriaoService = {
       .where(eq(acomodacoes.id, id))
       .returning();
 
-    return { data: updated };
+    const conjuntos = await resolveConjuntosRegrasForRead(updated.id, updated.metadata);
+    let metadata = enrichMetadataWithConjuntosRegras(updated.metadata, conjuntos);
+    const coanfitrioes = await resolveCoanfitrioesForRead(updated.id, updated.metadata);
+    metadata = enrichMetadataWithCoanfitrioes(metadata, coanfitrioes);
+
+    return { data: { ...updated, metadata } };
   },
 
   async enviarAprovacao(auth: AuthContext, id: number) {
