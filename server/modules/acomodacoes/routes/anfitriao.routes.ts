@@ -640,6 +640,31 @@ router.post('/unidades/:id/desarquivar', ...parceiroAuth, async (req, res) => {
   }
 });
 
+router.post('/coanfitrioes/aceitar-token', ...parceiroAuth, async (req, res) => {
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'Token obrigatório' });
+    }
+    const result = await anfitriaoService.aceitarConvitePorToken(authFromReq(req), token);
+    if ('error' in result) {
+      if (result.error === 'email_required') {
+        return res.status(400).json({ success: false, error: 'E-mail da sessão é obrigatório' });
+      }
+      if (result.error === 'invalid_token') {
+        return res.status(400).json({ success: false, error: 'Token inválido' });
+      }
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Convite inválido ou sem permissão' });
+      }
+      return res.status(404).json({ success: false, error: 'Convite não encontrado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
   try {
     const nome = typeof req.body?.nome === 'string' ? req.body.nome : '';
@@ -674,7 +699,11 @@ router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
       }
       return res.status(400).json({ success: false, error: 'Não foi possível convidar' });
     }
-    res.json({ success: true, data: result.data });
+    res.json({
+      success: true,
+      data: result.data,
+      ...(result.emailStatus ? { emailStatus: result.emailStatus } : {}),
+    });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }

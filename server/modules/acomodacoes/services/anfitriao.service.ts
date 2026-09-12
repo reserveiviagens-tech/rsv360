@@ -63,6 +63,10 @@ import {
   type CoanfitriaoPapel,
   type ListingCoanfitriao,
 } from './listing-coanfitrioes.util';
+import {
+  enviarConviteCoanfitriaoEmail,
+  papelToLabel,
+} from './coanfitriao-invite-email.service';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
@@ -1793,7 +1797,21 @@ export const anfitriaoService = {
     const list = await listCoanfitrioesFromDb(unidadeId);
     await syncCoanfitrioesToMetadata(unidadeId, row, list);
 
-    return { data: list };
+    const emailResult = await enviarConviteCoanfitriaoEmail({
+      destinatarioEmail: email,
+      nomeConvidado: nome,
+      nomeUnidade: row.titulo,
+      token,
+      papelLabel: papelToLabel(papel),
+    });
+
+    const emailStatus: 'sent' | 'skipped' | 'failed' = emailResult.skipped
+      ? 'skipped'
+      : emailResult.ok
+        ? 'sent'
+        : 'failed';
+
+    return { data: list, emailStatus };
   },
 
   async revogarCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
@@ -1858,6 +1876,56 @@ export const anfitriaoService = {
     await syncCoanfitrioesToMetadata(unidadeId, row, list);
 
     return { data: list };
+  },
+
+  async aceitarConvitePorToken(auth: AuthContext, token: string) {
+    const authEmail = normalizeCoanfitriaoEmail(auth.email);
+    if (!authEmail) return { error: 'email_required' as const };
+
+    const tokenTrimmed = typeof token === 'string' ? token.trim() : '';
+    if (!tokenTrimmed) return { error: 'invalid_token' as const };
+
+    const [target] = await db
+      .select()
+      .from(coanfitriaoConvites)
+      .where(
+        and(
+          eq(coanfitriaoConvites.token, tokenTrimmed),
+          eq(coanfitriaoConvites.status, 'pendente'),
+        ),
+      )
+      .limit(1);
+
+    if (
+      !target ||
+      !coanfitriaoMatchesEmail(mapConviteRowToListingCoanfitriao(target), authEmail)
+    ) {
+      return { error: 'forbidden' as const };
+    }
+
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, target.acomodacaoId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+
+    const now = new Date();
+    await db
+      .update(coanfitriaoConvites)
+      .set({ status: 'ativo', acceptedAt: now, updatedAt: now })
+      .where(eq(coanfitriaoConvites.id, target.id));
+
+    const list = await listCoanfitrioesFromDb(target.acomodacaoId);
+    await syncCoanfitrioesToMetadata(target.acomodacaoId, row, list);
+
+    return {
+      data: {
+        acomodacaoId: target.acomodacaoId,
+        titulo: row.titulo,
+        coanfitrioes: list,
+      },
+    };
   },
 
   async removerCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {

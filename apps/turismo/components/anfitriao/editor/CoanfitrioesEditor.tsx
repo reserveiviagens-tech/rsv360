@@ -82,7 +82,8 @@ function AddCoanfitriaoForm({
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Adicionar coanfitrião</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Convite salvo no servidor; envio por e-mail chega em versão futura
+          Um e-mail de convite é enviado automaticamente quando SMTP ou SendGrid estiver configurado no
+          servidor.
         </p>
       </div>
       <label className="block text-sm">
@@ -161,6 +162,7 @@ export function CoanfitrioesEditor({
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [emailNotice, setEmailNotice] = useState<string | null>(null);
   const list = Array.isArray(value) ? value : [];
   const atMax = list.length >= COANFITRIOES_MAX;
   const useApi = unidadeId != null;
@@ -171,11 +173,21 @@ export function CoanfitrioesEditor({
 
   async function handleInvite(draft: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string }) {
     setActionError(null);
+    setEmailNotice(null);
     if (useApi) {
       setBusy(true);
       try {
         const res = await fase1Api.anfitriaoConvidarCoanfitriao(unidadeId, draft);
         onChange(res.data as CoanfitrioesValue);
+        if (res.emailStatus === 'skipped') {
+          setEmailNotice(
+            'Convite salvo. E-mail não enviado — configure SMTP ou SendGrid no servidor.',
+          );
+        } else if (res.emailStatus === 'failed') {
+          setEmailNotice(
+            'Convite salvo, mas o e-mail não pôde ser enviado. O convidado pode aceitar pelo painel ou pelo link quando disponível.',
+          );
+        }
         await refreshFromServer();
         setAdding(false);
       } catch (e) {
@@ -275,10 +287,16 @@ export function CoanfitrioesEditor({
         </p>
       ) : null}
 
+      {emailNotice ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {emailNotice}
+        </p>
+      ) : null}
+
       {list.length === 0 ? (
         <p className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-          Nenhum coanfitrião adicionado. Convites são salvos no servidor; o envio por e-mail chega
-          em versão futura.
+          Nenhum coanfitrião adicionado. Ao convidar, enviamos e-mail automaticamente se o servidor
+          tiver SMTP ou SendGrid configurado.
         </p>
       ) : (
         <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200">

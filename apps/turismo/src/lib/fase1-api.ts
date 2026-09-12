@@ -365,13 +365,22 @@ export const fase1Api = {
     id: number,
     body: { nome: string; email: string; papel: string },
   ) =>
-    fetchJson<{ success: boolean; data: unknown[] }>(
-      `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes`,
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-      },
-    ),
+    fetchJson<{
+      success: boolean;
+      data: unknown[];
+      emailStatus?: 'sent' | 'skipped' | 'failed';
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  anfitriaoAceitarConvitePorToken: (token: string) =>
+    fetchJson<{
+      success: boolean;
+      data: { acomodacaoId: number; titulo: string; coanfitrioes: unknown[] };
+    }>(`/api/v1/acomodacoes/anfitriao/coanfitrioes/aceitar-token`, {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
   anfitriaoRevogarCoanfitriao: (id: number, coId: string) =>
     fetchJson<{ success: boolean; data: unknown[] }>(
       `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/revogar`,

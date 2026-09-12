@@ -1,6 +1,7 @@
 const mockConvidar = jest.fn();
 const mockRevogar = jest.fn();
 const mockAceitar = jest.fn();
+const mockAceitarPorToken = jest.fn();
 const mockRemover = jest.fn();
 
 jest.mock('../../../../server/modules/acomodacoes/services/anfitriao.service', () => ({
@@ -8,6 +9,7 @@ jest.mock('../../../../server/modules/acomodacoes/services/anfitriao.service', (
     convidarCoanfitriao: (...args: unknown[]) => mockConvidar(...args),
     revogarCoanfitriao: (...args: unknown[]) => mockRevogar(...args),
     aceitarConviteCoanfitriao: (...args: unknown[]) => mockAceitar(...args),
+    aceitarConvitePorToken: (...args: unknown[]) => mockAceitarPorToken(...args),
     removerCoanfitriao: (...args: unknown[]) => mockRemover(...args),
     desarquivarUnidadesBulk: jest.fn(),
     exportImpostosCsv: jest.fn(),
@@ -169,5 +171,32 @@ describe('anfitriao coanfitrioes routes', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/convite/i);
+  });
+
+  it('POST aceitar-token without token -> 400', async () => {
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/coanfitrioes/aceitar-token')
+      .set(authHeaders('anfitriao', 99, 'cohost@test.local'))
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(mockAceitarPorToken).not.toHaveBeenCalled();
+  });
+
+  it('POST aceitar-token with token calls service', async () => {
+    mockAceitarPorToken.mockResolvedValue({
+      data: { acomodacaoId: 101, titulo: 'Chalé', coanfitrioes: [] },
+    });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/coanfitrioes/aceitar-token')
+      .set(authHeaders('anfitriao', 99, 'cohost@test.local'))
+      .send({ token: 'invite-token-uuid' });
+
+    expect(res.status).toBe(200);
+    expect(mockAceitarPorToken).toHaveBeenCalledWith(
+      { userId: 99, role: 'anfitriao', email: 'cohost@test.local' },
+      'invite-token-uuid',
+    );
   });
 });
