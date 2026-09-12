@@ -53,7 +53,11 @@ import {
 } from './RequisitosHospedeEditor';
 import { SolidariaEditor, summarizeSolidariaClient } from './SolidariaEditor';
 import { IdiomasEditor, summarizeIdiomasClient } from './IdiomasEditor';
-import { LeisLocaisEditor, summarizeLeisLocaisClient } from './LeisLocaisEditor';
+import {
+  LeisLocaisEditor,
+  summarizeLeisLocaisClient,
+  type LeisMeta,
+} from './LeisLocaisEditor';
 import {
   ImpostosEditor,
   summarizeImpostosClient,
@@ -240,6 +244,7 @@ export function AnfitriaoListingEditor({
   const [solidaria, setSolidaria] = useState(Boolean(meta0.hospedagemSolidaria));
   const [idiomas, setIdiomas] = useState<string[]>(meta0.idiomas ?? ['Português']);
   const [impostos, setImpostos] = useState<ImpostosMeta>(meta0.impostos ?? {});
+  const [leis, setLeis] = useState<LeisMeta>(meta0.leis ?? {});
   const [polCurta, setPolCurta] = useState(
     pricing?.politicaCancelamentoCurta ?? unidade.politicaCancelamentoCurta ?? 'limitada',
   );
@@ -386,7 +391,7 @@ export function AnfitriaoListingEditor({
       case 'idiomas':
         return summarizeIdiomasClient(idiomas);
       case 'leis':
-        return summarizeLeisLocaisClient();
+        return summarizeLeisLocaisClient(leis);
       case 'impostos':
         return summarizeImpostosClient(impostos);
       case 'remover':
@@ -442,6 +447,7 @@ export function AnfitriaoListingEditor({
       idiomas,
       guiasLocais: guiasLocais.length > 0 ? guiasLocais : undefined,
       impostos: buildImpostosMetadata(impostos),
+      leis: buildLeisMetadata(leis),
     };
 
     await onSaveUnit({
@@ -843,6 +849,11 @@ export function AnfitriaoListingEditor({
               setImpostos(v);
               markDirty();
             }}
+            leis={leis}
+            setLeis={(v) => {
+              setLeis(v);
+              markDirty();
+            }}
             onEnviarAprovacao={onEnviarAprovacao}
             archived={unidade.ativo === false}
             onArquivar={onArquivar}
@@ -1235,6 +1246,17 @@ function GuiaPanel({
   return <PanelTitle title="Seção" hint="Em construção." />;
 }
 
+function buildLeisMetadata(value: LeisMeta): EditorMeta['leis'] {
+  const payload: LeisMeta = {};
+  if (value.declaracaoAceita === true) payload.declaracaoAceita = true;
+  if (value.licencaNumero?.trim()) {
+    payload.licencaNumero = value.licencaNumero.trim();
+  }
+  if (value.zoneamento?.trim()) payload.zoneamento = value.zoneamento.trim();
+  if (value.notas?.trim()) payload.notas = value.notas.trim();
+  return Object.keys(payload).length ? payload : undefined;
+}
+
 function buildImpostosMetadata(value: ImpostosMeta): EditorMeta['impostos'] {
   const isento = Boolean(value.isento);
   const payload: ImpostosMeta = {};
@@ -1264,6 +1286,8 @@ function PreferenciasPanel({
   setIdiomas,
   impostos,
   setImpostos,
+  leis,
+  setLeis,
   onEnviarAprovacao,
   archived,
   onArquivar,
@@ -1280,6 +1304,8 @@ function PreferenciasPanel({
   setIdiomas: (v: string[]) => void;
   impostos: ImpostosMeta;
   setImpostos: (v: ImpostosMeta) => void;
+  leis: LeisMeta;
+  setLeis: (v: LeisMeta) => void;
   onEnviarAprovacao?: () => Promise<void>;
   archived?: boolean;
   onArquivar?: (motivo?: string) => Promise<void>;
@@ -1313,7 +1339,7 @@ function PreferenciasPanel({
     return <IdiomasEditor value={idiomas} onChange={setIdiomas} />;
   }
   if (section === 'leis') {
-    return <LeisLocaisEditor />;
+    return <LeisLocaisEditor value={leis} onChange={setLeis} />;
   }
   if (section === 'impostos') {
     return <ImpostosEditor value={impostos} onChange={setImpostos} />;
