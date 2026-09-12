@@ -5,6 +5,7 @@
 export const COANFITRIOES_MAX = 10;
 export const COANFITRIOES_NOME_MAX = 120;
 export const COANFITRIOES_EMAIL_MAX = 254;
+export const COANFITRIOES_TELEFONE_MAX = 20;
 export const COANFITRIOES_ID_MAX = 64;
 export const COANFITRIAO_INVITE_TTL_DAYS = 14;
 
@@ -35,6 +36,7 @@ export type ListingCoanfitriao = {
   id: string;
   nome: string;
   email?: string;
+  telefone?: string;
   papel: CoanfitriaoPapel;
   status: CoanfitriaoStatus;
   expiresAt?: string;
@@ -45,6 +47,7 @@ export type CoanfitriaoConviteRow = {
   id: string;
   nome: string;
   email: string;
+  telefone?: string | null;
   papel: string;
   status: string;
   expiresAt?: Date | string | null;
@@ -58,6 +61,7 @@ export function mapConviteRowToListingCoanfitriao(row: CoanfitriaoConviteRow): L
     papel: row.papel as CoanfitriaoPapel,
     status: row.status as CoanfitriaoStatus,
   };
+  if (row.telefone) mapped.telefone = row.telefone;
   if (row.expiresAt != null) {
     const expiry =
       row.expiresAt instanceof Date ? row.expiresAt : new Date(row.expiresAt);
@@ -108,6 +112,39 @@ export function maskEmail(email: string): string {
   const domain = email.slice(at + 1);
   const visible = local.slice(0, 1);
   return `${visible}***@${domain}`;
+}
+
+/** Normalizes phone to E.164 (+55…) for Brazil-friendly input. */
+export function normalizeCoanfitriaoTelefone(raw: unknown): string | undefined {
+  if (raw == null || raw === '') return undefined;
+  if (typeof raw !== 'string') return undefined;
+
+  let cleaned = raw.replace(CONTROL_CHARS, '').trim();
+  if (!cleaned) return undefined;
+
+  const hasPlus = cleaned.startsWith('+');
+  let digits = cleaned.replace(/\D/g, '');
+  if (!digits) return undefined;
+
+  if (!hasPlus && (digits.length === 10 || digits.length === 11)) {
+    digits = `55${digits}`;
+  } else if (hasPlus && digits.startsWith('55') === false && digits.length >= 10 && digits.length <= 11) {
+    digits = `55${digits}`;
+  }
+
+  const e164 = `+${digits}`;
+  if (!/^\+[1-9]\d{9,14}$/.test(e164)) return undefined;
+  if (digits.startsWith('55') && (digits.length < 12 || digits.length > 13)) return undefined;
+
+  return e164.slice(0, COANFITRIOES_TELEFONE_MAX);
+}
+
+/** Masks phone for safe logs and UI (LGPD). */
+export function maskPhone(telefone: string): string {
+  const normalized = normalizeCoanfitriaoTelefone(telefone) ?? telefone.replace(/\D/g, '');
+  if (normalized.length <= 4) return '***';
+  const visible = normalized.slice(-4);
+  return `***${visible}`;
 }
 
 export function coanfitriaoMatchesEmail(item: ListingCoanfitriao, email: string): boolean {
@@ -248,8 +285,30 @@ export function validateListingCoanfitrioes(
       }
     }
 
+    let telefone: string | undefined;
+    if (Object.prototype.hasOwnProperty.call(src, 'telefone')) {
+      if (src.telefone != null && src.telefone !== '' && typeof src.telefone !== 'string') {
+        return {
+          ok: false,
+          error: 'coanfitrioes_invalido',
+          message: 'Telefone do coanfitrião inválido',
+        };
+      }
+      if (typeof src.telefone === 'string' && src.telefone.trim()) {
+        telefone = normalizeCoanfitriaoTelefone(src.telefone);
+        if (!telefone) {
+          return {
+            ok: false,
+            error: 'coanfitrioes_invalido',
+            message: 'Telefone do coanfitrião inválido',
+          };
+        }
+      }
+    }
+
     const row: ListingCoanfitriao = { id, nome, papel, status };
     if (email) row.email = email;
+    if (telefone) row.telefone = telefone;
     value.push(row);
   }
 

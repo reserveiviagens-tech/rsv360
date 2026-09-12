@@ -60,6 +60,7 @@ import {
   isInviteExpired,
   mapConviteRowToListingCoanfitriao,
   normalizeCoanfitriaoEmail,
+  normalizeCoanfitriaoTelefone,
   papelPermiteCalendario,
   papelPermiteMensagens,
   enrichMetadataWithCoanfitrioes,
@@ -72,6 +73,7 @@ import {
   enviarConviteCoanfitriaoEmail,
   papelToLabel,
 } from './coanfitriao-invite-email.service';
+import { enviarConviteCoanfitriaoSms } from './coanfitriao-invite-sms.service';
 import { validateListingConfigReserva } from './listing-config-reserva.util';
 import { validateListingCancelamento } from './listing-cancelamento.util';
 import { validateListingRegrasCasa } from './listing-regras-casa.util';
@@ -130,6 +132,16 @@ export interface AuthContext {
 function isPgUniqueViolation(err: unknown): boolean {
   const e = err as { code?: string; message?: string };
   return e?.code === '23505' || /unique/i.test(e?.message ?? '');
+}
+
+type InviteDispatchStatus = 'sent' | 'skipped' | 'failed';
+
+function resolveInviteDispatchStatus(result: {
+  ok: boolean;
+  skipped?: boolean;
+}): InviteDispatchStatus {
+  if (result.skipped) return 'skipped';
+  return result.ok ? 'sent' : 'failed';
 }
 
 export async function listCoanfitrioesFromDb(acomodacaoId: number): Promise<ListingCoanfitriao[]> {
@@ -1881,7 +1893,7 @@ export const anfitriaoService = {
   async convidarCoanfitriao(
     auth: AuthContext,
     unidadeId: number,
-    input: { nome: string; email: string; papel: string },
+    input: { nome: string; email: string; papel: string; telefone?: string },
   ) {
     const [row] = await db
       .select()
@@ -1906,6 +1918,12 @@ export const anfitriaoService = {
     }
     const papel = papelRaw as CoanfitriaoPapel;
 
+    let telefone: string | undefined;
+    if (input.telefone != null && String(input.telefone).trim()) {
+      telefone = normalizeCoanfitriaoTelefone(input.telefone);
+      if (!telefone) return { error: 'invalid_telefone' as const };
+    }
+
     let activeCount = await countNonRevogadoCoanfitrioesFromDb(unidadeId);
     if (activeCount === 0) {
       activeCount = readCoanfitrioesFromMetadata(row.metadata).filter(
@@ -1924,6 +1942,7 @@ export const anfitriaoService = {
         acomodacaoId: unidadeId,
         nome,
         email,
+        telefone,
         papel,
         status: 'pendente',
         invitedByUserId: auth.userId,
@@ -1940,7 +1959,7 @@ export const anfitriaoService = {
     const list = await listCoanfitrioesFromDb(unidadeId);
     await syncCoanfitrioesToMetadata(unidadeId, row, list);
 
-    let emailStatus: 'sent' | 'skipped' | 'failed' = 'skipped';
+    let emailStatus: InviteDispatchStatus = 'skipped';
     try {
       const emailResult = await enviarConviteCoanfitriaoEmail({
         destinatarioEmail: email,
@@ -1949,12 +1968,28 @@ export const anfitriaoService = {
         token,
         papelLabel: papelToLabel(papel),
       });
-      emailStatus = emailResult.skipped ? 'skipped' : emailResult.ok ? 'sent' : 'failed';
+      emailStatus = resolveInviteDispatchStatus(emailResult);
     } catch {
       emailStatus = 'failed';
     }
 
-    return { data: list, emailStatus };
+    let smsStatus: InviteDispatchStatus = 'skipped';
+    if (telefone) {
+      try {
+        const smsResult = await enviarConviteCoanfitriaoSms({
+          telefone,
+          nomeConvidado: nome,
+          nomeUnidade: row.titulo,
+          token,
+          papelLabel: papelToLabel(papel),
+        });
+        smsStatus = resolveInviteDispatchStatus(smsResult);
+      } catch {
+        smsStatus = 'failed';
+      }
+    }
+
+    return { data: list, emailStatus, smsStatus };
   },
 
   async revogarCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {
@@ -2019,7 +2054,7 @@ export const anfitriaoService = {
     const list = await listCoanfitrioesFromDb(unidadeId);
     await syncCoanfitrioesToMetadata(unidadeId, row, list);
 
-    let emailStatus: 'sent' | 'skipped' | 'failed' = 'skipped';
+    let emailStatus: InviteDispatchStatus = 'skipped';
     try {
       const emailResult = await enviarConviteCoanfitriaoEmail({
         destinatarioEmail: target.email,
@@ -2028,12 +2063,29 @@ export const anfitriaoService = {
         token,
         papelLabel: papelToLabel(target.papel as CoanfitriaoPapel),
       });
-      emailStatus = emailResult.skipped ? 'skipped' : emailResult.ok ? 'sent' : 'failed';
+      emailStatus = resolveInviteDispatchStatus(emailResult);
     } catch {
       emailStatus = 'failed';
     }
 
-    return { data: list, emailStatus };
+    let smsStatus: InviteDispatchStatus = 'skipped';
+    const telefone = target.telefone ?? undefined;
+    if (telefone) {
+      try {
+        const smsResult = await enviarConviteCoanfitriaoSms({
+          telefone,
+          nomeConvidado: target.nome,
+          nomeUnidade: row.titulo,
+          token,
+          papelLabel: papelToLabel(target.papel as CoanfitriaoPapel),
+        });
+        smsStatus = resolveInviteDispatchStatus(smsResult);
+      } catch {
+        smsStatus = 'failed';
+      }
+    }
+
+    return { data: list, emailStatus, smsStatus };
   },
 
   async aceitarConviteCoanfitriao(auth: AuthContext, unidadeId: number, coId: string) {

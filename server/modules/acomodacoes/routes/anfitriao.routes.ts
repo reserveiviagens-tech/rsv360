@@ -715,13 +715,15 @@ router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
     const nome = typeof req.body?.nome === 'string' ? req.body.nome : '';
     const email = typeof req.body?.email === 'string' ? req.body.email : '';
     const papel = typeof req.body?.papel === 'string' ? req.body.papel : '';
+    const telefone =
+      typeof req.body?.telefone === 'string' ? req.body.telefone : undefined;
     if (!email.trim()) {
       return res.status(400).json({ success: false, error: 'E-mail é obrigatório' });
     }
     const result = await anfitriaoService.convidarCoanfitriao(
       authFromReq(req),
       Number(req.params.id),
-      { nome, email, papel },
+      { nome, email, papel, telefone },
     );
     if ('error' in result) {
       if (result.error === 'forbidden') {
@@ -742,12 +744,16 @@ router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
       if (result.error === 'coanfitrioes_max') {
         return res.status(400).json({ success: false, error: 'Limite de coanfitriões atingido' });
       }
+      if (result.error === 'invalid_telefone') {
+        return res.status(400).json({ success: false, error: 'Telefone inválido' });
+      }
       return res.status(400).json({ success: false, error: 'Não foi possível convidar' });
     }
     res.json({
       success: true,
       data: result.data,
       ...(result.emailStatus ? { emailStatus: result.emailStatus } : {}),
+      ...(result.smsStatus ? { smsStatus: result.smsStatus } : {}),
     });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
@@ -780,6 +786,7 @@ router.post('/unidades/:id/coanfitrioes/:coId/reenviar', ...parceiroAuth, async 
       success: true,
       data: result.data,
       ...(result.emailStatus ? { emailStatus: result.emailStatus } : {}),
+      ...(result.smsStatus ? { smsStatus: result.smsStatus } : {}),
     });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });

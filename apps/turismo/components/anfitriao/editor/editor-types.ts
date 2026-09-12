@@ -141,6 +141,7 @@ export type EditorMeta = {
     id: string;
     nome: string;
     email?: string;
+    telefone?: string;
     papel: 'calendario' | 'mensagens' | 'tudo';
     status: 'pendente' | 'ativo' | 'revogado';
     expiresAt?: string;

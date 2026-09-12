@@ -9,6 +9,7 @@ export const coanfitriaoConvites = pgTable('coanfitriao_convites', {
     .references(() => acomodacoes.id, { onDelete: 'cascade' }),
   nome: varchar('nome', { length: 120 }).notNull(),
   email: varchar('email', { length: 254 }).notNull(),
+  telefone: varchar('telefone', { length: 20 }),
   papel: varchar('papel', { length: 20 }).notNull(),
   status: varchar('status', { length: 20 }).notNull().default('pendente'),
   invitedByUserId: integer('invited_by_user_id').references(() => users.id),

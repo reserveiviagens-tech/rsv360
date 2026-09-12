@@ -373,12 +373,13 @@ export const fase1Api = {
 
   anfitriaoConvidarCoanfitriao: (
     id: number,
-    body: { nome: string; email: string; papel: string },
+    body: { nome: string; email: string; papel: string; telefone?: string },
   ) =>
     fetchJson<{
       success: boolean;
       data: unknown[];
       emailStatus?: 'sent' | 'skipped' | 'failed';
+      smsStatus?: 'sent' | 'skipped' | 'failed';
     }>(`/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes`, {
       method: 'POST',
       body: JSON.stringify(body),
@@ -401,6 +402,7 @@ export const fase1Api = {
       success: boolean;
       data: unknown[];
       emailStatus?: 'sent' | 'skipped' | 'failed';
+      smsStatus?: 'sent' | 'skipped' | 'failed';
     }>(
       `/api/v1/acomodacoes/anfitriao/unidades/${id}/coanfitrioes/${encodeURIComponent(coId)}/reenviar`,
       { method: 'POST', body: '{}' },

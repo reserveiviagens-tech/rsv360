@@ -4,7 +4,9 @@ import {
   findCoanfitriaoAtivoByEmail,
   mapConviteRowToListingCoanfitriao,
   maskEmail,
+  maskPhone,
   normalizeCoanfitriaoEmail,
+  normalizeCoanfitriaoTelefone,
   papelPermiteCalendario,
   papelPermiteMensagens,
   summarizeCoanfitrioes,
@@ -109,6 +111,17 @@ describe('listing-coanfitrioes.util', () => {
     expect(maskEmail('cohost@test.local')).toBe('c***@test.local');
   });
 
+  it('normalizeCoanfitriaoTelefone accepts Brazil local and E.164', () => {
+    expect(normalizeCoanfitriaoTelefone('11999998888')).toBe('+5511999998888');
+    expect(normalizeCoanfitriaoTelefone('(11) 99999-8888')).toBe('+5511999998888');
+    expect(normalizeCoanfitriaoTelefone('+5511999998888')).toBe('+5511999998888');
+    expect(normalizeCoanfitriaoTelefone('123')).toBeUndefined();
+  });
+
+  it('maskPhone hides digits except last four', () => {
+    expect(maskPhone('+5511999998888')).toBe('***8888');
+  });
+
   it('coanfitriaoMatchesEmail is case-insensitive', () => {
     const item = {
       id: 'c1',
@@ -157,6 +170,7 @@ describe('listing-coanfitrioes.util', () => {
         id: 'c1',
         nome: 'Maria',
         email: 'cohost@test.local',
+        telefone: '+5511999998888',
         papel: 'tudo',
         status: 'pendente',
       }),
@@ -164,6 +178,7 @@ describe('listing-coanfitrioes.util', () => {
       id: 'c1',
       nome: 'Maria',
       email: 'cohost@test.local',
+      telefone: '+5511999998888',
       papel: 'tudo',
       status: 'pendente',
     });

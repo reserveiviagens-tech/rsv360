@@ -134,8 +134,60 @@ describe('anfitriao coanfitrioes routes', () => {
     expect(mockConvidar).toHaveBeenCalledWith(
       { userId: 1, role: 'anfitriao', email: 'owner@test.local' },
       101,
-      { nome: 'Maria', email: 'cohost@test.local', papel: 'tudo' },
+      { nome: 'Maria', email: 'cohost@test.local', papel: 'tudo', telefone: undefined },
     );
+  });
+
+  it('POST convidar with optional telefone forwards to service and returns smsStatus', async () => {
+    mockConvidar.mockResolvedValue({
+      data: [
+        {
+          id: 'c1',
+          nome: 'Maria',
+          email: 'cohost@test.local',
+          telefone: '+5511999998888',
+          papel: 'tudo',
+          status: 'pendente',
+        },
+      ],
+      emailStatus: 'sent',
+      smsStatus: 'skipped',
+    });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/unidades/101/coanfitrioes')
+      .set(authHeaders('anfitriao', 1, 'owner@test.local'))
+      .send({
+        nome: 'Maria',
+        email: 'cohost@test.local',
+        papel: 'tudo',
+        telefone: '11999998888',
+      });
+
+    expect(res.status).toBe(200);
+    expect(mockConvidar).toHaveBeenCalledWith(
+      { userId: 1, role: 'anfitriao', email: 'owner@test.local' },
+      101,
+      { nome: 'Maria', email: 'cohost@test.local', papel: 'tudo', telefone: '11999998888' },
+    );
+    expect(res.body.smsStatus).toBe('skipped');
+  });
+
+  it('POST convidar with invalid telefone -> 400', async () => {
+    mockConvidar.mockResolvedValue({ error: 'invalid_telefone' });
+
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/unidades/101/coanfitrioes')
+      .set(authHeaders('anfitriao', 1, 'owner@test.local'))
+      .send({
+        nome: 'Maria',
+        email: 'cohost@test.local',
+        papel: 'tudo',
+        telefone: 'abc',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/telefone/i);
   });
 
   it('POST aceitar without matching invite email -> 403', async () => {
@@ -215,6 +267,7 @@ describe('anfitriao coanfitrioes routes', () => {
         },
       ],
       emailStatus: 'sent',
+      smsStatus: 'sent',
     });
 
     const res = await request(buildApp())
@@ -229,6 +282,7 @@ describe('anfitriao coanfitrioes routes', () => {
       'c1',
     );
     expect(res.body.emailStatus).toBe('sent');
+    expect(res.body.smsStatus).toBe('sent');
   });
 
   it('POST aceitar with expired invite returns 410', async () => {
