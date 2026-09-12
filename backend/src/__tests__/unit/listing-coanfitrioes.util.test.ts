@@ -10,6 +10,7 @@ import {
   papelPermiteCalendario,
   papelPermiteMensagens,
   summarizeCoanfitrioes,
+  stripCoanfitrioesFromMetadataRecord,
   validateListingCoanfitrioes,
 } from '../../../../server/modules/acomodacoes/services/listing-coanfitrioes.util';
 
@@ -203,5 +204,16 @@ describe('listing-coanfitrioes.util', () => {
         { id: 'c1', nome: 'Ana', papel: 'tudo', status: 'revogado' },
       ]),
     ).toBeNull();
+  });
+
+  it('stripCoanfitrioesFromMetadataRecord removes mirror key only when present', () => {
+    const withKey = { titulo: 'X', coanfitrioes: [{ id: 'c1' }] };
+    expect(stripCoanfitrioesFromMetadataRecord(withKey)).toBe(true);
+    expect(withKey).toEqual({ titulo: 'X' });
+    expect(Object.prototype.hasOwnProperty.call(withKey, 'coanfitrioes')).toBe(false);
+
+    const without = { titulo: 'Y' };
+    expect(stripCoanfitrioesFromMetadataRecord(without)).toBe(false);
+    expect(without).toEqual({ titulo: 'Y' });
   });
 });
