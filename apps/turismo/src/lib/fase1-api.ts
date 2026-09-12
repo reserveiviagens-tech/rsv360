@@ -723,6 +723,12 @@ export const fase1Api = {
       },
     ),
 
+  anfitriaoCriarPreviewLink: (id: number) =>
+    fetchJson<{ success: boolean; data: { url: string; expiresAt: string } }>(
+      `/api/v1/acomodacoes/anfitriao/unidades/${id}/preview-link`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+
   anfitriaoIcalToken: (id: number, opts?: { regenerate?: boolean }) =>
     fetchJson<{ success: boolean; data: { icalToken: string; regenerated?: boolean } }>(
       `/api/v1/acomodacoes/anfitriao/unidades/${id}/ical-token`,

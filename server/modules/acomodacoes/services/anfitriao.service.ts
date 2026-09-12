@@ -93,6 +93,11 @@ import {
   type ConjuntoRegras,
 } from './listing-conjuntos-regras.util';
 import { buildImpostosExportCsv } from './listing-impostos-export.util';
+import {
+  generatePreviewToken,
+  previewExpiresAtFromNow,
+  resolvePreviewPublicUrl,
+} from './listing-preview-token.util';
 import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
 import {
   ativoFilterWhere,
@@ -2152,6 +2157,38 @@ export const anfitriaoService = {
     await syncCoanfitrioesToMetadata(unidadeId, row, list);
 
     return { data: list };
+  },
+
+  async criarPreviewLink(auth: AuthContext, unidadeId: number) {
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, unidadeId))
+      .limit(1);
+    if (!row) return { error: 'not_found' as const };
+    if (!(await podeGerenciarUnidade(auth, row))) return { error: 'forbidden' as const };
+
+    const { raw, hash } = generatePreviewToken();
+    const expiresAt = previewExpiresAtFromNow();
+
+    await db
+      .update(acomodacoes)
+      .set({
+        previewTokenHash: hash,
+        previewExpiresAt: expiresAt,
+        atualizadoEm: new Date(),
+      })
+      .where(eq(acomodacoes.id, unidadeId));
+
+    const previewPath = `/h/preview/${raw}`;
+
+    return {
+      data: {
+        url: resolvePreviewPublicUrl(previewPath),
+        previewPath,
+        expiresAt: expiresAt.toISOString(),
+      },
+    };
   },
 
   async exportImpostosCsv(

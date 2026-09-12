@@ -70,6 +70,8 @@ export const acomodacoes = pgTable('acomodacoes', {
   checkinDiasPermitidos: jsonb('checkin_dias_permitidos'),
   checkoutDiasPermitidos: jsonb('checkout_dias_permitidos'),
   icalToken: varchar('ical_token', { length: 64 }),
+  previewTokenHash: varchar('preview_token_hash', { length: 128 }),
+  previewExpiresAt: timestamp('preview_expires_at', { withTimezone: true }),
   icalImportUrl: text('ical_import_url'),
   icalImportLastSyncAt: timestamp('ical_import_last_sync_at', { withTimezone: true }),
   icalImportLastStatus: varchar('ical_import_last_status', { length: 16 }),

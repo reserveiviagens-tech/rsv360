@@ -114,6 +114,30 @@ router.post('/unidades/desarquivar-bulk', ...parceiroAuth, async (req, res) => {
   }
 });
 
+router.post('/unidades/:id/preview-link', ...parceiroAuth, async (req, res) => {
+  try {
+    const result = await anfitriaoService.criarPreviewLink(
+      authFromReq(req),
+      Number(req.params.id),
+    );
+    if ('error' in result) {
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({
+      success: true,
+      data: {
+        url: result.data.url,
+        expiresAt: result.data.expiresAt,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/unidades/:id/ical-token', ...masterAuth, async (req, res) => {
   try {
     const regenerate = Boolean(req.body?.regenerate);

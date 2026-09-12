@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../../../lib/db';
 import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { disponibilidadeAcomodacao } from '../../../../backend/src/db/schema/disponibilidade-acomodacao';
@@ -17,6 +17,95 @@ import {
   resolveModoReserva,
 } from './listing-slug.util';
 import { normalizeMidia } from './anfitriao-midia.util';
+import { hashPreviewToken } from './listing-preview-token.util';
+
+export type PublicListingPayload = {
+  id: number;
+  slug: string | null;
+  titulo: string;
+  hotelId: string;
+  precoDiaria: number | null;
+  capacidadeMax: number;
+  quartos: number;
+  amenidades: unknown;
+  midia: { capa: string | null; fotos: string[] };
+  descricao: string | null;
+  localizacao: {
+    bairro: string | null;
+    cidade: string | null;
+    uf: string | null;
+    mostrarExata: boolean;
+    endereco: string | null;
+  };
+  modoReserva: 'instantanea' | 'aprovar';
+  localVerificado: boolean;
+  mensagemPreReserva: string | null;
+  isPreview?: boolean;
+};
+
+function mapRowToPublicListing(
+  row: typeof acomodacoes.$inferSelect,
+  opts?: { slug?: string | null; isPreview?: boolean },
+): PublicListingPayload {
+  const meta =
+    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+  const midia = normalizeMidia(row.midia);
+  const desc =
+    meta.descricaoDetalhada &&
+    typeof meta.descricaoDetalhada === 'object' &&
+    !Array.isArray(meta.descricaoDetalhada)
+      ? (meta.descricaoDetalhada as Record<string, unknown>)
+      : {};
+  const loc =
+    meta.localizacao && typeof meta.localizacao === 'object' && !Array.isArray(meta.localizacao)
+      ? (meta.localizacao as Record<string, unknown>)
+      : {};
+  const ver =
+    meta.verificacaoLocal &&
+    typeof meta.verificacaoLocal === 'object' &&
+    !Array.isArray(meta.verificacaoLocal)
+      ? (meta.verificacaoLocal as Record<string, unknown>)
+      : {};
+
+  const slugFromMeta =
+    typeof meta.slugPersonalizado === 'string' ? normalizeListingSlug(meta.slugPersonalizado) : null;
+  const slug = opts?.slug !== undefined ? opts.slug : slugFromMeta;
+
+  const payload: PublicListingPayload = {
+    id: row.id,
+    slug: slug && isValidListingSlug(slug) ? slug : null,
+    titulo: row.titulo,
+    hotelId: row.hotelId,
+    precoDiaria: row.precoDiaria != null ? Number(row.precoDiaria) : null,
+    capacidadeMax: row.capacidadeMax,
+    quartos: row.quartos,
+    amenidades: row.amenidades,
+    midia: {
+      capa: midia.capa,
+      fotos: midia.fotos.slice(0, 24),
+    },
+    descricao: typeof desc.anuncio === 'string' ? desc.anuncio : null,
+    localizacao: {
+      bairro: typeof loc.bairro === 'string' ? loc.bairro : null,
+      cidade: typeof loc.cidade === 'string' ? loc.cidade : null,
+      uf: typeof loc.uf === 'string' ? loc.uf : null,
+      mostrarExata: Boolean(loc.mostrarExata),
+      endereco: loc.mostrarExata && typeof loc.endereco === 'string' ? loc.endereco : null,
+    },
+    modoReserva: resolveModoReserva(meta.modoReserva),
+    localVerificado: ver.status === 'aprovado',
+    mensagemPreReserva:
+      typeof meta.mensagemPreReserva === 'string' ? meta.mensagemPreReserva.slice(0, 400) : null,
+  };
+
+  if (opts?.isPreview) {
+    payload.isPreview = true;
+  }
+
+  return payload;
+}
 
 export interface ListarAcomodacoesInput {
   hotelId: string;
@@ -275,54 +364,29 @@ export const acomodacoesService = {
 
     if (!row) return null;
 
-    const meta =
-      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : {};
-    const midia = normalizeMidia(row.midia);
-    const desc =
-      meta.descricaoDetalhada &&
-      typeof meta.descricaoDetalhada === 'object' &&
-      !Array.isArray(meta.descricaoDetalhada)
-        ? (meta.descricaoDetalhada as Record<string, unknown>)
-        : {};
-    const loc =
-      meta.localizacao && typeof meta.localizacao === 'object' && !Array.isArray(meta.localizacao)
-        ? (meta.localizacao as Record<string, unknown>)
-        : {};
-    const ver =
-      meta.verificacaoLocal &&
-      typeof meta.verificacaoLocal === 'object' &&
-      !Array.isArray(meta.verificacaoLocal)
-        ? (meta.verificacaoLocal as Record<string, unknown>)
-        : {};
+    return mapRowToPublicListing(row, { slug });
+  },
 
-    return {
-      id: row.id,
-      slug,
-      titulo: row.titulo,
-      hotelId: row.hotelId,
-      precoDiaria: row.precoDiaria != null ? Number(row.precoDiaria) : null,
-      capacidadeMax: row.capacidadeMax,
-      quartos: row.quartos,
-      amenidades: row.amenidades,
-      midia: {
-        capa: midia.capa,
-        fotos: midia.fotos.slice(0, 24),
-      },
-      descricao: typeof desc.anuncio === 'string' ? desc.anuncio : null,
-      localizacao: {
-        bairro: typeof loc.bairro === 'string' ? loc.bairro : null,
-        cidade: typeof loc.cidade === 'string' ? loc.cidade : null,
-        uf: typeof loc.uf === 'string' ? loc.uf : null,
-        mostrarExata: Boolean(loc.mostrarExata),
-        endereco: loc.mostrarExata && typeof loc.endereco === 'string' ? loc.endereco : null,
-      },
-      modoReserva: resolveModoReserva(meta.modoReserva),
-      localVerificado: ver.status === 'aprovado',
-      mensagemPreReserva:
-        typeof meta.mensagemPreReserva === 'string' ? meta.mensagemPreReserva.slice(0, 400) : null,
-    };
+  /**
+   * Public listing by short-lived preview token (any publication status).
+   * Same sanitized shape as obterPublicoPorSlug; includes isPreview flag.
+   */
+  async obterPublicoPorPreviewToken(rawToken: string) {
+    const trimmed = String(rawToken ?? '').trim();
+    if (!trimmed || trimmed.length > 128) return null;
+
+    const hash = hashPreviewToken(trimmed);
+    const now = new Date();
+
+    const [row] = await db
+      .select()
+      .from(acomodacoes)
+      .where(and(eq(acomodacoes.previewTokenHash, hash), gt(acomodacoes.previewExpiresAt, now)))
+      .limit(1);
+
+    if (!row) return null;
+
+    return mapRowToPublicListing(row, { isPreview: true });
   },
 
   async listarAddons(escopo = 'hotel') {

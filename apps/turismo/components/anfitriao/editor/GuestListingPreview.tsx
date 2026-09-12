@@ -1,14 +1,27 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { fase1Api } from '@/lib/fase1-api';
 import type { GuestPreviewModel } from './build-guest-preview-model';
 
 type Props = {
   model: GuestPreviewModel;
+  unitId?: number;
   onClose: () => void;
 };
 
-export function GuestListingPreview({ model, onClose }: Props) {
+function formatExpiresHint(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return iso;
+  }
+}
+
+export function GuestListingPreview({ model, unitId, onClose }: Props) {
+  const [previewLinkStatus, setPreviewLinkStatus] = useState<'idle' | 'loading' | 'copied' | 'error'>('idle');
+  const [previewExpiresAt, setPreviewExpiresAt] = useState<string | null>(null);
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -159,21 +172,67 @@ export function GuestListingPreview({ model, onClose }: Props) {
           </div>
         </div>
 
-        {model.publicPageUrl ? (
-          <div className="shrink-0 border-t border-stone-200 bg-white px-4 py-3">
-            <a
-              href={model.publicPageUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex text-sm font-medium text-teal-800 underline hover:text-teal-900"
-            >
-              Abrir página pública
-            </a>
-            <p className="mt-1 text-xs text-stone-500">
-              Link da versão publicada salva no servidor (pode diferir do rascunho atual).
-            </p>
-          </div>
-        ) : null}
+        <div className="shrink-0 space-y-3 border-t border-stone-200 bg-white px-4 py-3">
+          {unitId != null ? (
+            <div>
+              <button
+                type="button"
+                disabled={previewLinkStatus === 'loading'}
+                onClick={() => {
+                  void (async () => {
+                    setPreviewLinkStatus('loading');
+                    try {
+                      const res = await fase1Api.anfitriaoCriarPreviewLink(unitId);
+                      const url = res?.data?.url;
+                      if (!url) throw new Error('Resposta inválida');
+                      await navigator.clipboard.writeText(url);
+                      setPreviewExpiresAt(res.data.expiresAt ?? null);
+                      setPreviewLinkStatus('copied');
+                    } catch {
+                      setPreviewLinkStatus('error');
+                    }
+                  })();
+                }}
+                className="inline-flex items-center rounded-lg bg-teal-800 px-3 py-2 text-sm font-medium text-white hover:bg-teal-900 disabled:opacity-60"
+              >
+                {previewLinkStatus === 'loading'
+                  ? 'Gerando link…'
+                  : previewLinkStatus === 'copied'
+                    ? 'Link copiado!'
+                    : 'Copiar link de pré-visualização'}
+              </button>
+              {previewLinkStatus === 'copied' && previewExpiresAt ? (
+                <p className="mt-1.5 text-xs text-stone-600">
+                  Válido até {formatExpiresHint(previewExpiresAt)} (72 h).
+                </p>
+              ) : null}
+              {previewLinkStatus === 'error' ? (
+                <p className="mt-1.5 text-xs text-red-700">
+                  Não foi possível gerar o link. Tente novamente.
+                </p>
+              ) : null}
+              <p className="mt-1 text-xs text-stone-500">
+                Compartilhe só com quem deve ver o rascunho. O link expira em 72 horas.
+              </p>
+            </div>
+          ) : null}
+
+          {model.publicPageUrl ? (
+            <div>
+              <a
+                href={model.publicPageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex text-sm font-medium text-teal-800 underline hover:text-teal-900"
+              >
+                Abrir página pública
+              </a>
+              <p className="mt-1 text-xs text-stone-500">
+                Link da versão publicada salva no servidor (pode diferir do rascunho atual).
+              </p>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

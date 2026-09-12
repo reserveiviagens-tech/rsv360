@@ -386,6 +386,13 @@
       "when": 1788563000000,
       "tag": "0054_coanfitriao_convites_expires_at",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1788564000000,
+      "tag": "0055_acomodacoes_preview_token",
+      "breakpoints": true
     }
   ]
 }
