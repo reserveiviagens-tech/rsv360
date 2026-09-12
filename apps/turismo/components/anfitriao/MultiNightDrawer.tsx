@@ -32,7 +32,6 @@ type Props = {
   onSavePrices: (preco: number) => void;
   onSaveBasePrice: () => void;
   onSaveCustom: () => void;
-  onOpenCompare: () => void;
   conjuntosRegras?: ConjuntoRegrasView[];
   smartPricingAtivo?: boolean;
   applyRange?: { de: string; ate: string } | null;
@@ -67,7 +66,6 @@ export function MultiNightDrawer({
   onSavePrices,
   onSaveBasePrice,
   onSaveCustom,
-  onOpenCompare,
   conjuntosRegras = [],
   smartPricingAtivo = false,
   applyRange = null,
@@ -111,11 +109,6 @@ export function MultiNightDrawer({
     summary.baseMin != null &&
     summary.precoMin != null &&
     summary.baseMin > summary.precoMin + 0.009;
-
-  const similarBand = {
-    min: Math.round(precoSugerido * 1.6),
-    max: Math.round(precoSugerido * 2.5),
-  };
 
   const priceDirty =
     editingPrice &&
@@ -206,14 +199,6 @@ export function MultiNightDrawer({
     return (
       <div className="space-y-3">
         <div className="mb-1 flex items-center justify-between gap-2 px-1">
-          <button
-            type="button"
-            aria-label="Ajuda"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-sm text-slate-600"
-            onClick={onOpenCompare}
-          >
-            ?
-          </button>
           <p className="text-sm font-semibold text-slate-800">
             {summary.total} noite{summary.total === 1 ? '' : 's'}
           </p>
@@ -249,13 +234,6 @@ export function MultiNightDrawer({
               </button>
             )}
           </div>
-          <button
-            type="button"
-            className="mt-3 text-left text-sm text-slate-300 underline-offset-2 hover:underline"
-            onClick={onOpenCompare}
-          >
-            Anúncios parecidos de {moneyBr(similarBand.min)} a {moneyBr(similarBand.max)}
-          </button>
           <div className="mt-6 flex items-center justify-between">
             <button
               type="button"
@@ -352,14 +330,7 @@ export function MultiNightDrawer({
             ←
           </button>
           <h2 className="text-lg font-bold text-slate-900">Preço básico</h2>
-          <button
-            type="button"
-            aria-label="Ajuda"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-sm"
-            onClick={onOpenCompare}
-          >
-            ?
-          </button>
+          <span className="h-9 w-9" aria-hidden />
         </div>
 
         <div className="flex items-center gap-2">
