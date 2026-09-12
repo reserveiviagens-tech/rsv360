@@ -891,6 +891,7 @@ export function AnfitriaoListingEditor({
       {previewOpen ? (
         <GuestListingPreview
           model={guestPreviewModel}
+          unitId={unitId}
           onClose={() => setPreviewOpen(false)}
         />
       ) : null}

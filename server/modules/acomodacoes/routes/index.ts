@@ -19,6 +19,21 @@ router.get('/health', (_req, res) => {
   res.json({ module: 'acomodacoes', status: 'ok' });
 });
 
+/** Público — anúncio por token de pré-visualização (/h/preview/[token]). */
+router.get('/publico/preview/:token', publicLimiter, async (req, res) => {
+  try {
+    const data = await acomodacoesService.obterPublicoPorPreviewToken(
+      String(req.params.token ?? ''),
+    );
+    if (!data) {
+      return res.status(404).json({ success: false, error: 'Anúncio não encontrado' });
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 /** Público — anúncio por slug personalizado (/h/[slug]). */
 router.get('/publico/by-slug/:slug', publicLimiter, async (req, res) => {
   try {
