@@ -1366,37 +1366,17 @@ router.post(
                 : 'Conjunto não encontrado',
           });
         }
-        if (result.error === 'range_exceeded') {
-          return res.status(400).json({
-            success: false,
-            error:
-              'message' in result && typeof result.message === 'string'
-                ? result.message
-                : 'Intervalo excede o máximo permitido',
-          });
-        }
-        if (result.error === 'invalid_dates') {
-          return res.status(400).json({
-            success: false,
-            error:
-              'message' in result && typeof result.message === 'string'
-                ? result.message
-                : 'Datas inválidas',
-          });
-        }
-        if (result.error === 'day_reserved') {
+        if (result.error === 'day_reserved' || result.error === 'day_reserved_conflict') {
           return res.status(403).json({
             success: false,
             error: 'Dia reservado não pode ser alterado',
           });
         }
-        return res.status(400).json({
-          success: false,
-          error:
-            'message' in result && typeof result.message === 'string'
-              ? result.message
-              : result.error,
-        });
+        const message =
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : String(result.error);
+        return res.status(400).json({ success: false, error: message });
       }
       res.json({ success: true, data: result });
     } catch (error) {
