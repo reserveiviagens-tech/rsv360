@@ -12,6 +12,7 @@ import { tarifaTemporada, tarifaTemporadaPeriodo } from '../../../../backend/src
 import { tarifaService } from './tarifa.service';
 import {
   anfitriaoService,
+  resolveConjuntosRegrasForRead,
   type AuthContext,
 } from './anfitriao.service';
 import {
@@ -42,7 +43,6 @@ import {
   toIcalDate,
 } from './ical.util';
 import { randomBytes } from 'crypto';
-import { readConjuntosRegrasFromMetadata } from './listing-conjuntos-regras.util';
 import { enumerateDatesInclusive } from './anfitriao-reservas.util';
 import { isDataValida } from './anfitriao-bulk.util';
 
@@ -542,7 +542,7 @@ export const rateCalendarService = {
         ate,
         canEditPricing: MASTER_ROLES.has(auth.role),
         canApplyDiscount: BROKER_ROLES.has(auth.role) || STAFF_ROLES.has(auth.role),
-        conjuntosRegras: readConjuntosRegrasFromMetadata(unit.metadata),
+        conjuntosRegras: await resolveConjuntosRegrasForRead(acomodacaoId, unit.metadata),
       },
     };
   },
@@ -581,7 +581,7 @@ export const rateCalendarService = {
     if ('error' in unitResult) return unitResult;
 
     const unit = unitResult.data;
-    const conjuntos = readConjuntosRegrasFromMetadata(unit.metadata);
+    const conjuntos = await resolveConjuntosRegrasForRead(acomodacaoId, unit.metadata);
     const conjunto = conjuntos.find((c) => c.id === conjuntoId);
     if (!conjunto) {
       return { error: 'conjunto_not_found' as const, message: 'Conjunto de regras não encontrado' };

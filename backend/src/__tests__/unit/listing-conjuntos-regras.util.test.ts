@@ -1,5 +1,6 @@
 import {
   CONJUNTOS_REGRAS_MAX,
+  mapConjuntoRegrasRowToConjuntoRegras,
   summarizeConjuntoRegras,
   validateListingConjuntosRegras,
 } from '../../../../server/modules/acomodacoes/services/listing-conjuntos-regras.util';
@@ -100,5 +101,47 @@ describe('listing-conjuntos-regras.util', () => {
     if (r.ok) {
       expect(r.value?.[0]?.cor).toBe('slate');
     }
+  });
+
+  it('maps DB row to API conjunto shape', () => {
+    expect(
+      mapConjuntoRegrasRowToConjuntoRegras({
+        id: VALID_ID,
+        nome: 'Alta temporada',
+        cor: 'amber',
+        precoPorNoite: '420.00',
+        ajustePct: null,
+        minNoites: 2,
+        maxNoites: 14,
+        checkinDiasBloqueados: [0, 6],
+      }),
+    ).toEqual({
+      id: VALID_ID,
+      nome: 'Alta temporada',
+      cor: 'amber',
+      precoPorNoite: 420,
+      minNoites: 2,
+      maxNoites: 14,
+      checkinDiasBloqueados: [0, 6],
+    });
+  });
+
+  it('omits empty optional fields when mapping DB row', () => {
+    expect(
+      mapConjuntoRegrasRowToConjuntoRegras({
+        id: VALID_ID,
+        nome: 'Básico',
+        cor: 'slate',
+        precoPorNoite: null,
+        ajustePct: null,
+        minNoites: null,
+        maxNoites: null,
+        checkinDiasBloqueados: null,
+      }),
+    ).toEqual({
+      id: VALID_ID,
+      nome: 'Básico',
+      cor: 'slate',
+    });
   });
 });

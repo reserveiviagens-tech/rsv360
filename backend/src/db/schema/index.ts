@@ -27,6 +27,7 @@ export * from './reservas-cotacao';
 export * from './tipos-acomodacao';
 export * from './acomodacoes';
 export * from './coanfitriao-convites';
+export * from './conjuntos-regras';
 export * from './empreendimentos';
 export * from './carteira-corretor';
 export * from './disponibilidade-acomodacao';

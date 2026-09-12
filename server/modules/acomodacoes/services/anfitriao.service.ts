@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../lib/db';
 import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { coanfitriaoConvites } from '../../../../backend/src/db/schema/coanfitriao-convites';
+import { conjuntosRegras } from '../../../../backend/src/db/schema/conjuntos-regras';
 import { carteiraCorretor } from '../../../../backend/src/db/schema/carteira-corretor';
 import {
   disponibilidadeAcomodacao,
@@ -79,7 +80,12 @@ import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
 import { validateListingLeis } from './listing-leis.util';
-import { validateListingConjuntosRegras } from './listing-conjuntos-regras.util';
+import {
+  mapConjuntoRegrasRowToConjuntoRegras,
+  readConjuntosRegrasFromMetadata,
+  validateListingConjuntosRegras,
+  type ConjuntoRegras,
+} from './listing-conjuntos-regras.util';
 import { buildImpostosExportCsv } from './listing-impostos-export.util';
 import { validateMotivoArquivar, validateMotivoDesarquivar } from './listing-arquivar.util';
 import {
@@ -148,6 +154,62 @@ async function resolveCoanfitrioesForRbac(
   const fromDb = await listCoanfitrioesFromDb(acomodacaoId);
   if (fromDb.length > 0) return fromDb;
   return readCoanfitrioesFromMetadata(metadata);
+}
+
+export async function listConjuntosRegrasFromDb(acomodacaoId: number): Promise<ConjuntoRegras[]> {
+  const rows = await db
+    .select()
+    .from(conjuntosRegras)
+    .where(eq(conjuntosRegras.acomodacaoId, acomodacaoId))
+    .orderBy(conjuntosRegras.criadoEm);
+  return rows.map(mapConjuntoRegrasRowToConjuntoRegras);
+}
+
+export async function resolveConjuntosRegrasForRead(
+  acomodacaoId: number,
+  metadata: unknown,
+): Promise<ConjuntoRegras[]> {
+  const fromDb = await listConjuntosRegrasFromDb(acomodacaoId);
+  if (fromDb.length > 0) return fromDb;
+  return readConjuntosRegrasFromMetadata(metadata);
+}
+
+async function syncConjuntosRegrasToDb(
+  acomodacaoId: number,
+  list: ConjuntoRegras[] | undefined,
+): Promise<void> {
+  await db.delete(conjuntosRegras).where(eq(conjuntosRegras.acomodacaoId, acomodacaoId));
+  if (!list || list.length === 0) return;
+
+  const now = new Date();
+  await db.insert(conjuntosRegras).values(
+    list.map((conjunto) => ({
+      id: conjunto.id,
+      acomodacaoId,
+      nome: conjunto.nome,
+      cor: conjunto.cor,
+      precoPorNoite:
+        conjunto.precoPorNoite != null ? String(conjunto.precoPorNoite) : null,
+      ajustePct: conjunto.ajustePct != null ? String(conjunto.ajustePct) : null,
+      minNoites: conjunto.minNoites ?? null,
+      maxNoites: conjunto.maxNoites ?? null,
+      checkinDiasBloqueados: conjunto.checkinDiasBloqueados ?? null,
+      criadoEm: now,
+      atualizadoEm: now,
+    })),
+  );
+}
+
+function enrichMetadataWithConjuntosRegras(
+  metadata: unknown,
+  list: ConjuntoRegras[],
+): Record<string, unknown> {
+  const base =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+      ? { ...(metadata as Record<string, unknown>) }
+      : {};
+  base.conjuntosRegras = list.length > 0 ? list : undefined;
+  return base;
 }
 
 async function syncCoanfitrioesToMetadata(
@@ -283,7 +345,14 @@ export const anfitriaoService = {
     if (!row) return { error: 'not_found' };
     const ok = await podeVerUnidade(auth, row);
     if (!ok) return { error: 'forbidden' };
-    return { data: row };
+
+    const conjuntos = await resolveConjuntosRegrasForRead(row.id, row.metadata);
+    return {
+      data: {
+        ...row,
+        metadata: enrichMetadataWithConjuntosRegras(row.metadata, conjuntos),
+      },
+    };
   },
 
   async atualizarUnidade(
@@ -706,6 +775,7 @@ export const anfitriaoService = {
       if (!conjuntos.ok) {
         return { error: conjuntos.error, message: conjuntos.message };
       }
+      await syncConjuntosRegrasToDb(id, conjuntos.value);
       (metadataPatch as Record<string, unknown>).conjuntosRegras = conjuntos.value;
     }
 

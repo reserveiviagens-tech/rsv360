@@ -30,6 +30,43 @@ export type ConjuntoRegras = {
   checkinDiasBloqueados?: number[];
 };
 
+/** Row shape from conjuntos_regras table (mapping helper input). */
+export type ConjuntoRegrasDbRow = {
+  id: string;
+  nome: string;
+  cor: string;
+  precoPorNoite: string | null;
+  ajustePct: string | null;
+  minNoites: number | null;
+  maxNoites: number | null;
+  checkinDiasBloqueados: number[] | null;
+};
+
+function parseDbNumeric(raw: string | null): number | undefined {
+  if (raw == null || raw === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return undefined;
+  return n;
+}
+
+export function mapConjuntoRegrasRowToConjuntoRegras(row: ConjuntoRegrasDbRow): ConjuntoRegras {
+  const value: ConjuntoRegras = {
+    id: row.id,
+    nome: row.nome,
+    cor: row.cor,
+  };
+  const preco = parseDbNumeric(row.precoPorNoite);
+  if (preco !== undefined) value.precoPorNoite = preco;
+  const pct = parseDbNumeric(row.ajustePct);
+  if (pct !== undefined) value.ajustePct = pct;
+  if (row.minNoites != null) value.minNoites = row.minNoites;
+  if (row.maxNoites != null) value.maxNoites = row.maxNoites;
+  if (Array.isArray(row.checkinDiasBloqueados) && row.checkinDiasBloqueados.length > 0) {
+    value.checkinDiasBloqueados = row.checkinDiasBloqueados;
+  }
+  return value;
+}
+
 export type ConjuntosRegrasValidationOk = { ok: true; value: ConjuntoRegras[] | undefined };
 export type ConjuntosRegrasValidationErr = {
   ok: false;
