@@ -17,6 +17,7 @@ import {
   getGuestFeedbackReviewsStatus,
 } from './anfitriao-reviews.service';
 import { roundReviewMedia } from './anfitriao-reviews.util';
+import { buildImpostosReceitaMensalCsv } from './listing-impostos-receita-export.util';
 
 function daysInclusive(de: string, ate: string): number {
   const a = new Date(`${de}T12:00:00`);
@@ -294,5 +295,35 @@ export const desempenhoService = {
       ),
     ];
     return lines.join('\n');
+  },
+
+  /**
+   * Monthly fiscal estimate CSV (receita × aliquotaPct). Excludes co-host access.
+   * Not an NFSe — estimate only from listing metadata.impostos.
+   */
+  async relatorioFiscalCsv(auth: AuthContext, mes?: string): Promise<string> {
+    const ym = mes && /^\d{4}-\d{2}$/.test(mes) ? mes : currentYearMonth();
+    const { de, ate } = monthBounds(ym);
+    const { items } = await anfitriaoService.listarMinhas(auth, 1, 5000);
+    const exportable = items.filter((unit) => unit.acessoComo !== 'coanfitriao');
+
+    const reservasResult = await anfitriaoService.listarReservas(auth, { de, ate });
+    const reservas = 'error' in reservasResult ? [] : reservasResult.data;
+    const receitaByUnit = new Map<number, number>();
+    for (const r of reservas) {
+      if (!exportable.some((u) => u.id === r.acomodacaoId)) continue;
+      const valor = Number(r.valorTotal) || 0;
+      receitaByUnit.set(r.acomodacaoId, (receitaByUnit.get(r.acomodacaoId) || 0) + valor);
+    }
+
+    return buildImpostosReceitaMensalCsv(
+      exportable.map((u) => ({
+        acomodacaoId: u.id,
+        titulo: u.titulo,
+        receita: receitaByUnit.get(u.id) || 0,
+        metadata: u.metadata,
+      })),
+      { mes: ym, de, ate },
+    );
   },
 };

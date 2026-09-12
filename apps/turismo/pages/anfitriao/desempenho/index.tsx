@@ -159,6 +159,28 @@ export default function AnfitriaoDesempenhoPage() {
       .catch((e) => setErro((e as Error).message));
   }
 
+  function downloadFiscalCsv() {
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('access_token') || localStorage.getItem('token') || ''
+        : '';
+    const url = `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/impostos/relatorio-mensal.csv?mes=${encodeURIComponent(mes)}`;
+    void fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(async (r) => {
+        if (!r.ok) {
+          const json = (await r.json().catch(() => ({}))) as { error?: string };
+          throw new Error(json.error || 'Falha ao baixar relatório fiscal');
+        }
+        const blob = await r.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `fiscal-mensal-rsv360-${mes}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch((e) => setErro((e as Error).message));
+  }
+
   const navItems: Array<{ id: NavId; label: string }> = [
     { id: 'oportunidades', label: 'Oportunidades' },
     { id: 'qualidade', label: 'Qualidade' },
@@ -209,13 +231,23 @@ export default function AnfitriaoDesempenhoPage() {
                   onChange={(e) => setMes(e.target.value)}
                 />
               </label>
-              <button
-                type="button"
-                onClick={downloadCsv}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
-              >
-                Baixar CSV
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={downloadCsv}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+                >
+                  Baixar CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadFiscalCsv}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+                  title="Estimativa receita × alíquota do mês (não é NFSe)"
+                >
+                  Exportar fiscal do mês
+                </button>
+              </div>
             </div>
 
             {erro && <p className="mb-4 text-sm text-red-600">{erro}</p>}
