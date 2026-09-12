@@ -106,12 +106,3 @@ export function isCustomObservacao(obs: string | null | undefined): boolean {
   const v = obs.trim().toLowerCase();
   return v !== 'bloqueado' && v !== 'reservado';
 }
-
-/** Heuristic similar-listing band for Compare modal (no external map API). */
-export function similarListingsBand(precoSugerido: number): { min: number; max: number } {
-  const mid = Math.max(80, precoSugerido);
-  return {
-    min: Math.round(mid * 1.6),
-    max: Math.round(mid * 2.5),
-  };
-}

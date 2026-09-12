@@ -19,7 +19,6 @@ import {
   MultiNightDrawer,
   type MultiNightPanel,
 } from '../../../../components/anfitriao/MultiNightDrawer';
-import { CompareAnunciosModal } from '../../../../components/anfitriao/CompareAnunciosModal';
 import { SelectionContextAlert } from '../../../../components/anfitriao/SelectionContextAlert';
 import { AnfitriaoHostNav } from '../../../../components/anfitriao/AnfitriaoHostNav';
 import { AnfitriaoPropertySwitcher } from '../../../../components/anfitriao/AnfitriaoPropertySwitcher';
@@ -78,7 +77,6 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
   const [selectNightsOpen, setSelectNightsOpen] = useState(false);
   const [multiDates, setMultiDates] = useState<string[]>([]);
   const [multiPanel, setMultiPanel] = useState<MultiNightPanel>('overview');
-  const [compareOpen, setCompareOpen] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(true);
   const [lastSelected, setLastSelected] = useState<string | null>(null);
   const [conjuntosRegras, setConjuntosRegras] = useState<ConjuntoRegrasView[]>([]);
@@ -312,18 +310,6 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
       setBusy(false);
     }
   }
-
-  const meuPrecoCompare = useMemo(() => {
-    if (multiDates.length === 0) {
-      const base = parseMoney(form.formBase);
-      return base ?? dicaPreco;
-    }
-    const prices = multiDates
-      .map((d) => dias.find((x) => x.data === d)?.precoEfetivo)
-      .filter((n): n is number => n != null && Number.isFinite(n));
-    if (prices.length === 0) return parseMoney(form.formBase) ?? dicaPreco;
-    return Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-  }, [multiDates, dias, form.formBase, dicaPreco]);
 
   async function saveDefaults(override?: Partial<typeof form>) {
     if (!id || !isMaster) return;
@@ -781,7 +767,6 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
                   onSavePrices={(p) => void saveMultiPrices(p)}
                   onSaveBasePrice={() => void saveBaseFromFlow()}
                   onSaveCustom={() => void saveCustomFromFlow()}
-                  onOpenCompare={() => setCompareOpen(true)}
                   conjuntosRegras={conjuntosRegras}
                   smartPricingAtivo={form.formSmartAtivo}
                   applyRange={applyRange}
@@ -842,14 +827,6 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
           setMultiPanel('overview');
           setSelectedDate(null);
         }}
-      />
-
-      <CompareAnunciosModal
-        open={compareOpen}
-        noites={multiDates.length || 1}
-        precoMeu={meuPrecoCompare}
-        precoSugerido={dicaPreco}
-        onClose={() => setCompareOpen(false)}
       />
     </AnfitriaoRoleGuard>
   );
