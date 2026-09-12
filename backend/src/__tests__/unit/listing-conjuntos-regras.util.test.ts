@@ -1,6 +1,8 @@
 import {
   CONJUNTOS_REGRAS_MAX,
+  enrichMetadataWithConjuntosRegras,
   mapConjuntoRegrasRowToConjuntoRegras,
+  stripConjuntosRegrasFromMetadataPatch,
   summarizeConjuntoRegras,
   validateListingConjuntosRegras,
 } from '../../../../server/modules/acomodacoes/services/listing-conjuntos-regras.util';
@@ -142,6 +144,33 @@ describe('listing-conjuntos-regras.util', () => {
       id: VALID_ID,
       nome: 'Básico',
       cor: 'slate',
+    });
+  });
+
+  it('stripConjuntosRegrasFromMetadataPatch removes conjuntosRegras key', () => {
+    const patch = {
+      conjuntosRegras: [{ id: VALID_ID, nome: 'Alta', cor: 'amber' }],
+      leis: { foo: 'bar' },
+    };
+    stripConjuntosRegrasFromMetadataPatch(patch);
+    expect(patch).toEqual({ leis: { foo: 'bar' } });
+    expect(Object.prototype.hasOwnProperty.call(patch, 'conjuntosRegras')).toBe(false);
+  });
+
+  it('enrichMetadataWithConjuntosRegras injects list when metadata is empty', () => {
+    const list = [{ id: VALID_ID, nome: 'Alta temporada', cor: 'amber' }];
+    expect(enrichMetadataWithConjuntosRegras(null, list)).toEqual({
+      conjuntosRegras: list,
+    });
+    expect(enrichMetadataWithConjuntosRegras({}, list)).toEqual({
+      conjuntosRegras: list,
+    });
+  });
+
+  it('enrichMetadataWithConjuntosRegras omits key when list is empty', () => {
+    expect(enrichMetadataWithConjuntosRegras({ foo: 'bar' }, [])).toEqual({
+      foo: 'bar',
+      conjuntosRegras: undefined,
     });
   });
 });
