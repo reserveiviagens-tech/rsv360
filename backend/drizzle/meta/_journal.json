@@ -400,6 +400,13 @@
       "when": 1788565000000,
       "tag": "0056_guest_feedback_acomodacao_id",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1788566000000,
+      "tag": "0057_coanfitriao_convites_telefone",
+      "breakpoints": true
     }
   ]
 }

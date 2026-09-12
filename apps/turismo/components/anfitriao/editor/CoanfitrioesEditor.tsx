@@ -67,12 +67,15 @@ function AddCoanfitriaoForm({
   saving,
 }: {
   onCancel: () => void;
-  onSave: (item: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string }) => void | Promise<void>;
+  onSave: (
+    item: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string; telefone?: string },
+  ) => void | Promise<void>;
   disabled: boolean;
   saving?: boolean;
 }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [papel, setPapel] = useState<CoanfitriaoItem['papel']>('tudo');
 
   const canSave = nome.trim().length > 0 && email.trim().length > 0 && !disabled && !saving;
@@ -89,8 +92,8 @@ function AddCoanfitriaoForm({
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Adicionar coanfitrião</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Um e-mail de convite é enviado automaticamente quando SMTP ou SendGrid estiver configurado no
-          servidor.
+          E-mail de convite é enviado quando SMTP ou SendGrid estiver configurado. SMS opcional quando
+          Twilio estiver configurado e um telefone for informado.
         </p>
       </div>
       <label className="block text-sm">
@@ -115,6 +118,17 @@ function AddCoanfitriaoForm({
           onChange={(e) => setEmail(e.target.value)}
           aria-label="E-mail do coanfitrião"
           placeholder="cohost@test.local"
+        />
+      </label>
+      <label className="block text-sm">
+        Telefone (opcional, SMS)
+        <input
+          type="tel"
+          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+          aria-label="Telefone do coanfitrião para SMS"
+          placeholder="(11) 99999-9999"
         />
       </label>
       <label className="block text-sm">
@@ -148,6 +162,7 @@ function AddCoanfitriaoForm({
             void onSave({
               nome: nome.trim(),
               email: email.trim(),
+              telefone: telefone.trim() || undefined,
               papel,
             });
           }}
@@ -169,7 +184,7 @@ export function CoanfitrioesEditor({
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [emailNotice, setEmailNotice] = useState<string | null>(null);
+  const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
   const list = Array.isArray(value) ? value : [];
   const atMax = list.length >= COANFITRIOES_MAX;
   const useApi = unidadeId != null;
@@ -178,23 +193,42 @@ export function CoanfitrioesEditor({
     if (onRefresh) await onRefresh();
   }
 
-  async function handleInvite(draft: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string }) {
+  function formatDispatchNotice(
+    emailStatus?: 'sent' | 'skipped' | 'failed',
+    smsStatus?: 'sent' | 'skipped' | 'failed',
+    hasPhone?: boolean,
+  ): string | null {
+    const parts: string[] = [];
+    if (emailStatus === 'skipped') {
+      parts.push('E-mail não enviado — configure SMTP ou SendGrid no servidor.');
+    } else if (emailStatus === 'failed') {
+      parts.push('E-mail não pôde ser enviado; o convite foi salvo.');
+    }
+    if (hasPhone) {
+      if (smsStatus === 'sent') {
+        parts.push('SMS enviado.');
+      } else if (smsStatus === 'skipped') {
+        parts.push('SMS não enviado — configure Twilio no servidor.');
+      } else if (smsStatus === 'failed') {
+        parts.push('SMS não pôde ser enviado; o convite foi salvo.');
+      }
+    }
+    return parts.length > 0 ? parts.join(' ') : null;
+  }
+
+  async function handleInvite(
+    draft: Omit<CoanfitriaoItem, 'id' | 'status'> & { email: string; telefone?: string },
+  ) {
     setActionError(null);
-    setEmailNotice(null);
+    setDispatchNotice(null);
     if (useApi) {
       setBusy(true);
       try {
         const res = await fase1Api.anfitriaoConvidarCoanfitriao(unidadeId, draft);
         onChange(res.data as CoanfitrioesValue);
-        if (res.emailStatus === 'skipped') {
-          setEmailNotice(
-            'Convite salvo. E-mail não enviado — configure SMTP ou SendGrid no servidor.',
-          );
-        } else if (res.emailStatus === 'failed') {
-          setEmailNotice(
-            'Convite salvo, mas o e-mail não pôde ser enviado. O convidado pode aceitar pelo painel ou pelo link quando disponível.',
-          );
-        }
+        setDispatchNotice(
+          formatDispatchNotice(res.emailStatus, res.smsStatus, Boolean(draft.telefone)),
+        );
         await refreshFromServer();
         setAdding(false);
       } catch (e) {
@@ -219,22 +253,22 @@ export function CoanfitrioesEditor({
 
   async function handleResend(coId: string) {
     setActionError(null);
-    setEmailNotice(null);
+    setDispatchNotice(null);
     if (!useApi) return;
     setBusy(true);
     try {
       const res = await fase1Api.anfitriaoReenviarCoanfitriao(unidadeId, coId);
       onChange(res.data as CoanfitrioesValue);
-      if (res.emailStatus === 'skipped') {
-        setEmailNotice(
-          'Convite reenviado. E-mail não enviado — configure SMTP ou SendGrid no servidor.',
-        );
-      } else if (res.emailStatus === 'failed') {
-        setEmailNotice(
-          'Convite atualizado, mas o e-mail não pôde ser enviado. Peça ao convidado para aceitar pelo painel.',
-        );
+      const item = list.find((c) => c.id === coId);
+      const notice = formatDispatchNotice(
+        res.emailStatus,
+        res.smsStatus,
+        Boolean(item?.telefone),
+      );
+      if (notice) {
+        setDispatchNotice(`Convite reenviado. ${notice}`);
       } else if (res.emailStatus === 'sent') {
-        setEmailNotice('Convite reenviado por e-mail.');
+        setDispatchNotice('Convite reenviado por e-mail.');
       }
       await refreshFromServer();
     } catch (e) {
@@ -321,9 +355,9 @@ export function CoanfitrioesEditor({
         </p>
       ) : null}
 
-      {emailNotice ? (
+      {dispatchNotice ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {emailNotice}
+          {dispatchNotice}
         </p>
       ) : null}
 
@@ -359,6 +393,9 @@ export function CoanfitrioesEditor({
                     <p className="mt-0.5 text-xs text-slate-500">{papelLabel(item.papel)}</p>
                     {item.email ? (
                       <p className="mt-0.5 truncate text-xs text-slate-600">{item.email}</p>
+                    ) : null}
+                    {item.telefone ? (
+                      <p className="mt-0.5 truncate text-xs text-slate-500">{item.telefone}</p>
                     ) : null}
                     <p className="mt-1 text-xs font-medium text-slate-500">
                       {STATUS_LABEL[item.status]}
