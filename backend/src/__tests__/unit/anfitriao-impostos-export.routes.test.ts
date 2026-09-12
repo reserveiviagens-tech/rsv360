@@ -1,4 +1,5 @@
 const mockExportImpostosCsv = jest.fn();
+const mockRelatorioFiscalCsv = jest.fn();
 
 jest.mock('../../../../server/modules/acomodacoes/services/anfitriao.service', () => ({
   anfitriaoService: {
@@ -29,6 +30,7 @@ jest.mock('../../../../server/modules/acomodacoes/services/desempenho.service', 
   desempenhoService: {
     obterMetricas: jest.fn(),
     relatorioCsv: jest.fn(),
+    relatorioFiscalCsv: (...args: unknown[]) => mockRelatorioFiscalCsv(...args),
   },
 }));
 
@@ -109,5 +111,44 @@ describe('anfitriao impostos export route', () => {
 
     expect(res.status).toBe(401);
     expect(mockExportImpostosCsv).not.toHaveBeenCalled();
+  });
+
+  it('GET impostos/relatorio-mensal.csv returns CSV for valid mes', async () => {
+    mockRelatorioFiscalCsv.mockResolvedValue(
+      'acomodacao_id,titulo,mes,de,ate,receita,aliquotaPct,isento,impostoEstimado,inscricaoMunicipal\n1,Casa,2026-03,2026-03-01,2026-03-31,1000,5,false,50,IM-1',
+    );
+
+    const res = await request(buildApp())
+      .get('/api/v1/acomodacoes/anfitriao/impostos/relatorio-mensal.csv?mes=2026-03')
+      .set(authHeaders('anfitriao', 1));
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.headers['content-disposition']).toBe(
+      'attachment; filename="fiscal-mensal-rsv360-2026-03.csv"',
+    );
+    expect(res.text).toContain('impostoEstimado');
+    expect(mockRelatorioFiscalCsv).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 1, role: 'anfitriao' }),
+      '2026-03',
+    );
+  });
+
+  it('GET impostos/relatorio-mensal.csv returns 400 for invalid mes', async () => {
+    const res = await request(buildApp())
+      .get('/api/v1/acomodacoes/anfitriao/impostos/relatorio-mensal.csv?mes=03-2026')
+      .set(authHeaders('anfitriao', 1));
+
+    expect(res.status).toBe(400);
+    expect(mockRelatorioFiscalCsv).not.toHaveBeenCalled();
+  });
+
+  it('GET impostos/relatorio-mensal.csv returns 401 without auth', async () => {
+    const res = await request(buildApp()).get(
+      '/api/v1/acomodacoes/anfitriao/impostos/relatorio-mensal.csv?mes=2026-03',
+    );
+
+    expect(res.status).toBe(401);
+    expect(mockRelatorioFiscalCsv).not.toHaveBeenCalled();
   });
 });

@@ -88,6 +88,25 @@ router.get('/impostos/export.csv', ...parceiroAuth, async (req, res) => {
   }
 });
 
+router.get('/impostos/relatorio-mensal.csv', ...parceiroAuth, async (req, res) => {
+  try {
+    const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
+    if (mes != null && !/^\d{4}-\d{2}$/.test(mes)) {
+      return res.status(400).json({ success: false, error: 'Parâmetro mes inválido (YYYY-MM)' });
+    }
+    const csv = await desempenhoService.relatorioFiscalCsv(authFromReq(req), mes);
+    const safeMes = (mes && /^\d{4}-\d{2}$/.test(mes) ? mes : 'atual').replace(/[^\d-]/g, '');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="fiscal-mensal-rsv360-${safeMes}.csv"`,
+    );
+    res.send(csv);
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/unidades/desarquivar-bulk', ...parceiroAuth, async (req, res) => {
   try {
     const parsed = parseBulkIds(req.body?.ids);
