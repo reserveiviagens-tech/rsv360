@@ -394,6 +394,15 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
             : 'Conjuntos de regras inválidos',
       });
     }
+    if (result.error === 'comp_set_invalido') {
+      return res.status(400).json({
+        success: false,
+        error:
+          'message' in result && typeof result.message === 'string'
+            ? result.message
+            : 'Comp-set inválido',
+      });
+    }
     if (result.error === 'verificacao_local_invalida') {
       return res.status(400).json({
         success: false,

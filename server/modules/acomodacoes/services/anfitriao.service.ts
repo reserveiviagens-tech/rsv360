@@ -86,6 +86,7 @@ import { validateListingIdiomas } from './listing-idiomas.util';
 import { validateListingGuiasLocais } from './listing-guias-locais.util';
 import { validateListingImpostos } from './listing-impostos.util';
 import { validateListingLeis } from './listing-leis.util';
+import { validateListingCompSet } from './listing-comp-set.util';
 import {
   enrichMetadataWithConjuntosRegras,
   mapConjuntoRegrasRowToConjuntoRegras,
@@ -799,6 +800,21 @@ export const anfitriaoService = {
         return { error: leis.error, message: leis.message };
       }
       (metadataPatch as Record<string, unknown>).leis = leis.value;
+    }
+
+    const updatingCompSet =
+      metadataPatch != null &&
+      typeof metadataPatch === 'object' &&
+      !Array.isArray(metadataPatch) &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'compSet');
+    if (updatingCompSet) {
+      const compSet = validateListingCompSet(
+        (metadataPatch as Record<string, unknown>).compSet,
+      );
+      if (!compSet.ok) {
+        return { error: compSet.error, message: compSet.message };
+      }
+      (metadataPatch as Record<string, unknown>).compSet = compSet.value;
     }
 
     const updatingConjuntosRegras =
