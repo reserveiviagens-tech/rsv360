@@ -25,6 +25,7 @@ import {
   type MinNoitesPorCheckin,
 } from './host-pricing.helpers';
 import { aggregateReviewsForAcomodacoes } from './anfitriao-reviews.service';
+import { readCompSetFromMetadata, summarizeCompSet } from './listing-comp-set.util';
 import { validateListingPrecosPatch } from './listing-precos.util';
 import { validateListingDescontosPatch } from './listing-descontos.util';
 import { validateListingDisponibilidadePatch } from './listing-disponibilidade.util';
@@ -570,6 +571,15 @@ export const rateCalendarService = {
         canEditPricing: MASTER_ROLES.has(auth.role),
         canApplyDiscount: BROKER_ROLES.has(auth.role) || STAFF_ROLES.has(auth.role),
         conjuntosRegras: await resolveConjuntosRegrasForRead(acomodacaoId, unit.metadata),
+        compSet: (() => {
+          const entries = readCompSetFromMetadata(unit.metadata);
+          const summary = summarizeCompSet(entries);
+          return {
+            entries,
+            mediaReferencia: summary.mediaReferencia,
+            count: summary.count,
+          };
+        })(),
       },
     };
   },

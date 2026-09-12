@@ -23,6 +23,10 @@ import { SelectionContextAlert } from '../../../../components/anfitriao/Selectio
 import { AnfitriaoHostNav } from '../../../../components/anfitriao/AnfitriaoHostNav';
 import { AnfitriaoPropertySwitcher } from '../../../../components/anfitriao/AnfitriaoPropertySwitcher';
 import type { ConjuntoRegrasView } from '../../../../components/anfitriao/ConjuntosRegrasPanel';
+import {
+  CompSetPanel,
+  type CompSetEntryView,
+} from '../../../../components/anfitriao/CompSetPanel';
 import { fase1Api } from '@/lib/fase1-api';
 import { useAuth } from '@/src/context/AuthContext';
 import { parseRouteId } from '@/src/lib/parse-route-id';
@@ -84,6 +88,8 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
   const [multiSelectMode, setMultiSelectMode] = useState(true);
   const [lastSelected, setLastSelected] = useState<string | null>(null);
   const [conjuntosRegras, setConjuntosRegras] = useState<ConjuntoRegrasView[]>([]);
+  const [compSet, setCompSet] = useState<CompSetEntryView[]>([]);
+  const [compSetMedia, setCompSetMedia] = useState<number | null>(null);
 
   const [form, setForm] = useState<PricingForm>({
     formBase: '',
@@ -210,6 +216,13 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
         formPermitirPedidosMesmoDia: pd.permitirPedidosMesmoDia !== false,
       }));
       setConjuntosRegras(data.conjuntosRegras ?? []);
+      const cs = data.compSet;
+      setCompSet(Array.isArray(cs?.entries) ? (cs.entries as CompSetEntryView[]) : []);
+      setCompSetMedia(
+        typeof cs?.mediaReferencia === 'number' && Number.isFinite(cs.mediaReferencia)
+          ? cs.mediaReferencia
+          : null,
+      );
       setDias(
         data.dias.map((d) => ({
           data: d.data,
@@ -291,6 +304,35 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
       });
       setConjuntosRegras(next);
       setMsg('Conjuntos de regras salvos');
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveCompSet(next: CompSetEntryView[]) {
+    if (!id || !isMaster) return;
+    setBusy(true);
+    setErro(null);
+    try {
+      await fase1Api.atualizarAnfitriaoUnidade(id, {
+        metadata: { compSet: next.length > 0 ? next : null },
+      });
+      setCompSet(next);
+      const prices = next
+        .map((r) => {
+          if (r.precoNoite != null) return r.precoNoite;
+          if (r.precoMin != null && r.precoMax != null) return (r.precoMin + r.precoMax) / 2;
+          return r.precoMin ?? r.precoMax ?? null;
+        })
+        .filter((n): n is number => n != null);
+      setCompSetMedia(
+        prices.length > 0
+          ? Math.round((prices.reduce((a, b) => a + b, 0) / prices.length) * 100) / 100
+          : null,
+      );
+      setMsg('Comp-set manual salvo');
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -756,6 +798,18 @@ export default function AnfitriaoRateCalendarPage({ unitId }: PageProps) {
                   setSelectedDate(null);
                   setSelectNightsOpen(true);
                 }}
+              />
+              {compSetMedia != null ? (
+                <p className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                  Comp-set manual — média de referência: R$ {compSetMedia.toFixed(2)} (
+                  {compSet.length} concorrente{compSet.length === 1 ? '' : 's'})
+                </p>
+              ) : null}
+              <CompSetPanel
+                value={compSet}
+                isMaster={isMaster}
+                busy={busy}
+                onSave={(next) => void saveCompSet(next)}
               />
               {multiSelectMode && multiDates.length > 0 ? (
                 <MultiNightDrawer
