@@ -19,12 +19,27 @@ function getTwilioFromNumber(): string | undefined {
   return process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_FROM;
 }
 
-function isTwilioConfigured(): boolean {
+export function isTwilioConfigured(): boolean {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID &&
       process.env.TWILIO_AUTH_TOKEN &&
       getTwilioFromNumber(),
   );
+}
+
+/** Public readiness flags only — never include SID/token/from values (LGPD/secrets). */
+export function getTwilioSmsConfigStatus(): {
+  configured: boolean;
+  hasAccountSid: boolean;
+  hasAuthToken: boolean;
+  hasFromNumber: boolean;
+} {
+  return {
+    configured: isTwilioConfigured(),
+    hasAccountSid: Boolean(process.env.TWILIO_ACCOUNT_SID),
+    hasAuthToken: Boolean(process.env.TWILIO_AUTH_TOKEN),
+    hasFromNumber: Boolean(getTwilioFromNumber()),
+  };
 }
 
 export function buildInviteSmsBody(opts: {

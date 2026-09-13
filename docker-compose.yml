@@ -110,6 +110,12 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
+      # Optional SMS (co-host invites) — set on host .env; never commit values
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
       OAUTH_BFF_SECRET: ${OAUTH_BFF_SECRET}
       SSO_BFF_SECRET: ${SSO_BFF_SECRET:-${OAUTH_BFF_SECRET}}
       MARKETING_LAB_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
