@@ -113,6 +113,8 @@ export default function AnfitriaoDesempenhoPage() {
   const [data, setData] = useState<DesempenhoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [nfseMsg, setNfseMsg] = useState<string | null>(null);
+  const [nfseBusy, setNfseBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -181,6 +183,32 @@ export default function AnfitriaoDesempenhoPage() {
       .catch((e) => setErro((e as Error).message));
   }
 
+  async function prepararNfseRascunhos() {
+    if (!data?.porUnidade?.length) {
+      setNfseMsg('Nenhuma unidade disponível para preparar NFSe neste mês.');
+      return;
+    }
+    setNfseBusy(true);
+    setNfseMsg(null);
+    setErro(null);
+    try {
+      let ok = 0;
+      let lastStatus = 'nfse_pending';
+      for (const u of data.porUnidade) {
+        const res = await fase1Api.anfitriaoPrepararNfse(u.acomodacaoId, mes);
+        if (res.data?.status) lastStatus = res.data.status;
+        ok += 1;
+      }
+      setNfseMsg(
+        `${ok} rascunho(s) NFSe criado(s) com status ${lastStatus} — pendente, sem autorização municipal neste MVP.`,
+      );
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setNfseBusy(false);
+    }
+  }
+
   const navItems: Array<{ id: NavId; label: string }> = [
     { id: 'oportunidades', label: 'Oportunidades' },
     { id: 'qualidade', label: 'Qualidade' },
@@ -247,9 +275,19 @@ export default function AnfitriaoDesempenhoPage() {
                 >
                   Exportar fiscal do mês
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void prepararNfseRascunhos()}
+                  disabled={nfseBusy || loading}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium disabled:opacity-40"
+                  title="Cria rascunho NFSe (nfse_pending) — sem autorização municipal"
+                >
+                  {nfseBusy ? 'Preparando NFSe…' : 'Preparar NFSe (rascunho)'}
+                </button>
               </div>
             </div>
 
+            {nfseMsg && <p className="mb-4 text-sm text-teal-800">{nfseMsg}</p>}
             {erro && <p className="mb-4 text-sm text-red-600">{erro}</p>}
             {loading && <p className="text-sm text-slate-600">Carregando métricas…</p>}
 
