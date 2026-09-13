@@ -588,8 +588,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 
 | Fatia | Status | PR / nota |
 |-------|--------|-----------|
-| Onda 0 baseline | Em andamento | Tracking + snapshot |
-| A1 rota legado `[id].tsx` | Pendente | |
+| Onda 0 baseline | Em PR | #355 |
+| A1 rota legado `[id].tsx` | Em PR | #355 |
 | A2 AppSidebar mocks | Pendente | |
 | A3 rótulos NFSe/contratos | Pendente | |
 | A4 HostNav tarifas/comissões/importar | Pendente | |
