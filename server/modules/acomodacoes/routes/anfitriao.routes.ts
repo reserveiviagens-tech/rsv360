@@ -4,6 +4,7 @@ import { normalizarListaDatas } from '../services/anfitriao-bulk.util';
 import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
 import { rateCalendarService } from '../services/rate-calendar.service';
 import { desempenhoService } from '../services/desempenho.service';
+import { getTwilioSmsConfigStatus } from '../services/coanfitriao-invite-sms.service';
 import { parseAtivoFilter } from '../services/listing-ativo-filter.util';
 import { parseBulkIds } from '../services/listing-desarquivar-bulk.util';
 import {
@@ -65,6 +66,14 @@ router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
       `attachment; filename="desempenho-rsv360-${safeMes}.csv"`,
     );
     res.send(csv);
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/comunicacao/sms-status', ...parceiroAuth, async (_req, res) => {
+  try {
+    res.json({ success: true, data: getTwilioSmsConfigStatus() });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }

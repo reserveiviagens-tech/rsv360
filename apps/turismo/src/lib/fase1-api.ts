@@ -370,6 +370,16 @@ export const fase1Api = {
     a.click();
     URL.revokeObjectURL(a.href);
   },
+  anfitriaoSmsConfigStatus: () =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        configured: boolean;
+        hasAccountSid: boolean;
+        hasAuthToken: boolean;
+        hasFromNumber: boolean;
+      };
+    }>('/api/v1/acomodacoes/anfitriao/comunicacao/sms-status'),
 
   anfitriaoConvidarCoanfitriao: (
     id: number,

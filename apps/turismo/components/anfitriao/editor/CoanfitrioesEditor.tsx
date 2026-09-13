@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fase1Api } from '@/lib/fase1-api';
 import type { EditorMeta } from './editor-types';
 
@@ -65,6 +65,7 @@ function AddCoanfitriaoForm({
   onSave,
   disabled,
   saving,
+  smsConfigured,
 }: {
   onCancel: () => void;
   onSave: (
@@ -72,6 +73,7 @@ function AddCoanfitriaoForm({
   ) => void | Promise<void>;
   disabled: boolean;
   saving?: boolean;
+  smsConfigured?: boolean | null;
 }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -95,6 +97,17 @@ function AddCoanfitriaoForm({
           E-mail de convite é enviado quando SMTP ou SendGrid estiver configurado. SMS opcional quando
           Twilio estiver configurado e um telefone for informado.
         </p>
+        {smsConfigured === false ? (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            SMS indisponível neste ambiente — defina TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e
+            TWILIO_PHONE_NUMBER no servidor.
+          </p>
+        ) : null}
+        {smsConfigured === true ? (
+          <p className="mt-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-900">
+            Twilio configurado — SMS será enviado se informar telefone.
+          </p>
+        ) : null}
       </div>
       <label className="block text-sm">
         Nome
@@ -185,9 +198,25 @@ export function CoanfitrioesEditor({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
+  const [smsConfigured, setSmsConfigured] = useState<boolean | null>(null);
   const list = Array.isArray(value) ? value : [];
   const atMax = list.length >= COANFITRIOES_MAX;
   const useApi = unidadeId != null;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fase1Api
+      .anfitriaoSmsConfigStatus()
+      .then((res) => {
+        if (!cancelled) setSmsConfigured(Boolean(res.data?.configured));
+      })
+      .catch(() => {
+        if (!cancelled) setSmsConfigured(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function refreshFromServer() {
     if (onRefresh) await onRefresh();
@@ -334,6 +363,7 @@ export function CoanfitrioesEditor({
       <AddCoanfitriaoForm
         disabled={atMax}
         saving={busy}
+        smsConfigured={smsConfigured}
         onCancel={() => setAdding(false)}
         onSave={handleInvite}
       />
