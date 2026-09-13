@@ -1,6 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import {
+  formatCompSetCsvClient,
+  parseCompSetCsvClient,
+} from './comp-set-csv';
 
 export type CompSetEntryView = {
   id: string;
@@ -46,6 +50,7 @@ function parseMoney(raw: string): number | undefined {
 }
 
 function CompSetPanelInner({ value, isMaster, busy, onSave }: Props) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<CompSetEntryView[]>(value);
   const [err, setErr] = useState<string | null>(null);
 
@@ -98,6 +103,35 @@ function CompSetPanelInner({ value, isMaster, busy, onSave }: Props) {
     );
   }
 
+  function exportCsv() {
+    const csv = formatCompSetCsvClient(draft);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'comp-set-rsv360.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function onImportFile(file: File | null) {
+    if (!file) return;
+    setErr(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      const parsed = parseCompSetCsvClient(text);
+      if (!parsed.ok) {
+        setErr(parsed.message);
+        return;
+      }
+      setDraft(parsed.value);
+      setErr(null);
+    };
+    reader.onerror = () => setErr('Falha ao ler o arquivo CSV');
+    reader.readAsText(file);
+    if (fileRef.current) fileRef.current.value = '';
+  }
+
   const prices = draft
     .map((r) => {
       if (r.precoNoite != null) return r.precoNoite;
@@ -114,7 +148,7 @@ function CompSetPanelInner({ value, isMaster, busy, onSave }: Props) {
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <h3 className="text-sm font-semibold text-slate-900">Comp-set manual</h3>
       <p className="mt-1 text-xs text-slate-500">
-        Referência de preços de concorrentes (digitado por você — sem scrape OTA).
+        Referência de preços de concorrentes (digitado ou CSV — sem scrape OTA).
       </p>
 
       {draft.length === 0 ? (
@@ -208,6 +242,29 @@ function CompSetPanelInner({ value, isMaster, busy, onSave }: Props) {
             onClick={handleSave}
           >
             Salvar comp-set
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+            disabled={busy || draft.length === 0}
+            onClick={exportCsv}
+          >
+            Exportar CSV
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => onImportFile(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+          >
+            Importar CSV
           </button>
         </div>
       ) : null}
