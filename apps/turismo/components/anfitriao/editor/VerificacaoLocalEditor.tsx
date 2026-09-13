@@ -35,17 +35,18 @@ const METODOS: Array<{
   label: string;
   hint: string;
   disabled?: boolean;
+  secondary?: boolean;
 }> = [
   {
     id: 'web_gps',
     label: 'Confirmar localização no navegador',
-    hint: 'Use o GPS do dispositivo no endereço do anúncio (até 500 m de tolerância).',
+    hint: 'Recomendado agora — use o GPS do dispositivo no endereço do anúncio (até 500 m de tolerância).',
   },
   {
     id: 'app',
     label: 'Verificar pelo app Reservei',
-    hint: 'Em breve — use a verificação pelo navegador.',
-    disabled: true,
+    hint: 'App nativo em breve — deep-link disponível; se o app não abrir, use a verificação pelo navegador (web_gps).',
+    secondary: true,
   },
   {
     id: 'terceiro',
@@ -72,6 +73,7 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoOk, setGeoOk] = useState<string | null>(null);
+  const [appFallbackMsg, setAppFallbackMsg] = useState<string | null>(null);
   const evidencias = value.evidencias ?? [];
   const status = value.status ?? 'pendente';
   const metodo = value.metodo ?? 'web_gps';
@@ -136,12 +138,36 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
     );
   }
 
+  function abrirAppReservei() {
+    setErr(null);
+    setAppFallbackMsg(null);
+    setGeoOk(null);
+    onChange({
+      ...value,
+      metodo: 'app',
+      evidenciaGeo: undefined,
+      distanciaMetros: undefined,
+    });
+    if (typeof window === 'undefined') return;
+    window.location.href = `reservei://verificacao-local?unitId=${encodeURIComponent(String(unitId))}`;
+    window.setTimeout(() => {
+      setAppFallbackMsg(
+        'App nativo ainda não disponível neste dispositivo. Use “Confirmar localização no navegador” (web_gps) — funciona agora.',
+      );
+    }, 1500);
+  }
+
   function enviarRevisao() {
     if (metodo === 'web_gps') {
       if (!value.evidenciaGeo) {
         setErr('Confirme a localização no navegador antes de enviar.');
         return;
       }
+    } else if (metodo === 'app') {
+      setErr(
+        'App nativo ainda não conclui a verificação aqui. Use a confirmação pelo navegador (web_gps).',
+      );
+      return;
     } else if ((metodo === 'videos' || !metodo) && evidencias.length < 1) {
       setErr('Adicione ao menos uma evidência (foto ou vídeo).');
       return;
@@ -184,6 +210,7 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
               if (m.disabled) return;
               setErr(null);
               setGeoOk(null);
+              setAppFallbackMsg(null);
               onChange({
                 ...value,
                 metodo: m.id,
@@ -195,13 +222,37 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
             }}
             className={`w-full rounded-2xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
               metodo === m.id ? 'border-slate-900' : 'border-slate-200'
-            }`}
+            } ${m.secondary ? 'opacity-90' : ''}`}
           >
-            <p className="text-sm font-semibold">{m.label}</p>
+            <p className="text-sm font-semibold">
+              {m.label}
+              {m.secondary ? (
+                <span className="ml-2 text-xs font-normal text-slate-500">(secundário)</span>
+              ) : null}
+            </p>
             <p className="mt-1 text-xs text-slate-500">{m.hint}</p>
           </button>
         ))}
       </div>
+
+      {metodo === 'app' && (
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <p className="text-sm font-medium">App Reservei</p>
+          <p className="text-xs text-slate-500">
+            O app nativo está a caminho. Enquanto isso, o deep-link tenta abrir o app; se falhar,
+            use web_gps no navegador.
+          </p>
+          <button
+            type="button"
+            className="mt-3 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-40"
+            disabled={status === 'enviado' || status === 'aprovado'}
+            onClick={abrirAppReservei}
+          >
+            Abrir no app Reservei
+          </button>
+          {appFallbackMsg ? <p className="mt-2 text-sm text-amber-800">{appFallbackMsg}</p> : null}
+        </div>
+      )}
 
       {metodo === 'web_gps' && (
         <div className="rounded-2xl border border-slate-200 p-4">

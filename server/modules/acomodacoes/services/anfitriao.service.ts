@@ -886,15 +886,32 @@ export const anfitriaoService = {
       patchPermitido.dadosCompletos ??
       ['completo', 'em_aprovacao', 'publicado'].includes(String(status));
 
+    const baseMetadataForMerge =
+      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+
     const nextMetadata =
       metadataPatch && typeof metadataPatch === 'object' && !Array.isArray(metadataPatch)
         ? {
-            ...((row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-              ? row.metadata
-              : {}) as Record<string, unknown>),
+            ...baseMetadataForMerge,
             ...metadataPatch,
           }
         : undefined;
+
+    // nfseDrafts is server-managed (prepareNfseDraft only) — ignore client writes.
+    if (
+      nextMetadata &&
+      metadataPatch &&
+      typeof metadataPatch === 'object' &&
+      Object.prototype.hasOwnProperty.call(metadataPatch, 'nfseDrafts')
+    ) {
+      if (Object.prototype.hasOwnProperty.call(baseMetadataForMerge, 'nfseDrafts')) {
+        nextMetadata.nfseDrafts = baseMetadataForMerge.nfseDrafts;
+      } else {
+        delete nextMetadata.nfseDrafts;
+      }
+    }
 
     if (nextMetadata && 'slugPersonalizado' in nextMetadata) {
       const slug = normalizeListingSlug(nextMetadata.slugPersonalizado);

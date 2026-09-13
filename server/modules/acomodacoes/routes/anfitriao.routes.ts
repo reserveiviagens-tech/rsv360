@@ -5,6 +5,7 @@ import { anfitriaoService, type AuthContext } from '../services/anfitriao.servic
 import { rateCalendarService } from '../services/rate-calendar.service';
 import { desempenhoService } from '../services/desempenho.service';
 import { getTwilioSmsConfigStatus } from '../services/coanfitriao-invite-sms.service';
+import { anfitriaoNfseService } from '../services/anfitriao-nfse.service';
 import { parseAtivoFilter } from '../services/listing-ativo-filter.util';
 import { parseBulkIds } from '../services/listing-desarquivar-bulk.util';
 import {
@@ -111,6 +112,64 @@ router.get('/impostos/relatorio-mensal.csv', ...parceiroAuth, async (req, res) =
       `attachment; filename="fiscal-mensal-rsv360-${safeMes}.csv"`,
     );
     res.send(csv);
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** NFSe draft only — no municipal authorization / certificate call. */
+router.post('/unidades/:id/nfse/preparar', ...masterAuth, async (req, res) => {
+  try {
+    const mes =
+      typeof req.body?.mes === 'string'
+        ? req.body.mes
+        : typeof req.query.mes === 'string'
+          ? req.query.mes
+          : undefined;
+    const result = await anfitriaoNfseService.prepareNfseDraft(
+      authFromReq(req),
+      Number(req.params.id),
+      { mes },
+    );
+    if ('error' in result) {
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      if (result.error === 'forbidden') {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      if (result.error === 'invalid_mes') {
+        return res.status(400).json({
+          success: false,
+          error: result.message ?? 'Parâmetro mes inválido (YYYY-MM)',
+        });
+      }
+      return res.status(400).json({ success: false, error: 'Não foi possível preparar NFSe' });
+    }
+    res.json({
+      success: true,
+      data: result.data,
+      message:
+        'Rascunho NFSe criado com status nfse_pending (sem autorização municipal neste MVP).',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/unidades/:id/nfse/rascunhos', ...masterAuth, async (req, res) => {
+  try {
+    const result = await anfitriaoNfseService.listNfseDrafts(
+      authFromReq(req),
+      Number(req.params.id),
+    );
+    if ('error' in result) {
+      if (result.error === 'not_found') {
+        return res.status(404).json({ success: false, error: 'Unidade não encontrada' });
+      }
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }

@@ -184,6 +184,42 @@ export const fase1Api = {
     }>(
       `/api/v1/acomodacoes/anfitriao/desempenho${mes ? `?mes=${encodeURIComponent(mes)}` : ''}`,
     ),
+
+  /** NFSe draft only — status nfse_pending, no municipal authorization. */
+  anfitriaoPrepararNfse: (unidadeId: number, mes?: string) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        id: string;
+        mes: string;
+        receita: number;
+        aliquotaPct: number | null;
+        isento: boolean;
+        impostoEstimado: number | null;
+        status: 'nfse_pending' | 'nfse_cancelled';
+        criadoEm: string;
+      };
+      message?: string;
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${unidadeId}/nfse/preparar`, {
+      method: 'POST',
+      body: JSON.stringify(mes ? { mes } : {}),
+    }),
+
+  anfitriaoListarNfseRascunhos: (unidadeId: number) =>
+    fetchJson<{
+      success: boolean;
+      data: Array<{
+        id: string;
+        mes: string;
+        receita: number;
+        aliquotaPct: number | null;
+        isento: boolean;
+        impostoEstimado: number | null;
+        status: 'nfse_pending' | 'nfse_cancelled';
+        criadoEm: string;
+      }>;
+    }>(`/api/v1/acomodacoes/anfitriao/unidades/${unidadeId}/nfse/rascunhos`),
+
   anfitriaoMinhas: (page = 1, pageSize = 20, ativo?: 'true' | 'false' | 'all') => {
     const params = new URLSearchParams({
       page: String(page),
