@@ -597,8 +597,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B1 DEAD modules | Merged | #360 |
 | B2 PORT 3002 default | Merged | #361 |
 | B3a payments inventário | Merged | #362 |
-| B3b PaymentService wire | Em PR | (este) |
-| B3c PixService wire | Pendente | |
+| B3b PaymentService wire | Merged | #363 |
+| B3c PixService wire | Em PR | (este) |
 | B3d webhook regressão | Pendente | |
 | B3e booking E2E pago | Pendente | |
 | C1–C4 frontends | Pendente | |
