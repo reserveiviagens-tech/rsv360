@@ -44,3 +44,4 @@ export * from './comissoes-lancamento';
 export * from './agentes';
 export * from './agentes-cache-semantico';
 export * from './agentes-conhecimento';
+export * from './payments';

@@ -11,11 +11,15 @@ import refundRoutes from './refund.routes';
 import disputeRoutes from './dispute.routes';
 import webhookPublicRoutes from './webhook-public.routes';
 import webhookStaffRoutes from './webhook-staff.routes';
+import checkoutPublicRoutes from './checkout-public.routes';
 
 const router = Router();
 
 /** Explicit public: provider webhooks (signature verified in service). */
 router.use('/webhooks', webhookPublicRoutes);
+
+/** B2C checkout — portal token + booking ownership (no staff JWT). */
+router.use('/public', checkoutPublicRoutes);
 
 /**
  * Fail-closed: everything below requires staff JWT.

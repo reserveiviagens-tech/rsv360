@@ -1,4 +1,5 @@
 import { pgTable, uuid, varchar, text, numeric, integer, boolean, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+import { bookings } from './bookings';
 
 // Enums
 export const paymentStatusEnum = pgEnum('payment_status', [
@@ -67,7 +68,7 @@ export const payments = pgTable('payments', {
   boletoUrl: text('boleto_url'),
   boletoBarcode: text('boleto_barcode'),
   boletoExpiresAt: timestamp('boleto_expires_at'),
-  bookingId: uuid('booking_id'),
+  bookingId: integer('booking_id').references(() => bookings.id),
   ticketId: uuid('ticket_id'),
   metadata: jsonb('metadata'),
   paidAt: timestamp('paid_at'),

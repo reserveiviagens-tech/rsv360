@@ -7,6 +7,7 @@ import {
   MpWebhookAuthError,
   verifyMercadoPagoWebhookSignature,
 } from '../lib/mp-webhook-signature';
+import { resolveMpWebhookSecret } from '../config';
 import {
   MpWebhookBodySchema,
   StripeWebhookEventSchema,
@@ -78,7 +79,7 @@ export class WebhookService {
       xSignature: input.xSignature,
       xRequestId: input.xRequestId,
       dataIdFromQuery,
-      secret: process.env.MERCADO_PAGO_WEBHOOK_SECRET,
+      secret: resolveMpWebhookSecret(),
       nowMs: input.nowMs,
     });
 
