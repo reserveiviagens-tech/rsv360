@@ -612,8 +612,9 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A9 Testes rota | Merged | #375 |
 | A10 Podar reservei/** | Adiado | Requer GO owner |
 | A11 Cotações servidor | Adiado | Pós-payments / alto esforço |
-| A12 Mensagens unread | Em PR | (este) |
-| B4–B7 hardening | Pendente | |
+| A12 Mensagens unread | Merged | #376 |
+| B4 Tracking dedup Redis | Em PR | (este) |
+| B5–B7 hardening | Pendente | |
 | Onda 7 ops humano | Pendente | Checklist §18.2 |
 
 ### 18.2 Checklist ops humano (Onda 7)
@@ -733,7 +734,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | comissoes | `/api/v1/comissoes` | READY | Aprovação |
 | cms | `/api/v1/cms` | READY | Vitrine + uploads |
 | agentes | `/api/v1/agentes` | READY | Feature-flag + instrutor |
-| tracking | `/api/tracking` | PARTIAL | CAPI; dedup **in-memory** |
+| tracking | `/api/tracking` | READY | CAPI; dedup Redis (fallback memória) |
 
 #### Módulos NÃO montados (código morto no processo)
 
@@ -761,7 +762,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Categoria | Itens |
 |-----------|--------|
 | **Pronto** | Auth v1, Fase1 CRUD, acomodações/anfitrião, cotação pública, propostas+WS, auctions, guest-portal, revenue, CRM, CMS, comissões, agentes, health/metrics |
-| **Falta concluir** | Wire real PaymentService/PixService; booking E2E pago; housekeeping auto-schedule decisão; tracking dedup Redis; alinhar CRM sob `/api/v1` ou documentar exceção |
+| **Falta concluir** | housekeeping auto-schedule decisão; alinhar CRM sob `/api/v1` ou documentar exceção; exporters DB/Redis (lab) |
 | **Não implantado** | Módulos pricing/cloud/comm/marketing no boot; `/api/core/token` legado; checkout session payments |
 | **Melhorar** | Remover ou montar DEAD modules com auth fail-closed; default `PORT=3002` no `server.js`; OpenAPI sincronizado com módulos vivos |
 
