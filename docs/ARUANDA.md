@@ -738,6 +738,8 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | agentes | `/api/v1/agentes` | READY | Feature-flag + instrutor |
 | tracking | `/api/tracking` | READY | CAPI; dedup Redis (fallback memória) |
 
+**Exceção canônica CRM (Aruanda B6):** o módulo monta em **`/api/crm`**, deliberadamente fora de `/api/v1`. Clients, OpenAPI e smoke tests usam esse prefixo. **Não** criar alias silencioso em `/api/v1/crm`; migração exige GO do owner.
+
 #### Módulos NÃO montados (código morto no processo)
 
 | Módulo | Prefixo pretendido | Status |
