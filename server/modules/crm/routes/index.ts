@@ -14,6 +14,9 @@ router.get('/health', (_req, res) => {
     module: 'crm',
     status: 'ok',
     timestamp: new Date().toISOString(),
+    /** Aruanda B6 — documented exception: CRM is not under /api/v1. */
+    apiPrefix: '/api/crm',
+    underApiV1: false,
     routes: {
       guests: '/api/crm/guests',
       loyalty: '/api/crm/loyalty',
@@ -46,6 +49,7 @@ router.use('/segments', segmentsRoutes);
 router.use('/kpis', kpisRoutes);
 
 export function registerCrmRoutes(app: any) {
+  // Canonical prefix — keep in sync with registerCrmModule (/api/crm, not /api/v1/crm).
   app.use('/api/crm', router);
 }
 
