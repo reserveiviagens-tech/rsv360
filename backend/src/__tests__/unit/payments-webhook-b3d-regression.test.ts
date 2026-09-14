@@ -16,7 +16,7 @@ describe('payments webhook regression (Aruanda B3d)', () => {
   it('verifies Mercado Pago HMAC signature (intact after B3b/B3c)', () => {
     const dataId = normalizeMpDataId('12345')!;
     const requestId = 'reqb3d1';
-    const ts = Math.floor(Date.now() / 1000);
+    const ts = Date.now();
     const manifest = buildMpWebhookManifest({
       dataId,
       requestId,
@@ -38,7 +38,7 @@ describe('payments webhook regression (Aruanda B3d)', () => {
   it('rejects invalid HMAC (fail-closed)', () => {
     const dataId = normalizeMpDataId('999')!;
     const requestId = 'reqb3dbad';
-    const ts = Math.floor(Date.now() / 1000);
+    const ts = Date.now();
 
     expect(() =>
       verifyMercadoPagoWebhookSignature({
