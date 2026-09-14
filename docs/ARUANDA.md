@@ -714,7 +714,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 5. Suite booking E2E pago com doubles (B3e).
 
 | guest-portal | `/api/portal`, `/api/admin/portal` | READY | Token portal + staff |
-| housekeeping | `/api/housekeeping` | PARTIAL | CRUD OK; auto-schedule `auto-disabled` |
+| housekeeping | `/api/housekeeping` | READY | CRUD OK; scheduler explícito (`auto-disabled` / `HK_AUTO_SCHEDULE`) |
 | revenue | `/api/revenue` | READY | Rules/calendar/forecast |
 | crm | `/api/crm` | READY | Guests/loyalty/campaigns (path **fora** de `/api/v1`) |
 | notifications | `/api/v1/notifications` | READY | Hub dispatch |
