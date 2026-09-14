@@ -68,7 +68,7 @@ export class SchedulerService {
     const lastProbe = await this.runDailySchedule();
     return {
       autoScheduleEnv: isAutoScheduleEnabled(),
-      bookingsTable,
+      bookingsTable: bookingsTable ?? null,
       lastProbe,
     };
   }
