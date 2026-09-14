@@ -229,6 +229,13 @@ export default function AnfitriaoDesempenhoPage() {
           <aside className="w-full border-b border-slate-200 bg-white lg:w-56 lg:border-b-0 lg:border-r">
             <div className="px-4 py-4">
               <h1 className="text-lg font-bold text-slate-900">Desempenho</h1>
+              <p className="mt-1 text-xs text-slate-500">
+                NFSe neste painel ={' '}
+                <span className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-amber-900">
+                  rascunho
+                </span>{' '}
+                — sem emissão municipal.
+              </p>
             </div>
             <nav className="flex gap-1 overflow-x-auto px-2 pb-3 lg:flex-col lg:overflow-visible">
               {navItems.map((item) => (
@@ -279,13 +286,25 @@ export default function AnfitriaoDesempenhoPage() {
                   type="button"
                   onClick={() => void prepararNfseRascunhos()}
                   disabled={nfseBusy || loading}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium disabled:opacity-40"
+                  className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-950 disabled:opacity-40"
                   title="Cria rascunho NFSe (nfse_pending) — sem autorização municipal"
+                  aria-describedby="nfse-draft-notice"
                 >
-                  {nfseBusy ? 'Preparando NFSe…' : 'Preparar NFSe (rascunho)'}
+                  {nfseBusy ? 'Preparando rascunho…' : 'Preparar NFSe (rascunho)'}
                 </button>
               </div>
             </div>
+
+            <p
+              id="nfse-draft-notice"
+              className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+              role="status"
+            >
+              <span className="mr-2 inline-flex items-center rounded border border-amber-400 bg-white px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide">
+                Rascunho
+              </span>
+              Ação fiscal cria apenas rascunho interno (`nfse_pending`). Não autoriza nem emite NFSe na prefeitura.
+            </p>
 
             {nfseMsg && <p className="mb-4 text-sm text-teal-800">{nfseMsg}</p>}
             {erro && <p className="mb-4 text-sm text-red-600">{erro}</p>}
