@@ -1,6 +1,10 @@
 # RSV360 PMS/CRM — Reservei Viagens
 # Copyright (c) 2024-2026 Reservei Viagens LTDA. Todos os direitos reservados.
 # Desenvolvido por Douglas P. Figueiredo <douglas@reserveiviagens.com.br>
+#
+# Aruanda D1 — lab default: null sink (no webhook).
+# Alerts are visible in the Alertmanager UI (:9093); nothing is delivered externally.
+# To wire a real sink later, add webhook_configs.url from env/ops (never commit secrets).
 
 global:
   resolve_timeout: 5m
@@ -13,7 +17,5 @@ route:
   repeat_interval: 12h
 
 receivers:
+  # Empty receiver = null sink (alerts stay in AM UI / silences only).
   - name: default
-    webhook_configs:
-      - url: http://localhost:9999/alert
-        send_resolved: true

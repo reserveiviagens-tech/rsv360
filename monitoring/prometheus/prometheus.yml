@@ -3,10 +3,17 @@
 # Desenvolvido por Douglas P. Figueiredo <douglas@reserveiviagens.com.br>
 #
 # PR-05b: scrape /metrics with Bearer METRICS_TOKEN (credentials_file written at container start).
+# Aruanda D1: forward firing alerts to Alertmanager (lab compose service name).
 
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
 
 rule_files:
   - /etc/prometheus/alerts.yml

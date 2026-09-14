@@ -592,8 +592,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A1 rota legado `[id].tsx` | Merged | #355 |
 | A2 AppSidebar mocks | Merged | #356 |
 | A3 rótulos NFSe/contratos | Merged | #357 |
-| A4 HostNav tarifas/comissões/importar | Em PR | (este) |
-| D1 Prometheus↔Alertmanager | Pendente | |
+| A4 HostNav tarifas/comissões/importar | Merged | #358 |
+| D1 Prometheus↔Alertmanager | Em PR | (este) |
 | B1 DEAD modules | Pendente | |
 | B2 PORT 3002 default | Pendente | |
 | B3a–B3e payments | Pendente | |
@@ -638,7 +638,7 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
                              │ /metrics (Bearer)
                              ▼
                     ┌─────────────────┐
-                    │ prometheus:9090 │ ──✗── alertmanager:9093 (NÃO ligado)
+                    │ prometheus:9090 │ ────► alertmanager:9093 (D1 ligado)
                     │ grafana:3007    │◄── prometheus
                     └─────────────────┘
 
@@ -657,7 +657,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Redis | `rsv360-redis` | 127.0.0.1:6379 | Cache / filas / rate-limit | READY |
 | Prometheus | `rsv360-prometheus` | :9090 | Scrape `/metrics` | PARTIAL |
 | Grafana | `rsv360-grafana` | :3007 | 1 dashboard | PARTIAL |
-| Alertmanager | `rsv360-alertmanager` | :9093 | Stub webhook | PARTIAL (órfão) |
+| Alertmanager | `rsv360-alertmanager` | :9093 | Null sink (UI only) | READY (lab D1) |
 
 ---
 
