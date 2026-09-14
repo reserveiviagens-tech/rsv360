@@ -616,8 +616,9 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B4 Tracking dedup Redis | Merged | #377 |
 | B5 Housekeeping schedule | Merged | #378 |
 | B6 CRM path exception | Merged | #379 |
-| B7 exporters (opcional) | Em PR | (este) lab-exporters |
-| Onda 7 ops humano | Pendente | Checklist §18.2 |
+| B7 exporters (opcional) | Merged | #380 |
+| Onda 6 hardening | Merged | #377–#380 |
+| Onda 7 ops humano | Pendente | Checklist §18.2 (humano; agente não executa) |
 
 ### 18.2 Checklist ops humano (Onda 7)
 
