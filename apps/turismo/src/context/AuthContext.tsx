@@ -34,6 +34,7 @@ interface User {
   name?: string;
   firstName?: string;
   lastName?: string;
+  phone?: string | null;
   role?: string;
   is_active: boolean;
   permissions: string[];

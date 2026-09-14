@@ -8,6 +8,7 @@ export const AUTH_V1 = {
   REGISTER: '/api/v1/auth/register',
   FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
   RESET_PASSWORD: '/api/v1/auth/reset-password',
+  CHANGE_PASSWORD: '/api/v1/auth/change-password',
   TWO_FA_SETUP: '/api/v1/auth/2fa/setup',
   TWO_FA_VERIFY_SETUP: '/api/v1/auth/2fa/verify-setup',
   TWO_FA_VERIFY: '/api/v1/auth/2fa/verify',
@@ -23,6 +24,7 @@ export interface AuthV1UserPayload {
   email?: string;
   name?: string;
   full_name?: string;
+  phone?: string | null;
   role?: string;
   roles?: string[];
   permissions?: string[];
@@ -55,6 +57,7 @@ export interface MappedAuthUser {
   name: string;
   firstName: string;
   lastName: string;
+  phone?: string | null;
   role?: string;
   is_active: boolean;
   permissions: string[];
@@ -72,6 +75,9 @@ export function mapAuthV1User(
   const parsedId =
     typeof u.id === 'string' ? parseInt(u.id, 10) : (u.id as number);
 
+  const phone =
+    typeof u.phone === 'string' && u.phone.trim() ? u.phone.trim() : null;
+
   return {
     id: Number.isNaN(parsedId) ? u.id : parsedId,
     email: u.email || '',
@@ -79,6 +85,7 @@ export function mapAuthV1User(
     name,
     firstName: name.split(' ')[0],
     lastName: name.split(' ').slice(1).join(' ') || '',
+    phone,
     role: u.role || roles[0],
     is_active: u.status !== 'inactive' && u.is_active !== false,
     permissions:
