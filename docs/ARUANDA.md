@@ -594,8 +594,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A3 rótulos NFSe/contratos | Merged | #357 |
 | A4 HostNav tarifas/comissões/importar | Merged | #358 |
 | D1 Prometheus↔Alertmanager | Merged | #359 |
-| B1 DEAD modules | Em PR | (este) |
-| B2 PORT 3002 default | Pendente | |
+| B1 DEAD modules | Merged | #360 |
+| B2 PORT 3002 default | Em PR | (este) |
 | B3a–B3e payments | Pendente | |
 | C1–C4 frontends | Pendente | |
 | A5–A12 turismo produto | Pendente | |
