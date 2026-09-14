@@ -103,7 +103,7 @@ export function TicketList({ initialFilters = {} }: TicketListProps) {
     if (!token) return;
 
     // Conectar ao WebSocket
-    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'}/tickets?token=${token}`);
+    const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002'}/tickets?token=${token}`);
 
     ws.onopen = () => {
       console.log('WebSocket conectado para tickets');

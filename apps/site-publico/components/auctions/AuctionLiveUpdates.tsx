@@ -19,7 +19,7 @@ export function AuctionLiveUpdates({ auctionId, onBidUpdate, onAuctionUpdate }: 
     // npm install socket.io-client
     const pollInterval = setInterval(async () => {
       try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
         const response = await fetch(`${API_BASE_URL}/api/v1/auctions/${auctionId}`);
         if (response.ok) {
           const data = await response.json();

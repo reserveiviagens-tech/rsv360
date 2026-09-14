@@ -12,7 +12,7 @@ test.describe('WebSocket e Chat', () => {
     // Verificar se WebSocket está disponível
     const wsConnected = await page.evaluate(() => {
       return new Promise((resolve) => {
-        const ws = new WebSocket('ws://localhost:3001');
+        const ws = new WebSocket('ws://localhost:3002');
         ws.onopen = () => {
           ws.close();
           resolve(true);

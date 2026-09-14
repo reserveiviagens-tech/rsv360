@@ -10,7 +10,7 @@ import { Building2, Plus, Search, Edit, Trash2, Eye, ChevronLeft } from 'lucide-
 import Link from 'next/link';
 import type { Enterprise } from '@/types/accommodations';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 export default function AdminEmpreendimentosPage() {
   const router = useRouter();

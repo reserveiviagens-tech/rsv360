@@ -95,7 +95,7 @@ function backendAuthBase(): string {
     process.env.BACKEND_INTERNAL_URL ||
     process.env.INTERNAL_API_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
-    'http://127.0.0.1:3001'
+    'http://127.0.0.1:3002'
   ).replace(/\/$/, '')
 }
 

@@ -137,7 +137,7 @@ export function AuctionDashboard() {
                     <h3 className="text-sm font-medium">Aviso: Não foi possível conectar ao backend</h3>
                     <div className="mt-2 text-sm">
                       <p>Erro: {error}</p>
-                      <p className="mt-1">Exibindo dados de exemplo. Verifique se o backend está rodando em <code className="bg-yellow-100 px-1 rounded">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}</code></p>
+                      <p className="mt-1">Exibindo dados de exemplo. Verifique se o backend está rodando em <code className="bg-yellow-100 px-1 rounded">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}</code></p>
                     </div>
                   </div>
                 </div>

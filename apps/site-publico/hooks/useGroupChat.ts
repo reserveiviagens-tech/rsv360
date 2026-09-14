@@ -166,7 +166,7 @@ export function useGroupChat(options: UseGroupChatOptions = {}) {
 
     // Lazy import do socket.io-client
     import('socket.io-client').then(({ io }) => {
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
       
       socketRef.current = io(wsUrl, {
         auth: {

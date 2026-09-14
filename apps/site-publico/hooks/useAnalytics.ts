@@ -89,7 +89,7 @@ export function useAnalytics() {
   const [report, setReport] = useState<GeneratedReport | null>(null);
 
   // URL base das APIs
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
   const ADMIN_TOKEN = 'Bearer admin-token-123';
 
   // Função para fazer requisições com tratamento de erro

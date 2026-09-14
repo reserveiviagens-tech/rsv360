@@ -275,7 +275,7 @@ let wsInstance: WebSocketService | null = null;
 
 export function getWebSocketService(token?: string): WebSocketService {
   if (!wsInstance) {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
     wsInstance = new WebSocketService(wsUrl, token);
   }
   return wsInstance;
