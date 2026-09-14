@@ -599,8 +599,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B3a payments inventário | Merged | #362 |
 | B3b PaymentService wire | Merged | #363 |
 | B3c PixService wire | Merged | #364 |
-| B3d webhook regressão | Em PR | (este) |
-| B3e booking E2E pago | Pendente | |
+| B3d webhook regressão | Merged | #365 |
+| B3e booking E2E pago | Em PR | (este) |
 | C1–C4 frontends | Pendente | |
 | A5–A12 turismo produto | Pendente | |
 | B4–B7 hardening | Pendente | |
@@ -679,7 +679,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | auth (v1) | `/api/v1/auth` | READY | Login/refresh/2FA/SSO/OAuth/reset |
 | tenant | `/api/v1/tenant` | READY | `GET /context` |
 | auctions | `/api/v1/auctions` | READY | + worker settlement |
-| payments | `/api/v1/payments` | **PARTIAL** | Providers reais; **CRUD services ainda mock** (B3a); webhooks HMAC mais maduros |
+| payments | `/api/v1/payments` | **READY*** | *Services wired (B3b/B3c); checkout session ainda “Not implemented”; E2E contrato B3e |
 
 #### Payments — inventário B3a (contrato de fechamento)
 
