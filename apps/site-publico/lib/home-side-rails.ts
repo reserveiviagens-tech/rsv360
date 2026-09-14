@@ -138,8 +138,22 @@ async function safeGetTotal(url: string): Promise<number | null> {
   }
 }
 
+import { isMarketingLabMode, isTheaterUiPath } from '@/lib/app-mode';
+
+function filterTheaterItems(data: HomeSideRailsData): HomeSideRailsData {
+  if (isMarketingLabMode()) return data;
+  const filterSection = (section: SideRailSection): SideRailSection => ({
+    ...section,
+    items: section.items.filter((item) => !isTheaterUiPath(item.href)),
+  });
+  return {
+    left: filterSection(data.left),
+    right: filterSection(data.right),
+  };
+}
+
 export function getHomeSideRailsFallback(): HomeSideRailsData {
-  return structuredClone(fallbackData);
+  return filterTheaterItems(structuredClone(fallbackData));
 }
 
 function getBaseUrl(): string {

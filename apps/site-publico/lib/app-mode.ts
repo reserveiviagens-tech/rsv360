@@ -31,6 +31,17 @@ const LAB_ROUTE_PREFIXES = [
   '/h',
 ] as const;
 
+/** Theater / mock surfaces — hidden from APP_MODE=public (Aruanda C4). */
+const THEATER_ROUTE_PREFIXES = [
+  '/leiloes',
+  '/insurance',
+  '/marketplace',
+  '/ui-demo',
+  '/admin/ui-demo',
+  '/admin/pwa-demo',
+  '/flash-deals',
+] as const;
+
 export function isMarketingLabMode(): boolean {
   return APP_MODE === 'marketing-lab';
 }
@@ -49,6 +60,12 @@ export function isLabApiPath(pathname: string): boolean {
 
 export function isLabUiPath(pathname: string): boolean {
   return LAB_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+export function isTheaterUiPath(pathname: string): boolean {
+  return THEATER_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }

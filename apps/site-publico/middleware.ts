@@ -9,6 +9,7 @@ import {
   isLabUiPath,
   isMarketingLabMode,
   isStaticAssetPath,
+  isTheaterUiPath,
 } from '@/lib/app-mode';
 import { isMarketingLabAuthRequired } from '@/lib/sso-config';
 
@@ -41,6 +42,15 @@ export async function middleware(req: NextRequest) {
 
   if (isStaticAssetPath(pathname)) {
     return NextResponse.next();
+  }
+
+  // Aruanda C4 — theater mocks stay out of APP_MODE=public path.
+  if (!isMarketingLabMode() && isTheaterUiPath(pathname)) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/';
+    url.search = '';
+    url.searchParams.set('teatro', 'oculto');
+    return NextResponse.redirect(url);
   }
 
   // PR-16b — CSRF for mutating API calls that carry session cookies (fail-closed Origin/Referer).

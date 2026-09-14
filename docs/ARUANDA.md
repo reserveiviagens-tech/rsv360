@@ -603,8 +603,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B3e booking E2E pago | Merged | #366 |
 | C1 site-publico portas | Merged | #367 |
 | C2 Guest stubs | Merged | #368 |
-| C3 Admin honestidade | Em PR | (este) |
-| C4 Teatro fora prod | Pendente | |
+| C3 Admin honestidade | Merged | #369 |
+| C4 Teatro fora prod | Em PR | (este) |
 | A5–A12 turismo produto | Pendente | |
 | B4–B7 hardening | Pendente | |
 | Onda 7 ops humano | Pendente | Checklist §18.2 |

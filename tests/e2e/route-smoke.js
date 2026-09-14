@@ -75,8 +75,25 @@ const LAB_ROUTE_PREFIXES = [
 	"/cotacao",
 ];
 
+/** Mirrors apps/site-publico/lib/app-mode.ts THEATER_ROUTE_PREFIXES (Aruanda C4) */
+const THEATER_ROUTE_PREFIXES = [
+	"/leiloes",
+	"/insurance",
+	"/marketplace",
+	"/ui-demo",
+	"/admin/ui-demo",
+	"/admin/pwa-demo",
+	"/flash-deals",
+];
+
 function isLabUiPath(pathname) {
 	return LAB_ROUTE_PREFIXES.some(
+		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+	);
+}
+
+function isTheaterUiPath(pathname) {
+	return THEATER_ROUTE_PREFIXES.some(
 		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
 	);
 }
@@ -86,6 +103,12 @@ function shouldSkipMarketingLabB2c(appName, routePath) {
 	if (routePath === "/") return null;
 	if (isLabUiPath(routePath)) return null;
 	return "marketing-lab-b2c-external";
+}
+
+function shouldSkipTheaterPublic(appName, routePath) {
+	if (appName !== "site-publico" || MARKETING_LAB_MODE) return null;
+	if (isTheaterUiPath(routePath)) return "theater-hidden-in-public-mode";
+	return null;
 }
 
 const RSV_SMOKE_ID = process.env.RSV_SMOKE_ID || "";
@@ -310,6 +333,22 @@ async function main() {
 			});
 			console.log(
 				`  SKIP  ${route.app.padEnd(14)} ${route.routePath}  (${labSkip})`,
+			);
+			continue;
+		}
+
+		const theaterSkip = shouldSkipTheaterPublic(route.app, route.routePath);
+		if (theaterSkip) {
+			counters.skipped++;
+			results.push({
+				app: route.app,
+				sourceFile: route.sourceFile,
+				routePath: route.routePath,
+				status: "skipped",
+				reason: theaterSkip,
+			});
+			console.log(
+				`  SKIP  ${route.app.padEnd(14)} ${route.routePath}  (${theaterSkip})`,
 			);
 			continue;
 		}
