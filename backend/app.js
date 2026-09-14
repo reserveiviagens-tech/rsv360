@@ -93,6 +93,10 @@ async function createApp() {
   app.use('/api/portal', portalRouter);
   app.use('/api/admin/portal', adminRouter);
 
+  // Aruanda B1: explicit 410 for archived modules (never mount pricing/cloud/comm/mkt).
+  const { registerDeadModuleStubs } = require('./src/routes/dead-modules.route');
+  registerDeadModuleStubs(app);
+
   try {
     const housekeepingModule = require('../server/modules/housekeeping');
     housekeepingModule.registerHousekeepingModule(app);
