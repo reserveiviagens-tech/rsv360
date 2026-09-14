@@ -10,20 +10,10 @@ import {
   ChevronLeft,
   Target, 
   Plane, 
-  Megaphone, 
-  Gift, 
-  ShoppingCart, 
-  DollarSign, 
-  FileText, 
-  Bot, 
-  Ticket, 
-  Briefcase, 
-  FileCheck, 
-  MapPin, 
-  Package, 
   Calculator,
   LayoutDashboard,
-  Home
+  Home,
+  KeyRound
 } from 'lucide-react'
 
 interface SidebarItem {
@@ -49,7 +39,7 @@ export default function AppSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['cotacoes']))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['anfitriao', 'gestao-turistica', 'cotacoes']))
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   // Detectar tamanho da tela e comunicar estado ao layout principal
@@ -88,6 +78,9 @@ export default function AppSidebar() {
     if (!pathname) return false
     if (href === '/dashboard' || href === '/') {
       return pathname === '/dashboard' || pathname === '/' || pathname === ''
+    }
+    if (href === '/anfitriao') {
+      return pathname === '/anfitriao' || pathname === '/anfitriao/'
     }
     return pathname.startsWith(href)
   }, [pathname])
@@ -140,6 +133,8 @@ export default function AppSidebar() {
     }
   }
 
+  // Honest nav: only surface READY / actively used modules (Aruanda A2).
+  // Mock/façade categories (Marketing, E-commerce, Relatórios standalone, etc.) stay out of the rail.
   const categories: SidebarCategory[] = [
     {
       id: 'dashboard',
@@ -151,11 +146,19 @@ export default function AppSidebar() {
       ]
     },
     {
-      id: 'all',
-      name: 'Todas as Funcionalidades',
-      icon: Target,
-      color: 'bg-blue-500',
-      items: []
+      id: 'anfitriao',
+      name: 'Anfitrião',
+      description: 'Anúncios, calendário e desempenho',
+      icon: KeyRound,
+      color: 'bg-rose-600',
+      items: [
+        { id: 'anf-hoje', name: 'Hoje', href: '/anfitriao' },
+        { id: 'anf-calendario', name: 'Calendário', href: '/anfitriao/calendario' },
+        { id: 'anf-anuncios', name: 'Anúncios', href: '/anfitriao/unidades' },
+        { id: 'anf-mensagens', name: 'Mensagens', href: '/anfitriao/mensagens' },
+        { id: 'anf-reservas', name: 'Reservas', href: '/anfitriao/reservas' },
+        { id: 'anf-desempenho', name: 'Desempenho', href: '/anfitriao/desempenho' },
+      ]
     },
     {
       id: 'gestao-turistica',
@@ -169,166 +172,8 @@ export default function AppSidebar() {
         { id: 'excursoes', name: 'Excursões', href: '/dashboard/excursoes' },
         { id: 'viagens-grupo', name: 'Viagens em Grupo', href: '/dashboard/viagens-grupo' },
         { id: 'marketplace', name: 'Marketplace', href: '/dashboard/marketplace' },
-        { id: 'affiliates', name: 'Afiliados', href: '/dashboard/affiliates' },
         { id: 'google-hotel-ads', name: 'Google Hotel Ads', href: '/dashboard/google-hotel-ads' },
         { id: 'ota-sync', name: 'Sincronização OTA', href: '/dashboard/ota-sync' },
-        { id: 'voice-commerce', name: 'Voice Commerce', href: '/dashboard/voice-commerce' }
-      ]
-    },
-    {
-      id: 'turismo',
-      name: 'Turismo',
-      description: 'Gestão de viagens',
-      icon: Plane,
-      color: 'bg-blue-600',
-      items: [
-        { id: 'viagens', name: 'Viagens', href: '/travel' },
-        { id: 'atracoes', name: 'Atrações', href: '/attractions' },
-        { id: 'parques', name: 'Parques', href: '/parks' },
-        { id: 'ingressos', name: 'Ingressos', href: '/tickets' }
-      ]
-    },
-    {
-      id: 'marketing',
-      name: 'Marketing',
-      description: 'Campanhas e analytics',
-      icon: Megaphone,
-      color: 'bg-purple-600',
-      items: [
-        { id: 'campanhas', name: 'Campanhas', href: '/marketing' },
-        { id: 'analytics', name: 'Analytics', href: '/analytics' },
-        { id: 'seo', name: 'SEO', href: '/seo' },
-        { id: 'recomendacoes', name: 'Recomendações', href: '/recommendations' }
-      ]
-    },
-    {
-      id: 'fidelizacao',
-      name: 'Fidelização',
-      description: 'Programa de fidelidade',
-      icon: Gift,
-      color: 'bg-pink-600',
-      items: [
-        { id: 'fidelidade', name: 'Fidelidade', href: '/loyalty' },
-        { id: 'recompensas', name: 'Recompensas', href: '/rewards' },
-        { id: 'cupons', name: 'Cupons', href: '/coupons' },
-        { id: 'cartoes-presente', name: 'Cartões Presente', href: '/giftcards' }
-      ]
-    },
-    {
-      id: 'ecommerce',
-      name: 'E-commerce',
-      description: 'Vendas e produtos',
-      icon: ShoppingCart,
-      color: 'bg-green-600',
-      items: [
-        { id: 'vendas', name: 'Vendas', href: '/sales' },
-        { id: 'produtos', name: 'Produtos', href: '/products' },
-        { id: 'estoque', name: 'Estoque', href: '/inventory' },
-        { id: 'ecommerce-plataforma', name: 'E-commerce', href: '/ecommerce' }
-      ]
-    },
-    {
-      id: 'financeiro',
-      name: 'Financeiro',
-      description: 'Gestão financeira',
-      icon: DollarSign,
-      color: 'bg-emerald-600',
-      items: [
-        { id: 'financas', name: 'Finanças', href: '/finance' },
-        { id: 'relatorios', name: 'Relatórios', href: '/reports' },
-        { id: 'pagamentos', name: 'Pagamentos', href: '/payments' },
-        { id: 'reembolsos', name: 'Reembolsos', href: '/refunds' }
-      ]
-    },
-    {
-      id: 'conteudo',
-      name: 'Conteúdo',
-      description: 'Mídia e avaliações',
-      icon: FileText,
-      color: 'bg-indigo-600',
-      items: [
-        { id: 'fotos', name: 'Fotos', href: '/photos' },
-        { id: 'videos', name: 'Vídeos', href: '/videos' },
-        { id: 'avaliacoes', name: 'Avaliações', href: '/reviews' },
-        { id: 'multilingue', name: 'Multilíngue', href: '/multilingual' }
-      ]
-    },
-    {
-      id: 'automacao',
-      name: 'Automação',
-      description: 'Chatbots e notificações',
-      icon: Bot,
-      color: 'bg-cyan-600',
-      items: [
-        { id: 'chatbots', name: 'Chatbots', href: '/chatbots' },
-        { id: 'notificacoes', name: 'Notificações', href: '/notifications' },
-        { id: 'automacao-config', name: 'Automação', href: '/automation' },
-        { id: 'workflows', name: 'Workflows', href: '/workflows' }
-      ]
-    },
-    {
-      id: 'vouchers',
-      name: 'Vouchers',
-      description: 'Gestão de vouchers',
-      icon: Ticket,
-      color: 'bg-orange-600',
-      items: [
-        { id: 'vouchers-gestao', name: 'Vouchers', href: '/vouchers' },
-        { id: 'editor', name: 'Editor', href: '/voucher-editor' },
-        { id: 'reservas', name: 'Reservas', href: '/reservations' },
-        { id: 'validacao', name: 'Validação', href: '/validation' }
-      ]
-    },
-    {
-      id: 'gestao',
-      name: 'Gestão',
-      description: 'Administração',
-      icon: Briefcase,
-      color: 'bg-slate-600',
-      items: [
-        { id: 'cadastros', name: 'Cadastros', href: '/gestao' },
-        { id: 'usuarios', name: 'Usuários', href: '/users' },
-        { id: 'permissoes', name: 'Permissões', href: '/permissions' },
-        { id: 'configuracoes', name: 'Configurações', href: '/settings' }
-      ]
-    },
-    {
-      id: 'documentos',
-      name: 'Documentos',
-      description: 'Gestão documental',
-      icon: FileCheck,
-      color: 'bg-amber-600',
-      items: [
-        { id: 'documentos-gestao', name: 'Documentos', href: '/documents' },
-        { id: 'contratos', name: 'Contratos', href: '/contracts' },
-        { id: 'seguros', name: 'Seguros', href: '/insurance' },
-        { id: 'vistos', name: 'Vistos', href: '/visa' }
-      ]
-    },
-    {
-      id: 'viagens-logistica',
-      name: 'Viagens',
-      description: 'Logística e transporte',
-      icon: MapPin,
-      color: 'bg-sky-600',
-      items: [
-        { id: 'viagens-logistica-gestao', name: 'Viagens', href: '/travel-catalog-rsv' },
-        { id: 'hoteis', name: 'Hotéis', href: '/hotels' },
-        { id: 'transporte', name: 'Transporte', href: '/transport' },
-        { id: 'mapas', name: 'Mapas', href: '/maps' }
-      ]
-    },
-    {
-      id: 'subscricoes',
-      name: 'Subscrições',
-      description: 'Planos e assinaturas',
-      icon: Package,
-      color: 'bg-violet-600',
-      items: [
-        { id: 'subscricoes-gestao', name: 'Subscrições', href: '/subscriptions' },
-        { id: 'planos', name: 'Planos', href: '/plans' },
-        { id: 'cobranca', name: 'Cobrança', href: '/billing' },
-        { id: 'upgrades', name: 'Upgrades', href: '/upgrades' }
       ]
     },
     {
