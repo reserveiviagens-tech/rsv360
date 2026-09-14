@@ -17,13 +17,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useServices, useServiceRequestMutation } from '@/hooks/use-services';
 import { ServiceCard } from '@/components/ServiceCard';
 import { EmptyState } from '@/components/EmptyState';
-import { SERVICE_CATALOG } from '@/lib/static-data';
 import type { GuestService } from '@/types/service';
 
 export default function ServicesPage() {
   const servicesQuery = useServices();
   const requestMutation = useServiceRequestMutation();
-  const services = servicesQuery.data || SERVICE_CATALOG;
+  const services = servicesQuery.data || [];
   const [selectedService, setSelectedService] = useState<GuestService | null>(null);
   const [desiredTime, setDesiredTime] = useState('');
   const [notes, setNotes] = useState('');
@@ -60,7 +59,14 @@ export default function ServicesPage() {
           <CardDescription>Escolha um serviço e envie sua solicitação para a equipe.</CardDescription>
         </CardHeader>
         <CardContent>
-          {services.length > 0 ? (
+          {servicesQuery.isLoading ? (
+            <p className="text-sm text-slate-600">Carregando serviços…</p>
+          ) : servicesQuery.isError ? (
+            <EmptyState
+              title="Catálogo indisponível"
+              description="Não foi possível carregar serviços da API. Tente novamente mais tarde."
+            />
+          ) : services.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {services.map((service) => (
                 <ServiceCard key={service.id} service={service} onRequest={() => setSelectedService(service)} />
