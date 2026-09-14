@@ -605,8 +605,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | C2 Guest stubs | Merged | #368 |
 | C3 Admin honestidade | Merged | #369 |
 | C4 Teatro fora prod | Merged | #370 |
-| A5 rótulo GPS sem app | Em PR | (este) |
-| A6 Reviews hide | Pendente | |
+| A5 rótulo GPS sem app | Merged | #371 |
+| A6 Reviews hide | Em PR | (este) |
 | A7 Mapa LocalizacaoEditor | Pendente | |
 | A8 Perfil anfitrião | Pendente | |
 | A9 Testes rota | Pendente | |
