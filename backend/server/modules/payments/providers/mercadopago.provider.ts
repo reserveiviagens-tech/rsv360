@@ -110,9 +110,14 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
 
   async createCheckoutSession(data: CreateCheckoutSessionDTO): Promise<CheckoutSessionResult> {
     const preference = new Preference(this.client);
+    const itemIdBase =
+      typeof data.metadata?.bookingId === 'string' || typeof data.metadata?.bookingId === 'number'
+        ? String(data.metadata.bookingId)
+        : 'checkout';
     const items =
       data.items && data.items.length > 0
-        ? data.items.map((item) => ({
+        ? data.items.map((item, index) => ({
+            id: `${itemIdBase}-${index + 1}`,
             title: item.name,
             description: item.description,
             quantity: item.quantity,
@@ -121,6 +126,7 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
           }))
         : [
             {
+              id: `${itemIdBase}-1`,
               title: data.description || 'Reserva RSV360',
               quantity: 1,
               unit_price: data.amount,
@@ -174,7 +180,6 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
         identification: data.document
           ? { type: 'CPF', number: data.document.replace(/\D/g, '') }
           : undefined,
-        metadata: data.metadata as Record<string, string> | undefined,
       },
     });
 

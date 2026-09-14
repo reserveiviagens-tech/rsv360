@@ -16,7 +16,7 @@ import { resolveStripeSecretKey, resolveStripeWebhookSecret } from '../config';
 
 export class StripeProvider implements PaymentProviderInterface {
   name = 'stripe';
-  private client: Stripe;
+  private client: any;
 
   constructor(secretKey?: string) {
     this.client = new Stripe(secretKey ?? resolveStripeSecretKey());
@@ -28,7 +28,7 @@ export class StripeProvider implements PaymentProviderInterface {
       currency: data.currency.toLowerCase(),
       description: data.description,
       payment_method_types: this.mapPaymentMethod(data.paymentMethod),
-      metadata: data.metadata as Stripe.MetadataParam | undefined,
+      metadata: data.metadata,
     });
 
     return {
@@ -71,8 +71,8 @@ export class StripeProvider implements PaymentProviderInterface {
     const refund = await this.client.refunds.create({
       payment_intent: data.paymentId,
       amount: Math.round(data.amount * 100),
-      reason: data.reason as Stripe.RefundCreateParams.Reason | undefined,
-      metadata: data.metadata as Stripe.MetadataParam | undefined,
+      reason: data.reason,
+      metadata: data.metadata,
     });
 
     return {
@@ -86,7 +86,7 @@ export class StripeProvider implements PaymentProviderInterface {
   }
 
   async listPayments(filters: PaymentFilters): Promise<PaginatedResult<PaymentResult>> {
-    const params: Stripe.PaymentIntentListParams = {
+    const params: { limit: number; customer?: string } = {
       limit: filters.limit || 10,
     };
 
@@ -96,7 +96,13 @@ export class StripeProvider implements PaymentProviderInterface {
 
     const result = await this.client.paymentIntents.list(params);
 
-    const data = result.data.map((pi) => ({
+    const data = result.data.map((pi: {
+      id: string;
+      status: string;
+      amount: number;
+      currency: string;
+      metadata: Record<string, string>;
+    }) => ({
       id: pi.id,
       externalId: pi.id,
       status: this.mapStatus(pi.status),
@@ -146,7 +152,7 @@ export class StripeProvider implements PaymentProviderInterface {
       line_items: lineItems,
       success_url: data.successUrl,
       cancel_url: data.cancelUrl,
-      metadata: data.metadata as Stripe.MetadataParam | undefined,
+      metadata: data.metadata,
       payment_method_types: this.mapPaymentMethod(data.paymentMethod || 'credit_card'),
     });
 
@@ -166,7 +172,7 @@ export class StripeProvider implements PaymentProviderInterface {
       email: data.email,
       name: data.name,
       phone: data.phone,
-      metadata: data.metadata as Stripe.MetadataParam | undefined,
+      metadata: data.metadata,
     });
 
     return { externalId: customer.id };
@@ -185,7 +191,7 @@ export class StripeProvider implements PaymentProviderInterface {
     }
   }
 
-  private mapPaymentMethod(method: string): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
+  private mapPaymentMethod(method: string): string[] {
     switch (method) {
       case 'credit_card':
         return ['card'];
