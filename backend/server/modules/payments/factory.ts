@@ -7,6 +7,7 @@ import { MercadoPagoSubscriptionProvider } from './providers/mercadopago-subscri
 import { StripeSubscriptionProvider } from './providers/stripe-subscription.provider';
 import { OpenFinancePIXProvider } from './providers/openfinance-pix.provider';
 
+/** Aruanda B3a: services must call this provider (no silent mock). */
 export function getPaymentProvider(): PaymentProviderInterface {
   const provider = process.env.PAYMENT_PROVIDER || 'mercadopago';
   switch (provider) {

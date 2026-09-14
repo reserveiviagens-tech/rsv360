@@ -595,8 +595,12 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A4 HostNav tarifas/comissões/importar | Merged | #358 |
 | D1 Prometheus↔Alertmanager | Merged | #359 |
 | B1 DEAD modules | Merged | #360 |
-| B2 PORT 3002 default | Em PR | (este) |
-| B3a–B3e payments | Pendente | |
+| B2 PORT 3002 default | Merged | #361 |
+| B3a payments inventário | Em PR | (este) |
+| B3b PaymentService wire | Pendente | |
+| B3c PixService wire | Pendente | |
+| B3d webhook regressão | Pendente | |
+| B3e booking E2E pago | Pendente | |
 | C1–C4 frontends | Pendente | |
 | A5–A12 turismo produto | Pendente | |
 | B4–B7 hardening | Pendente | |
@@ -675,7 +679,29 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | auth (v1) | `/api/v1/auth` | READY | Login/refresh/2FA/SSO/OAuth/reset |
 | tenant | `/api/v1/tenant` | READY | `GET /context` |
 | auctions | `/api/v1/auctions` | READY | + worker settlement |
-| payments | `/api/v1/payments` | **PARTIAL** | Providers reais; **CRUD services ainda mock**; webhooks HMAC mais maduros |
+| payments | `/api/v1/payments` | **PARTIAL** | Providers reais; **CRUD services ainda mock** (B3a); webhooks HMAC mais maduros |
+
+#### Payments — inventário B3a (contrato de fechamento)
+
+| Peça | Path | Estado B3a |
+|------|------|------------|
+| Factory | `backend/server/modules/payments/factory.ts` | `PAYMENT_PROVIDER` → MP/Stripe; default `mercadopago` |
+| PaymentService | `…/services/payment.service.ts` | **Mock silencioso** (ignora `this.provider`) |
+| PIXService | `…/services/pix.service.ts` | **Mock silencioso** (não chama `getPIXProvider`) |
+| MercadoPagoProvider | `…/providers/mercadopago.provider.ts` | Implementação real (`MP_ACCESS_TOKEN`) |
+| StripeProvider | `…/providers/stripe.provider.ts` | Implementação real |
+| OpenFinance PIX | `…/providers/openfinance-pix.provider.ts` | Alt via `PIX_PROVIDER` |
+| Webhooks | `…/services/webhook.service.ts` + HMAC lib | Maduro; teste `pr02-mp-webhook-hmac.test.ts` |
+| Rotas | `payment.routes.ts` / `pix.routes.ts` | Delega aos services mock |
+
+**Critérios de aceite (B3b–B3e):**
+
+1. `create`/`list`/`get`/`cancel` **deixam de retornar mock** quando o provider está configurado (credenciais presentes).
+2. Sem provider utilizável (`PAYMENT_PROVIDER=none|disabled` **ou** credencial ausente) → **erro explícito** (4xx/5xx de domínio), nunca mock silencioso.
+3. Testes de contrato com **test doubles** do provider (sem PII; sem chamar rede).
+4. Webhook HMAC + `webhook_events` intactos (B3d).
+5. Suite booking E2E pago com doubles (B3e).
+
 | guest-portal | `/api/portal`, `/api/admin/portal` | READY | Token portal + staff |
 | housekeeping | `/api/housekeeping` | PARTIAL | CRUD OK; auto-schedule `auto-disabled` |
 | revenue | `/api/revenue` | READY | Rules/calendar/forecast |
