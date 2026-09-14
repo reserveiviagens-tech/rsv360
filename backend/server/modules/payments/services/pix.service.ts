@@ -1,69 +1,70 @@
-import { CreatePIXDTO, PIXResult } from '../interfaces';
+import { getPIXProvider } from '../factory';
+import {
+  CreatePIXDTO,
+  PIXResult,
+  PIXProviderInterface,
+} from '../interfaces';
+import {
+  PaymentProviderNotConfiguredError,
+} from './payment.service';
+
+/**
+ * Assert PIX provider credentials. Never fall back to silent mocks (Aruanda B3c).
+ */
+export function assertPixProviderConfigured(
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  const provider = (env.PIX_PROVIDER || env.PAYMENT_PROVIDER || 'mercadopago').toLowerCase();
+  if (provider === 'none' || provider === 'disabled') {
+    throw new PaymentProviderNotConfiguredError(
+      'PIX provider disabled (PIX_PROVIDER=none|disabled)',
+    );
+  }
+  if (provider === 'mercadopago' && !String(env.MP_ACCESS_TOKEN || '').trim()) {
+    throw new PaymentProviderNotConfiguredError(
+      'MercadoPago PIX not configured: MP_ACCESS_TOKEN required',
+    );
+  }
+  if (provider === 'openfinance') {
+    if (!String(env.PIX_CLIENT_ID || '').trim() || !String(env.PIX_CLIENT_SECRET || '').trim()) {
+      throw new PaymentProviderNotConfiguredError(
+        'OpenFinance PIX not configured: PIX_CLIENT_ID and PIX_CLIENT_SECRET required',
+      );
+    }
+  }
+}
 
 export class PIXService {
-  async createPIXCharge(enterpriseId: string, data: CreatePIXDTO): Promise<PIXResult> {
-    // Mock implementation for testing
-    return {
-      id: 'pix_mock_' + Date.now(),
-      externalId: 'pix_mp_' + Date.now(),
-      status: 'pending',
-      qrCode: '00020101021126890014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-42661417400016BR.COM.SOFTPAY0111Test PIX520400005303986540510.005802BR5913Test Customer6009SAO PAULO62070503***6304E2CA',
-      qrCodeBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
-      amount: data.amount,
-      description: data.description,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    };
+  constructor(private readonly provider: PIXProviderInterface = getPIXProvider()) {}
+
+  async createPIXCharge(_enterpriseId: string, data: CreatePIXDTO): Promise<PIXResult> {
+    assertPixProviderConfigured();
+    return this.provider.createPIXCharge(data);
   }
 
   async getPIXCharge(id: string): Promise<PIXResult> {
-    // Mock implementation for testing
-    return {
-      id,
-      externalId: 'pix_mp_' + id,
-      status: 'pending',
-      qrCode: 'mock_qr_code',
-      qrCodeBase64: 'mock_qr_base64',
-      amount: 100.00,
-      description: 'Mock PIX charge',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    };
+    assertPixProviderConfigured();
+    return this.provider.getPIXCharge(id);
   }
 
   async cancelPIXCharge(id: string): Promise<PIXResult> {
-    // Mock implementation for testing
-    return {
-      id,
-      externalId: 'pix_mp_' + id,
-      status: 'cancelled',
-      qrCode: 'mock_qr_code',
-      qrCodeBase64: 'mock_qr_base64',
-      amount: 100.00,
-      description: 'Cancelled PIX charge',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    };
+    assertPixProviderConfigured();
+    return this.provider.cancelPIXCharge(id);
   }
 
   async generateQRCode(pixCode: string): Promise<string> {
-    // Mock implementation for testing
-    return 'mock_qr_code_base64';
+    assertPixProviderConfigured();
+    return this.provider.generateQRCode(pixCode);
   }
 
   async checkPIXStatus(id: string): Promise<string> {
-    // Mock implementation for testing
-    return 'pending';
+    assertPixProviderConfigured();
+    const charge = await this.provider.getPIXCharge(id);
+    return charge.status;
   }
 
-  async listPIXCharges(limit = 10, offset = 0): Promise<PIXResult[]> {
-    // Mock implementation for testing
-    return [{
-      id: 'pix_mock_1',
-      externalId: 'pix_mp_1',
-      status: 'pending',
-      qrCode: 'mock_qr_code',
-      qrCodeBase64: 'mock_qr_base64',
-      amount: 50.00,
-      description: 'Mock PIX charge',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    }];
+  async listPIXCharges(_limit = 10, _offset = 0): Promise<PIXResult[]> {
+    assertPixProviderConfigured();
+    throw new Error('PIXService.listPIXCharges not implemented by provider contract');
   }
 }
