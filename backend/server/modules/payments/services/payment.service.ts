@@ -1,86 +1,86 @@
 import { getPaymentProvider } from '../factory';
-import { CreatePaymentDTO, PaymentResult, PaymentFilters, PaginatedResult } from '../interfaces';
+import {
+  CreatePaymentDTO,
+  PaymentResult,
+  PaymentFilters,
+  PaginatedResult,
+  PaymentProviderInterface,
+} from '../interfaces';
+
+export class PaymentProviderNotConfiguredError extends Error {
+  readonly code = 'PAYMENT_PROVIDER_NOT_CONFIGURED';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'PaymentProviderNotConfiguredError';
+  }
+}
+
+/**
+ * Assert live payment credentials. Never fall back to silent mocks (Aruanda B3b).
+ */
+export function assertPaymentProviderConfigured(
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  const provider = (env.PAYMENT_PROVIDER || 'mercadopago').toLowerCase();
+  if (provider === 'none' || provider === 'disabled') {
+    throw new PaymentProviderNotConfiguredError(
+      'Payment provider disabled (PAYMENT_PROVIDER=none|disabled)',
+    );
+  }
+  if (provider === 'mercadopago' && !String(env.MP_ACCESS_TOKEN || '').trim()) {
+    throw new PaymentProviderNotConfiguredError(
+      'MercadoPago not configured: MP_ACCESS_TOKEN required',
+    );
+  }
+  if (provider === 'stripe' && !String(env.STRIPE_SECRET_KEY || '').trim()) {
+    throw new PaymentProviderNotConfiguredError(
+      'Stripe not configured: STRIPE_SECRET_KEY required',
+    );
+  }
+}
 
 export class PaymentService {
-  private provider = getPaymentProvider();
+  constructor(private readonly provider: PaymentProviderInterface = getPaymentProvider()) {}
 
   async createPayment(enterpriseId: string, data: CreatePaymentDTO): Promise<PaymentResult> {
-    // Mock implementation for testing
-    return {
-      id: 'pay_mock_' + Date.now(),
-      externalId: 'pay_mp_' + Date.now(),
-      status: 'approved',
-      amount: data.amount,
-      currency: data.currency,
-      qrCode: 'mock_qr_code',
-      qrCodeBase64: 'mock_qr_base64',
-      boletoUrl: 'https://mock.boleto.url',
-      boletoBarcode: 'mock_barcode',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-      metadata: data.metadata || {},
-    };
+    assertPaymentProviderConfigured();
+    return this.provider.createPayment({
+      ...data,
+      metadata: {
+        ...(data.metadata || {}),
+        enterpriseId,
+      },
+    });
   }
 
-  async getPayment(enterpriseId: string, paymentId: string): Promise<PaymentResult> {
-    // Mock implementation for testing
-    return {
-      id: paymentId,
-      externalId: 'pay_mp_' + paymentId,
-      status: 'approved',
-      amount: 100.00,
-      currency: 'BRL',
-      qrCode: 'mock_qr_code',
-      qrCodeBase64: 'mock_qr_base64',
-      boletoUrl: 'https://mock.boleto.url',
-      boletoBarcode: 'mock_barcode',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      metadata: {},
-    };
+  async getPayment(_enterpriseId: string, paymentId: string): Promise<PaymentResult> {
+    assertPaymentProviderConfigured();
+    return this.provider.getPayment(paymentId);
   }
 
-  async listPayments(enterpriseId: string, filters: PaymentFilters = {}): Promise<PaginatedResult<PaymentResult>> {
-    // Mock implementation for testing
-    return {
-      data: [{
-        id: 'pay_mock_1',
-        externalId: 'pay_mp_1',
-        status: 'approved',
-        amount: 100.00,
-        currency: 'BRL',
-        qrCode: 'mock_qr_code',
-        qrCodeBase64: 'mock_qr_base64',
-        boletoUrl: 'https://mock.boleto.url',
-        boletoBarcode: 'mock_barcode',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        metadata: {},
-      }],
-      total: 1,
-      limit: filters.limit || 10,
-      offset: filters.offset || 0,
-    };
+  async listPayments(
+    _enterpriseId: string,
+    filters: PaymentFilters = {},
+  ): Promise<PaginatedResult<PaymentResult>> {
+    assertPaymentProviderConfigured();
+    return this.provider.listPayments(filters);
   }
 
-  async cancelPayment(enterpriseId: string, paymentId: string): Promise<PaymentResult> {
-    // Mock implementation for testing
-    return {
-      id: paymentId,
-      externalId: 'pay_mp_' + paymentId,
-      status: 'cancelled',
-      amount: 100.00,
-      currency: 'BRL',
-      metadata: {},
-    };
+  async cancelPayment(_enterpriseId: string, paymentId: string): Promise<PaymentResult> {
+    assertPaymentProviderConfigured();
+    return this.provider.cancelPayment(paymentId);
   }
 
-  async getPaymentsByBooking(bookingId: string): Promise<PaymentResult[]> {
+  async getPaymentsByBooking(_bookingId: string): Promise<PaymentResult[]> {
     throw new Error('PaymentService.getPaymentsByBooking not implemented');
   }
 
-  async getPaymentsByCustomer(customerId: string): Promise<PaymentResult[]> {
+  async getPaymentsByCustomer(_customerId: string): Promise<PaymentResult[]> {
     throw new Error('PaymentService.getPaymentsByCustomer not implemented');
   }
 
-  async getPaymentStats(enterpriseId: string): Promise<unknown> {
+  async getPaymentStats(_enterpriseId: string): Promise<unknown> {
     throw new Error('PaymentService.getPaymentStats not implemented');
   }
 }
