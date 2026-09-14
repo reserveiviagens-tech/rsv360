@@ -593,8 +593,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A2 AppSidebar mocks | Merged | #356 |
 | A3 rótulos NFSe/contratos | Merged | #357 |
 | A4 HostNav tarifas/comissões/importar | Merged | #358 |
-| D1 Prometheus↔Alertmanager | Em PR | (este) |
-| B1 DEAD modules | Pendente | |
+| D1 Prometheus↔Alertmanager | Merged | #359 |
+| B1 DEAD modules | Em PR | (este) |
 | B2 PORT 3002 default | Pendente | |
 | B3a–B3e payments | Pendente | |
 | C1–C4 frontends | Pendente | |
@@ -703,10 +703,10 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 | Módulo | Prefixo pretendido | Status |
 |--------|--------------------|--------|
-| pricing | `/api/pricing` | **DEAD** — não registrado no boot |
-| cloud | `/api/cloud` | **DEAD** |
-| communication | `/api/v1/comm` | **DEAD** (TODOs/mocks no código) |
-| marketing | `/api/v1/mkt` | **DEAD** |
+| pricing | `/api/pricing` | **DEAD** — 410 stub (B1); não montado |
+| cloud | `/api/cloud` | **DEAD** — 410 stub (B1) |
+| communication | `/api/v1/comm` | **DEAD** — 410 stub (B1) |
+| marketing | `/api/v1/mkt` | **DEAD** — 410 stub (B1) |
 
 #### Domínios críticos (backend)
 
