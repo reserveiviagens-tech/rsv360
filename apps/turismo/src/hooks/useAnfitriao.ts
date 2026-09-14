@@ -59,19 +59,59 @@ export function useAnfitriaoHoje(hoje?: string) {
   });
 }
 
-export function useAnfitriaoInbox(de: string, ate: string) {
+/** Default window for host inbox / unread badge (matches mensagens page). */
+export function anfitriaoInboxDateWindow(now = new Date()): { de: string; ate: string } {
+  const de = new Date(now);
+  de.setDate(de.getDate() - 90);
+  const ate = new Date(now);
+  ate.setDate(ate.getDate() + 180);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { de: iso(de), ate: iso(ate) };
+}
+
+export function useAnfitriaoInbox(
+  de: string,
+  ate: string,
+  opts?: { pollMs?: number | false },
+) {
+  const pollMs = opts?.pollMs === false ? false : opts?.pollMs ?? false;
   return useQuery({
     queryKey: ['anfitriao', 'inbox', de, ate],
     queryFn: () => fase1Api.anfitriaoInboxMensagens(de, ate),
     enabled: Boolean(de && ate),
+    refetchInterval: pollMs || false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 
-export function useAnfitriaoMensagensThread(propostaId: number | null) {
+/** Polling unread count for HostNav badge (near-realtime; no Socket.IO in A12). */
+export function useAnfitriaoUnreadCount(opts?: { pollMs?: number | false; enabled?: boolean }) {
+  const { de, ate } = anfitriaoInboxDateWindow();
+  const pollMs = opts?.pollMs === false ? false : opts?.pollMs ?? 20_000;
+  return useQuery({
+    queryKey: ['anfitriao', 'unread-count', de, ate],
+    queryFn: () => fase1Api.anfitriaoMensagensUnreadCount(de, ate),
+    enabled: opts?.enabled !== false && Boolean(de && ate),
+    refetchInterval: pollMs || false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    select: (res) => res.data?.unread ?? 0,
+  });
+}
+
+export function useAnfitriaoMensagensThread(
+  propostaId: number | null,
+  opts?: { pollMs?: number | false },
+) {
+  const pollMs = opts?.pollMs === false ? false : opts?.pollMs ?? false;
   return useQuery({
     queryKey: ['anfitriao', 'thread', propostaId],
     queryFn: () => fase1Api.anfitriaoMensagensThread(propostaId!),
     enabled: propostaId != null && propostaId > 0,
+    refetchInterval: pollMs || false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -83,6 +123,7 @@ export function useEnviarMensagemAnfitriao(propostaId: number | null) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['anfitriao', 'thread', propostaId] });
       qc.invalidateQueries({ queryKey: ['anfitriao', 'inbox'] });
+      qc.invalidateQueries({ queryKey: ['anfitriao', 'unread-count'] });
     },
   });
 }

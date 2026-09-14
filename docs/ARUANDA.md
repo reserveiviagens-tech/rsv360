@@ -203,7 +203,7 @@ Auth: `parceiroAuth` · `masterAuth` · `staffAprovacao` (admin/manager).
 | GET | `/calendario` · `/unidades/:id/calendario` |
 | GET/PUT | `/unidades/:id/disponibilidade` |
 | POST | bloquear / desbloquear |
-| GET | `/reservas` · `/hoje` · `/mensagens` |
+| GET | `/reservas` · `/hoje` · `/mensagens` · `/mensagens/unread-count` |
 | GET/POST | `/reservas/:propostaId/mensagens` |
 | POST | aprovar / rejeitar reserva |
 | iCal | token · import · sync · `.ics` público |
@@ -409,7 +409,7 @@ Padrão: UI grande + `hoteisMock` / “dados mock” / TODO. **Nenhuma fatia mar
 13. Validar ou retirar do menu: leilões/OTA/marketplace se API rasa  
 14. Contratos GATE-PROD-01: nunca parecer documento válido  
 15. Affiliates: remover ID hardcoded  
-16. Mensagens: unread realtime (melhoria)  
+16. Mensagens: unread realtime (melhoria) ✅ (A12 — polling + badge; sem Socket.IO host)  
 
 ---
 
@@ -609,10 +609,10 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A6 Reviews hide | Merged | #372 |
 | A7 Mapa LocalizacaoEditor | Merged | #373 |
 | A8 Perfil anfitrião | Merged | #374 |
-| A9 Testes rota | Em PR | (este) |
+| A9 Testes rota | Merged | #375 |
 | A10 Podar reservei/** | Adiado | Requer GO owner |
 | A11 Cotações servidor | Adiado | Pós-payments / alto esforço |
-| A12 Mensagens unread | Pendente | |
+| A12 Mensagens unread | Em PR | (este) |
 | B4–B7 hardening | Pendente | |
 | Onda 7 ops humano | Pendente | Checklist §18.2 |
 

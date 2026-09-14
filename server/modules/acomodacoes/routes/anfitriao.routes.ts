@@ -1138,6 +1138,24 @@ router.get('/mensagens', ...parceiroAuth, async (req, res) => {
   }
 });
 
+/** Near-realtime unread badge (polling) — no WebSocket in this slice. */
+router.get('/mensagens/unread-count', ...parceiroAuth, async (req, res) => {
+  try {
+    const de = String(req.query.de ?? '');
+    const ate = String(req.query.ate ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate)) {
+      return res.status(400).json({ success: false, error: 'de e ate (YYYY-MM-DD) obrigatórios' });
+    }
+    const result = await anfitriaoService.contarInboxNaoLidas(authFromReq(req), { de, ate });
+    if ('error' in result) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.get('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res) => {
   try {
     const propostaId = Number(req.params.propostaId);
