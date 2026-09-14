@@ -40,13 +40,7 @@ const METODOS: Array<{
   {
     id: 'web_gps',
     label: 'Confirmar localização no navegador',
-    hint: 'Recomendado agora — use o GPS do dispositivo no endereço do anúncio (até 500 m de tolerância).',
-  },
-  {
-    id: 'app',
-    label: 'Verificar pelo app Reservei',
-    hint: 'App nativo em breve — deep-link disponível; se o app não abrir, use a verificação pelo navegador (web_gps).',
-    secondary: true,
+    hint: 'Disponível agora — use o GPS do dispositivo no endereço do anúncio (até 500 m de tolerância).',
   },
   {
     id: 'terceiro',
@@ -58,6 +52,7 @@ const METODOS: Array<{
     label: 'Enviar 3 vídeos/fotos',
     hint: 'Interno, fachada e placa/identificação do local.',
   },
+  // Aruanda A5: no app-store product — do not offer "app" as a primary method.
 ];
 
 function geoErrorMessage(code: number): string {
@@ -73,10 +68,11 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoOk, setGeoOk] = useState<string | null>(null);
-  const [appFallbackMsg, setAppFallbackMsg] = useState<string | null>(null);
   const evidencias = value.evidencias ?? [];
   const status = value.status ?? 'pendente';
-  const metodo = value.metodo ?? 'web_gps';
+  // Aruanda A5: legacy `app` is not offered — force web_gps for editing.
+  const metodo: MetodoId =
+    value.metodo === 'app' || !value.metodo ? 'web_gps' : value.metodo;
 
   async function onFile(file: File | null) {
     if (!file) return;
@@ -138,36 +134,12 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
     );
   }
 
-  function abrirAppReservei() {
-    setErr(null);
-    setAppFallbackMsg(null);
-    setGeoOk(null);
-    onChange({
-      ...value,
-      metodo: 'app',
-      evidenciaGeo: undefined,
-      distanciaMetros: undefined,
-    });
-    if (typeof window === 'undefined') return;
-    window.location.href = `reservei://verificacao-local?unitId=${encodeURIComponent(String(unitId))}`;
-    window.setTimeout(() => {
-      setAppFallbackMsg(
-        'App nativo ainda não disponível neste dispositivo. Use “Confirmar localização no navegador” (web_gps) — funciona agora.',
-      );
-    }, 1500);
-  }
-
   function enviarRevisao() {
     if (metodo === 'web_gps') {
       if (!value.evidenciaGeo) {
         setErr('Confirme a localização no navegador antes de enviar.');
         return;
       }
-    } else if (metodo === 'app') {
-      setErr(
-        'App nativo ainda não conclui a verificação aqui. Use a confirmação pelo navegador (web_gps).',
-      );
-      return;
     } else if ((metodo === 'videos' || !metodo) && evidencias.length < 1) {
       setErr('Adicione ao menos uma evidência (foto ou vídeo).');
       return;
@@ -210,7 +182,6 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
               if (m.disabled) return;
               setErr(null);
               setGeoOk(null);
-              setAppFallbackMsg(null);
               onChange({
                 ...value,
                 metodo: m.id,
@@ -235,24 +206,11 @@ export function VerificacaoLocalEditor({ unitId, value, onChange }: Props) {
         ))}
       </div>
 
-      {metodo === 'app' && (
-        <div className="rounded-2xl border border-slate-200 p-4">
-          <p className="text-sm font-medium">App Reservei</p>
-          <p className="text-xs text-slate-500">
-            O app nativo está a caminho. Enquanto isso, o deep-link tenta abrir o app; se falhar,
-            use web_gps no navegador.
-          </p>
-          <button
-            type="button"
-            className="mt-3 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-40"
-            disabled={status === 'enviado' || status === 'aprovado'}
-            onClick={abrirAppReservei}
-          >
-            Abrir no app Reservei
-          </button>
-          {appFallbackMsg ? <p className="mt-2 text-sm text-amber-800">{appFallbackMsg}</p> : null}
-        </div>
-      )}
+      {value.metodo === 'app' ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
+          Método “app” não está disponível (sem app na loja). Use a verificação pelo navegador.
+        </p>
+      ) : null}
 
       {metodo === 'web_gps' && (
         <div className="rounded-2xl border border-slate-200 p-4">

@@ -604,8 +604,15 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | C1 site-publico portas | Merged | #367 |
 | C2 Guest stubs | Merged | #368 |
 | C3 Admin honestidade | Merged | #369 |
-| C4 Teatro fora prod | Em PR | (este) |
-| A5–A12 turismo produto | Pendente | |
+| C4 Teatro fora prod | Merged | #370 |
+| A5 rótulo GPS sem app | Em PR | (este) |
+| A6 Reviews hide | Pendente | |
+| A7 Mapa LocalizacaoEditor | Pendente | |
+| A8 Perfil anfitrião | Pendente | |
+| A9 Testes rota | Pendente | |
+| A10 Podar reservei/** | Adiado | Requer GO owner |
+| A11 Cotações servidor | Adiado | Pós-payments / alto esforço |
+| A12 Mensagens unread | Pendente | |
 | B4–B7 hardening | Pendente | |
 | Onda 7 ops humano | Pendente | Checklist §18.2 |
 
