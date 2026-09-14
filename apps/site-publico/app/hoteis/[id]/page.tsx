@@ -18,7 +18,7 @@ import { HotelMapPin } from '@/components/hotel/HotelMapPin';
 import { getCoordinatesByHotelName } from '@/lib/caldas-novas-coordinates';
 import ChatAgent from '@/components/chat-agent';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 export default function EnterpriseDetailPage() {
   const params = useParams();

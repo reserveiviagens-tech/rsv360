@@ -61,7 +61,7 @@ export class RealtimeVotingService {
    * Conectar ao WebSocket para uma wishlist
    */
   async connect(wishlistId: number, token: string): Promise<void> {
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3001';
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3002';
     this.wsService = new WebSocketService(wsUrl, token);
 
     await this.wsService.connect();

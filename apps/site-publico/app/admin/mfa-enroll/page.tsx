@@ -18,7 +18,7 @@ export default function AdminMfaEnrollPage() {
   const [started, setStarted] = useState(false)
 
   const backendBase = () =>
-    (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3001").replace(
+    (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3002").replace(
       /\/$/,
       "",
     )

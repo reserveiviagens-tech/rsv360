@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3002';
 
 const LOGIN_EMAIL = '#loginEmail, input[name="loginEmail"], input[name="email"]';
 const LOGIN_PASSWORD = '#loginPassword, input[name="password"][type="password"]';

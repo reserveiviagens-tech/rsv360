@@ -331,7 +331,7 @@ let wsClientInstance: WebSocketClient | null = null;
  */
 export function getWebSocketClient(token?: string): WebSocketClient {
   if (!wsClientInstance) {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002';
     wsClientInstance = new WebSocketClient({
       url: wsUrl,
       token,
@@ -343,7 +343,7 @@ export function getWebSocketClient(token?: string): WebSocketClient {
     // Atualizar token se necessário
     wsClientInstance.disconnect();
     wsClientInstance = new WebSocketClient({
-      url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
+      url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002',
       token,
       reconnectAttempts: 5,
       reconnectDelay: 1000,

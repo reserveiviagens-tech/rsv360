@@ -23,7 +23,7 @@ const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
       ? process.env.FRONTEND_URL?.split(',') || ['http://localhost:3000']
-      : ['http://localhost:3000', 'http://localhost:3001'],
+      : ['http://localhost:3000', 'http://localhost:3002'],
     credentials: true,
     methods: ['GET', 'POST'],
   },
