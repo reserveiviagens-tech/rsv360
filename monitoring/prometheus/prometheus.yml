@@ -27,3 +27,14 @@ scrape_configs:
     static_configs:
       - targets:
           - backend:3002
+
+  # Aruanda B7 — only up when compose profile lab-exporters is enabled (targets DOWN otherwise).
+  - job_name: rsv360-postgres
+    static_configs:
+      - targets:
+          - postgres-exporter:9187
+
+  - job_name: rsv360-redis
+    static_configs:
+      - targets:
+          - redis-exporter:9121

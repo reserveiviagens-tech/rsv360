@@ -615,8 +615,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A12 Mensagens unread | Merged | #376 |
 | B4 Tracking dedup Redis | Merged | #377 |
 | B5 Housekeeping schedule | Merged | #378 |
-| B6 CRM path exception | Em PR | (este) |
-| B7 exporters (opcional) | Pendente | Lab only |
+| B6 CRM path exception | Merged | #379 |
+| B7 exporters (opcional) | Em PR | (este) lab-exporters |
 | Onda 7 ops humano | Pendente | Checklist §18.2 |
 
 ### 18.2 Checklist ops humano (Onda 7)
@@ -766,7 +766,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Categoria | Itens |
 |-----------|--------|
 | **Pronto** | Auth v1, Fase1 CRUD, acomodações/anfitrião, cotação pública, propostas+WS, auctions, guest-portal, revenue, CRM, CMS, comissões, agentes, health/metrics |
-| **Falta concluir** | exporters DB/Redis (lab, B7 opcional) |
+| **Falta concluir** | — (B7 exporters lab opcional entregue) |
 | **Não implantado** | Módulos pricing/cloud/comm/marketing no boot; `/api/core/token` legado; checkout session payments |
 | **Melhorar** | Remover ou montar DEAD modules com auth fail-closed; default `PORT=3002` no `server.js`; OpenAPI sincronizado com módulos vivos |
 
@@ -854,19 +854,21 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 | Serviço | Endereço | Config | Status | Gaps |
 |---------|----------|--------|--------|------|
-| Postgres | 127.0.0.1:5433 | `POSTGRES_*` + init SQL | READY | Healthcheck user/db hardcoded; sem exporter |
-| Redis | 127.0.0.1:6379 | AOF inline | READY | Sem senha; sem exporter |
+| Postgres | 127.0.0.1:5433 | `POSTGRES_*` + init SQL | READY | Healthcheck user/db hardcoded; exporter lab (`lab-exporters`) |
+| Redis | 127.0.0.1:6379 | AOF inline | READY | Sem senha; exporter lab (`lab-exporters`) |
 | Prometheus | :9090 | `monitoring/prometheus/*.yml` | READY | Scrape backend `/metrics`; `alerting.alertmanagers` → `alertmanager:9093` |
 | Grafana | :3007 | `monitoring/grafana/**` | PARTIAL | 1 dashboard (conversão); sem healthcheck |
 | Alertmanager | :9093 | `monitoring/alertmanager/alertmanager.yml` | READY (lab) | Null sink (sem webhook); ligado ao Prometheus (D1) |
 
 **Prod (`docker-compose.prod.yml`):** sem Prometheus/Grafana/Alertmanager; Postgres/Redis sem publish de porta.
 
+**Lab exporters (B7):** `docker compose --profile lab-exporters up -d` sobe `postgres-exporter` (:9187 interno) e `redis-exporter` (:9121 interno). Prometheus já tem scrape jobs; targets ficam DOWN até o profile estar ativo. **Ausente no compose prod.**
+
 | Categoria | Itens |
 |-----------|--------|
-| **Pronto** | Postgres+Redis healthy gate; scrape backend com Bearer; Grafana→Prometheus |
-| **Falta concluir** | Ligar Prometheus→Alertmanager; receivers reais; exporters DB/Redis |
-| **Não implantado** | Observabilidade no compose **prod**; multi-job scrape |
+| **Pronto** | Postgres+Redis healthy gate; scrape backend com Bearer; Grafana→Prometheus; Alertmanager lab (D1); exporters lab opt-in (B7) |
+| **Falta concluir** | receivers reais Alertmanager; obs no compose **prod** (GO) |
+| **Não implantado** | Observabilidade no compose **prod**; multi-job scrape avançado |
 | **Melhorar** | Mais dashboards; healthchecks nos monitores; alinhar healthcheck PG ao `.env` |
 
 ---
