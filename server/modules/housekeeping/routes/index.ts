@@ -4,6 +4,7 @@ import roomsRoutes from './room-status.routes';
 import tasksRoutes from './tasks.routes';
 import maintenanceRoutes from './maintenance.routes';
 import checklistsRoutes from './checklists.routes';
+import schedulerRoutes from './scheduler.routes';
 
 const router = Router();
 
@@ -18,6 +19,8 @@ router.get('/health', (_req, res) => {
       tasks: '/api/housekeeping/tasks',
       maintenance: '/api/housekeeping/maintenance',
       checklists: '/api/housekeeping/checklists',
+      schedulerStatus: '/api/housekeeping/scheduler/status',
+      schedulerRun: '/api/housekeeping/scheduler/run',
     },
   });
 });
@@ -43,6 +46,7 @@ router.use('/rooms', roomsRoutes);
 router.use('/tasks', tasksRoutes);
 router.use('/maintenance', maintenanceRoutes);
 router.use('/checklists', checklistsRoutes);
+router.use('/scheduler', schedulerRoutes);
 
 export default router;
 
@@ -50,6 +54,7 @@ export { default as roomsRoutes } from './room-status.routes';
 export { default as tasksRoutes } from './tasks.routes';
 export { default as maintenanceRoutes } from './maintenance.routes';
 export { default as checklistsRoutes } from './checklists.routes';
+export { default as schedulerRoutes } from './scheduler.routes';
 
 module.exports = router;
 

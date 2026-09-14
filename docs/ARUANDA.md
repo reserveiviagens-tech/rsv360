@@ -613,8 +613,9 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A10 Podar reservei/** | Adiado | Requer GO owner |
 | A11 Cotações servidor | Adiado | Pós-payments / alto esforço |
 | A12 Mensagens unread | Merged | #376 |
-| B4 Tracking dedup Redis | Em PR | (este) |
-| B5–B7 hardening | Pendente | |
+| B4 Tracking dedup Redis | Merged | #377 |
+| B5 Housekeeping schedule | Em PR | (este) |
+| B6–B7 hardening | Pendente | |
 | Onda 7 ops humano | Pendente | Checklist §18.2 |
 
 ### 18.2 Checklist ops humano (Onda 7)
@@ -714,7 +715,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 5. Suite booking E2E pago com doubles (B3e).
 
 | guest-portal | `/api/portal`, `/api/admin/portal` | READY | Token portal + staff |
-| housekeeping | `/api/housekeeping` | PARTIAL | CRUD OK; auto-schedule `auto-disabled` |
+| housekeeping | `/api/housekeeping` | READY | CRUD OK; scheduler explícito (`auto-disabled` / `HK_AUTO_SCHEDULE`) |
 | revenue | `/api/revenue` | READY | Rules/calendar/forecast |
 | crm | `/api/crm` | READY | Guests/loyalty/campaigns (path **fora** de `/api/v1`) |
 | notifications | `/api/v1/notifications` | READY | Hub dispatch |
@@ -762,7 +763,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Categoria | Itens |
 |-----------|--------|
 | **Pronto** | Auth v1, Fase1 CRUD, acomodações/anfitrião, cotação pública, propostas+WS, auctions, guest-portal, revenue, CRM, CMS, comissões, agentes, health/metrics |
-| **Falta concluir** | housekeeping auto-schedule decisão; alinhar CRM sob `/api/v1` ou documentar exceção; exporters DB/Redis (lab) |
+| **Falta concluir** | alinhar CRM sob `/api/v1` ou documentar exceção; exporters DB/Redis (lab) |
 | **Não implantado** | Módulos pricing/cloud/comm/marketing no boot; `/api/core/token` legado; checkout session payments |
 | **Melhorar** | Remover ou montar DEAD modules com auth fail-closed; default `PORT=3002` no `server.js`; OpenAPI sincronizado com módulos vivos |
 
