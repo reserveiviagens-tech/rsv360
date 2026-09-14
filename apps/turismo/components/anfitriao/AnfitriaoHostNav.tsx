@@ -38,6 +38,24 @@ const TABS = [
     href: '/anfitriao/desempenho',
     match: (p: string) => p.startsWith('/anfitriao/desempenho'),
   },
+  {
+    id: 'tarifas',
+    label: 'Tarifas',
+    href: '/anfitriao/tarifas',
+    match: (p: string) => p.startsWith('/anfitriao/tarifas'),
+  },
+  {
+    id: 'comissoes',
+    label: 'Comissões',
+    href: '/anfitriao/comissoes',
+    match: (p: string) => p.startsWith('/anfitriao/comissoes'),
+  },
+  {
+    id: 'importar',
+    label: 'Importar',
+    href: '/anfitriao/importar',
+    match: (p: string) => p.startsWith('/anfitriao/importar'),
+  },
 ] as const;
 
 type Props = {
