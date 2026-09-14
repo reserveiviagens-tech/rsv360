@@ -1,12 +1,65 @@
 import request from 'supertest';
 import { authHeader } from '../../test/fase1-test-helpers';
 
+const fakePaymentProvider = {
+  name: 'fake',
+  createPayment: jest.fn(async (data: { amount: number; currency: string; metadata?: Record<string, unknown> }) => ({
+    id: 'pay_live_int_1',
+    externalId: 'ext_int_1',
+    status: 'pending',
+    amount: data.amount,
+    currency: data.currency,
+    metadata: data.metadata || {},
+  })),
+  getPayment: jest.fn(async (externalId: string) => ({
+    id: externalId,
+    externalId,
+    status: 'approved',
+    amount: 150,
+    currency: 'BRL',
+    metadata: {},
+  })),
+  cancelPayment: jest.fn(async (externalId: string) => ({
+    id: externalId,
+    externalId,
+    status: 'cancelled',
+    amount: 150,
+    currency: 'BRL',
+    metadata: {},
+  })),
+  createRefund: jest.fn(),
+  listPayments: jest.fn(async () => ({
+    data: [
+      {
+        id: 'pay_live_int_1',
+        externalId: 'ext_int_1',
+        status: 'approved',
+        amount: 150,
+        currency: 'BRL',
+        metadata: {},
+      },
+    ],
+    total: 1,
+    limit: 10,
+    offset: 0,
+  })),
+  verifyWebhookSignature: () => true,
+};
+
+jest.mock('../../../server/modules/payments/factory', () => ({
+  getPaymentProvider: () => fakePaymentProvider,
+  getSubscriptionProvider: () => fakePaymentProvider,
+  getPIXProvider: () => fakePaymentProvider,
+}));
+
 const { createApp } = require('../../../app');
 
 describe('Payments Integration', () => {
   let app: any;
 
   beforeAll(async () => {
+    process.env.PAYMENT_PROVIDER = 'mercadopago';
+    process.env.MP_ACCESS_TOKEN = 'test-token';
     app = await createApp();
   });
 
@@ -17,7 +70,7 @@ describe('Payments Integration', () => {
     expect(response.status).toBe(401);
   });
 
-  it('cria e consulta pagamento', async () => {
+  it('cria e consulta pagamento via provider (sem mock silencioso)', async () => {
     const createResponse = await request(app)
       .post('/api/v1/payments/payments')
       .set(authHeader())
@@ -30,7 +83,9 @@ describe('Payments Integration', () => {
       });
 
     expect(createResponse.status).toBe(200);
-    expect(createResponse.body.id).toContain('pay_mock_');
+    expect(createResponse.body.id).toBe('pay_live_int_1');
+    expect(String(createResponse.body.id)).not.toContain('pay_mock_');
+    expect(fakePaymentProvider.createPayment).toHaveBeenCalled();
 
     const getResponse = await request(app)
       .get(`/api/v1/payments/payments/${createResponse.body.id}`)
