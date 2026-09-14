@@ -426,36 +426,33 @@ export default function AnfitriaoDesempenhoPage() {
                       {data.qualidade.scoreMedio != null ? `${data.qualidade.scoreMedio}%` : '—'}
                     </p>
                   </div>
-                  {data.avaliacoesHospedes?.disponivel &&
-                  (data.avaliacoesHospedes.totalAvaliacoes ?? 0) > 0 ? (
-                    <div className="rounded-2xl border bg-white p-4">
-                      <p className="text-sm text-slate-500">Avaliações de hóspedes</p>
-                      <p className="mt-2 text-2xl font-bold">
-                        {data.avaliacoesHospedes.mediaGeral != null
-                          ? `${data.avaliacoesHospedes.mediaGeral}`
-                          : '—'}
-                        <span className="ml-1 text-base font-normal text-slate-500">/ 5</span>
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {data.avaliacoesHospedes.totalAvaliacoes} avaliação
-                        {data.avaliacoesHospedes.totalAvaliacoes === 1 ? '' : 'ões'} no escopo do
-                        anfitrião
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-medium text-slate-600">
-                        {data.avaliacoesHospedes?.disponivel
-                          ? 'Ainda não há avaliações de hóspedes'
-                          : 'Avaliações de hóspedes — ainda não disponíveis neste painel'}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {data.avaliacoesHospedes?.disponivel
-                          ? 'Quando hóspedes enviarem feedback após a estadia, a média aparecerá aqui.'
-                          : 'Notas e comentários de estadia não estão integrados ao RSV360° nesta versão. A completude acima mede apenas metadados do anúncio.'}
-                      </p>
-                    </div>
-                  )}
+                  {data.avaliacoesHospedes?.disponivel ? (
+                    (data.avaliacoesHospedes.totalAvaliacoes ?? 0) > 0 ? (
+                      <div className="rounded-2xl border bg-white p-4">
+                        <p className="text-sm text-slate-500">Avaliações de hóspedes</p>
+                        <p className="mt-2 text-2xl font-bold">
+                          {data.avaliacoesHospedes.mediaGeral != null
+                            ? `${data.avaliacoesHospedes.mediaGeral}`
+                            : '—'}
+                          <span className="ml-1 text-base font-normal text-slate-500">/ 5</span>
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {data.avaliacoesHospedes.totalAvaliacoes} avaliação
+                          {data.avaliacoesHospedes.totalAvaliacoes === 1 ? '' : 'ões'} no escopo do
+                          anfitrião
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                        <p className="text-sm font-medium text-slate-600">
+                          Ainda não há avaliações de hóspedes
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Quando hóspedes enviarem feedback após a estadia, a média aparecerá aqui.
+                        </p>
+                      </div>
+                    )
+                  ) : null}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {data.qualidade.categorias.map((cat) => (
