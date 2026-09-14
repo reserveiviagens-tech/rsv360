@@ -549,6 +549,14 @@ export const fase1Api = {
       `/api/v1/acomodacoes/anfitriao/mensagens?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`,
     ),
 
+  anfitriaoMensagensUnreadCount: (de: string, ate: string) =>
+    fetchJson<{
+      success: boolean;
+      data: { unread: number };
+    }>(
+      `/api/v1/acomodacoes/anfitriao/mensagens/unread-count?de=${encodeURIComponent(de)}&ate=${encodeURIComponent(ate)}`,
+    ),
+
   anfitriaoMensagensThread: (propostaId: number) =>
     fetchJson<{
       success: boolean;

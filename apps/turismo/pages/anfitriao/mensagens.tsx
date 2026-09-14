@@ -12,6 +12,7 @@ import {
   useAnfitriaoMensagensThread,
   useEnviarMensagemAnfitriao,
 } from '@/hooks/useAnfitriao';
+import { useQueryClient } from '@tanstack/react-query';
 
 type InboxRow = {
   propostaId: number;
@@ -40,9 +41,10 @@ function isHostSender(type: string): boolean {
 
 export default function AnfitriaoMensagensPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const de = useMemo(() => format(addDays(new Date(), -90), 'yyyy-MM-dd'), []);
   const ate = useMemo(() => format(addDays(new Date(), 180), 'yyyy-MM-dd'), []);
-  const { data, isLoading, refetch } = useAnfitriaoInbox(de, ate);
+  const { data, isLoading, refetch } = useAnfitriaoInbox(de, ate, { pollMs: 15_000 });
   const rows = (data?.data ?? []) as InboxRow[];
   const [filtro, setFiltro] = useState<'todas' | 'nao-lidas'>('todas');
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -63,6 +65,7 @@ export default function AnfitriaoMensagensPage() {
     }
   }, [rows, selectedId]);
 
+  const unreadTotal = rows.filter((r) => r.unread).length;
   const filtered =
     filtro === 'nao-lidas' ? rows.filter((r) => r.unread) : rows;
   const selected = rows.find((r) => r.propostaId === selectedId) ?? null;
@@ -72,15 +75,16 @@ export default function AnfitriaoMensagensPage() {
     isLoading: loadingThread,
     refetch: refetchThread,
     isSuccess: threadOk,
-  } = useAnfitriaoMensagensThread(selectedId);
+  } = useAnfitriaoMensagensThread(selectedId, { pollMs: 12_000 });
   const messages = threadRes?.data?.messages ?? [];
   const enviar = useEnviarMensagemAnfitriao(selectedId);
 
   useEffect(() => {
     if (threadOk && selectedId != null) {
       void refetch();
+      void qc.invalidateQueries({ queryKey: ['anfitriao', 'unread-count'] });
     }
-  }, [threadOk, selectedId, refetch]);
+  }, [threadOk, selectedId, refetch, qc]);
 
   async function onSend() {
     if (!selectedId || !draft.trim()) return;
@@ -117,11 +121,20 @@ export default function AnfitriaoMensagensPage() {
                   key={id}
                   type="button"
                   onClick={() => setFiltro(id)}
-                  className={`rounded-full px-3 py-1 text-sm ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm ${
                     filtro === id ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
                   }`}
                 >
                   {label}
+                  {id === 'nao-lidas' && unreadTotal > 0 ? (
+                    <span
+                      className={`rounded-full px-1.5 text-[10px] font-semibold ${
+                        filtro === id ? 'bg-white/20 text-white' : 'bg-teal-600 text-white'
+                      }`}
+                    >
+                      {unreadTotal}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>

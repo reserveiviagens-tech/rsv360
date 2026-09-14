@@ -1633,6 +1633,14 @@ export const anfitriaoService = {
     return { data };
   },
 
+  /** Lightweight unread tally for HostNav badge / polling (Aruanda A12). */
+  async contarInboxNaoLidas(auth: AuthContext, opts: { de: string; ate: string }) {
+    const inbox = await this.listarInboxMensagens(auth, opts);
+    if ('error' in inbox) return { error: inbox.error };
+    const unread = inbox.data.filter((row) => row.unread).length;
+    return { data: { unread } };
+  },
+
   async obterAgendaHoje(auth: AuthContext, hoje?: string) {
     const day = hoje && /^\d{4}-\d{2}-\d{2}$/.test(hoje) ? hoje : new Date().toISOString().slice(0, 10);
     const de = day;

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
+import { useAnfitriaoUnreadCount } from '@/hooks/useAnfitriao';
 
 const TABS = [
   { id: 'hoje', label: 'Hoje', href: '/anfitriao', match: (p: string) => p === '/anfitriao' || p === '/anfitriao/' },
@@ -68,8 +69,12 @@ type Props = {
 export function AnfitriaoHostNav({ className = '' }: Props) {
   const router = useRouter();
   const path = (router.asPath || router.pathname || '').split('?')[0];
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const isStaff = user?.role === 'admin' || user?.role === 'manager';
+  const { data: unreadCount = 0 } = useAnfitriaoUnreadCount({
+    enabled: Boolean(isAuthenticated),
+    pollMs: 20_000,
+  });
 
   return (
     <header className={`border-b border-slate-200 bg-white ${className}`}>
@@ -87,18 +92,32 @@ export function AnfitriaoHostNav({ className = '' }: Props) {
         >
           {TABS.map((tab) => {
             const active = tab.match(path);
+            const showUnread = tab.id === 'mensagens' && unreadCount > 0;
             return (
               <Link
                 key={tab.id}
                 href={tab.href}
                 prefetch={false}
-                className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${
+                className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3 text-sm transition ${
                   active
                     ? 'border-slate-900 font-semibold text-slate-900'
                     : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
                 }`}
+                aria-label={
+                  showUnread
+                    ? `Mensagens, ${unreadCount} não lida${unreadCount === 1 ? '' : 's'}`
+                    : undefined
+                }
               >
                 {tab.label}
+                {showUnread ? (
+                  <span
+                    className="min-w-[1.25rem] rounded-full bg-teal-600 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white"
+                    aria-hidden
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
