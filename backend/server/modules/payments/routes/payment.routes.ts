@@ -90,9 +90,11 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-router.post('/checkout/session', async (req, res) => {
-  // Stripe checkout session
-  res.json({ message: 'Not implemented' });
+router.post('/checkout/session', async (_req, res) => {
+  res.status(410).json({
+    error: 'Use POST /api/v1/payments/public/checkout/session with portal token',
+    code: 'CHECKOUT_USE_PUBLIC_ROUTE',
+  });
 });
 
 export default router;

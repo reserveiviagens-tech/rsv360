@@ -74,6 +74,14 @@ function makeProvider(createImpl?: PaymentProviderInterface['createPayment']): P
       limit: 10,
       offset: 0,
     }),
+    createCheckoutSession: async () => ({
+      sessionId: 'sess_e2e_1',
+      url: 'https://checkout.example/e2e',
+      provider: 'double',
+    }),
+    createProviderCustomer: async (data) => ({
+      externalId: `ext_${data.email}`,
+    }),
     verifyWebhookSignature: () => true,
   };
 }

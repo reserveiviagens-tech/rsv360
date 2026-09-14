@@ -6,6 +6,7 @@ import {
   PaginatedResult,
   PaymentProviderInterface,
 } from '../interfaces';
+import { resolveMpAccessToken, resolvePaymentProvider, resolveStripeSecretKey } from '../config';
 
 export class PaymentProviderNotConfiguredError extends Error {
   readonly code = 'PAYMENT_PROVIDER_NOT_CONFIGURED';
@@ -22,18 +23,18 @@ export class PaymentProviderNotConfiguredError extends Error {
 export function assertPaymentProviderConfigured(
   env: NodeJS.ProcessEnv = process.env,
 ): void {
-  const provider = (env.PAYMENT_PROVIDER || 'mercadopago').toLowerCase();
+  const provider = resolvePaymentProvider(env);
   if (provider === 'none' || provider === 'disabled') {
     throw new PaymentProviderNotConfiguredError(
       'Payment provider disabled (PAYMENT_PROVIDER=none|disabled)',
     );
   }
-  if (provider === 'mercadopago' && !String(env.MP_ACCESS_TOKEN || '').trim()) {
+  if (provider === 'mercadopago' && !resolveMpAccessToken(env)) {
     throw new PaymentProviderNotConfiguredError(
-      'MercadoPago not configured: MP_ACCESS_TOKEN required',
+      'MercadoPago not configured: MP_ACCESS_TOKEN required (MERCADOPAGO_ACCESS_TOKEN deprecated)',
     );
   }
-  if (provider === 'stripe' && !String(env.STRIPE_SECRET_KEY || '').trim()) {
+  if (provider === 'stripe' && !resolveStripeSecretKey(env)) {
     throw new PaymentProviderNotConfiguredError(
       'Stripe not configured: STRIPE_SECRET_KEY required',
     );

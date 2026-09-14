@@ -1,3 +1,41 @@
+export interface CheckoutLineItem {
+  name: string;
+  description?: string;
+  amount: number;
+  quantity: number;
+}
+
+export interface CreateCheckoutSessionDTO {
+  amount: number;
+  currency: string;
+  description?: string;
+  customerEmail: string;
+  customerName?: string;
+  successUrl: string;
+  cancelUrl: string;
+  paymentMethod?: string;
+  items?: CheckoutLineItem[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface CheckoutSessionResult {
+  sessionId: string;
+  url: string;
+  provider: string;
+}
+
+export interface ProviderCustomerInput {
+  email: string;
+  name: string;
+  document?: string;
+  phone?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ProviderCustomerResult {
+  externalId: string;
+}
+
 // PaymentProviderInterface
 export interface PaymentProviderInterface {
   name: string;
@@ -6,6 +44,8 @@ export interface PaymentProviderInterface {
   cancelPayment(externalId: string): Promise<PaymentResult>;
   createRefund(data: CreateRefundDTO): Promise<RefundResult>;
   listPayments(filters: PaymentFilters): Promise<PaginatedResult<PaymentResult>>;
+  createCheckoutSession(data: CreateCheckoutSessionDTO): Promise<CheckoutSessionResult>;
+  createProviderCustomer(data: ProviderCustomerInput): Promise<ProviderCustomerResult>;
   verifyWebhookSignature(payload: string | Buffer, signature: string): boolean;
 }
 

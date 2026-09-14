@@ -58,6 +58,14 @@ function makeFakeProvider(overrides: Partial<PaymentProviderInterface> = {}): Pa
       limit: filters.limit || 10,
       offset: filters.offset || 0,
     }),
+    createCheckoutSession: async () => ({
+      sessionId: 'sess_fake_1',
+      url: 'https://checkout.example/fake',
+      provider: 'fake',
+    }),
+    createProviderCustomer: async (data) => ({
+      externalId: `ext_${data.email}`,
+    }),
     verifyWebhookSignature: () => true,
   };
   return { ...base, ...overrides };

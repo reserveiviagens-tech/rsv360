@@ -1,27 +1,45 @@
-import { MercadoPagoConfig, Payment, MerchantOrder } from 'mercadopago';
-import { PaymentProviderInterface, PIXProviderInterface, CreatePaymentDTO, PaymentResult, CreateRefundDTO, RefundResult, PaymentFilters, PaginatedResult, CreatePIXDTO } from '../interfaces';
+import { MercadoPagoConfig, Payment, Preference, Customer } from 'mercadopago';
+import {
+  PaymentProviderInterface,
+  PIXProviderInterface,
+  CreatePaymentDTO,
+  PaymentResult,
+  CreateRefundDTO,
+  RefundResult,
+  PaymentFilters,
+  PaginatedResult,
+  CreatePIXDTO,
+  CreateCheckoutSessionDTO,
+  CheckoutSessionResult,
+  ProviderCustomerInput,
+  ProviderCustomerResult,
+} from '../interfaces';
+import {
+  resolveMpAccessToken,
+  resolveMpWebhookSecret,
+} from '../config';
+import { verifyMercadoPagoWebhookSignature } from '../lib/mp-webhook-signature';
 
 export class MercadoPagoProvider implements PaymentProviderInterface, PIXProviderInterface {
   name = 'mercadopago';
   private client: MercadoPagoConfig;
 
-  constructor() {
+  constructor(accessToken?: string) {
     this.client = new MercadoPagoConfig({
-      accessToken: process.env.MP_ACCESS_TOKEN!,
-      options: { timeout: 5000 }
+      accessToken: accessToken ?? resolveMpAccessToken(),
+      options: { timeout: 5000 },
     });
   }
 
   async createPayment(data: CreatePaymentDTO): Promise<PaymentResult> {
-    // Implementation for creating payment
     const payment = new Payment(this.client);
-    
+
     const paymentData = {
       transaction_amount: data.amount,
       description: data.description,
       payment_method_id: this.mapPaymentMethod(data.paymentMethod),
       payer: {
-        email: 'customer@example.com', // Get from customer data
+        email: 'customer@example.com',
       },
       installments: data.installments || 1,
       metadata: data.metadata,
@@ -77,15 +95,11 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
     };
   }
 
-  async createRefund(data: CreateRefundDTO): Promise<RefundResult> {
-    // Mercado Pago SDK may not have refund support in current version
-    // This would need to be implemented using direct API calls
+  async createRefund(_data: CreateRefundDTO): Promise<RefundResult> {
     throw new Error('Refund not implemented for Mercado Pago provider');
   }
 
   async listPayments(filters: PaymentFilters): Promise<PaginatedResult<PaymentResult>> {
-    // Implementation for listing payments
-    // This would use MerchantOrder or search payments
     return {
       data: [],
       total: 0,
@@ -94,13 +108,113 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
     };
   }
 
-  verifyWebhookSignature(payload: string | Buffer, signature: string): boolean {
-    // HMAC SHA256 verification
-    // Implementation needed
-    return true; // Placeholder
+  async createCheckoutSession(data: CreateCheckoutSessionDTO): Promise<CheckoutSessionResult> {
+    const preference = new Preference(this.client);
+    const itemIdBase =
+      typeof data.metadata?.bookingId === 'string' || typeof data.metadata?.bookingId === 'number'
+        ? String(data.metadata.bookingId)
+        : 'checkout';
+    const items =
+      data.items && data.items.length > 0
+        ? data.items.map((item, index) => ({
+            id: `${itemIdBase}-${index + 1}`,
+            title: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.amount,
+            currency_id: data.currency.toUpperCase(),
+          }))
+        : [
+            {
+              id: `${itemIdBase}-1`,
+              title: data.description || 'Reserva RSV360',
+              quantity: 1,
+              unit_price: data.amount,
+              currency_id: data.currency.toUpperCase(),
+            },
+          ];
+
+    const result = await preference.create({
+      body: {
+        items,
+        payer: {
+          email: data.customerEmail,
+          name: data.customerName,
+        },
+        back_urls: {
+          success: data.successUrl,
+          failure: data.cancelUrl,
+          pending: data.successUrl,
+        },
+        auto_return: 'approved',
+        metadata: data.metadata as Record<string, string> | undefined,
+        external_reference:
+          typeof data.metadata?.bookingId === 'string' ||
+          typeof data.metadata?.bookingId === 'number'
+            ? String(data.metadata.bookingId)
+            : undefined,
+      },
+    });
+
+    const sessionId = result.id!;
+    const url = result.init_point || result.sandbox_init_point;
+    if (!url) {
+      throw new Error('Mercado Pago preference did not return checkout URL');
+    }
+
+    return {
+      sessionId,
+      url,
+      provider: this.name,
+    };
   }
 
-  // PIXProviderInterface
+  async createProviderCustomer(data: ProviderCustomerInput): Promise<ProviderCustomerResult> {
+    const customer = new Customer(this.client);
+    const result = await customer.create({
+      body: {
+        email: data.email,
+        first_name: data.name.split(' ')[0] || data.name,
+        last_name: data.name.split(' ').slice(1).join(' ') || data.name,
+        phone: data.phone ? { number: data.phone } : undefined,
+        identification: data.document
+          ? { type: 'CPF', number: data.document.replace(/\D/g, '') }
+          : undefined,
+      },
+    });
+
+    if (!result.id) {
+      throw new Error('Mercado Pago customer creation did not return id');
+    }
+
+    return { externalId: String(result.id) };
+  }
+
+  verifyWebhookSignature(payload: string | Buffer, signature: string): boolean {
+    try {
+      const bodyStr = typeof payload === 'string' ? payload : payload.toString('utf8');
+      let dataIdFromQuery: string | undefined;
+      try {
+        const parsed = JSON.parse(bodyStr) as { data?: { id?: string | number } };
+        if (parsed?.data?.id != null) {
+          dataIdFromQuery = String(parsed.data.id);
+        }
+      } catch {
+        // body may not be JSON when called with raw buffer
+      }
+
+      verifyMercadoPagoWebhookSignature({
+        xSignature: signature,
+        xRequestId: undefined,
+        dataIdFromQuery,
+        secret: resolveMpWebhookSecret(),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async createPIXCharge(data: CreatePIXDTO): Promise<any> {
     return this.createPayment({
       ...data,
@@ -118,30 +232,41 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
   }
 
   async generateQRCode(pixCode: string): Promise<string> {
-    // Use qrcode package
     const QRCode = require('qrcode');
     return await QRCode.toDataURL(pixCode);
   }
 
   private mapPaymentMethod(method: string): string {
     switch (method) {
-      case 'credit_card': return 'visa'; // or detect from card
-      case 'pix': return 'pix';
-      case 'boleto': return 'bolbradesco'; // or other
-      default: return method;
+      case 'credit_card':
+        return 'visa';
+      case 'pix':
+        return 'pix';
+      case 'boleto':
+        return 'bolbradesco';
+      default:
+        return method;
     }
   }
 
   private mapStatus(status: string): string {
     switch (status) {
-      case 'approved': return 'approved';
-      case 'pending': return 'pending';
-      case 'in_process': return 'processing';
-      case 'rejected': return 'rejected';
-      case 'cancelled': return 'cancelled';
-      case 'refunded': return 'refunded';
-      case 'charged_back': return 'charged_back';
-      default: return 'pending';
+      case 'approved':
+        return 'approved';
+      case 'pending':
+        return 'pending';
+      case 'in_process':
+        return 'processing';
+      case 'rejected':
+        return 'rejected';
+      case 'cancelled':
+        return 'cancelled';
+      case 'refunded':
+        return 'refunded';
+      case 'charged_back':
+        return 'charged_back';
+      default:
+        return 'pending';
     }
   }
 }

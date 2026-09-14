@@ -1,17 +1,30 @@
 import Stripe from 'stripe';
-import { PaymentProviderInterface, CreatePaymentDTO, PaymentResult, CreateRefundDTO, RefundResult, PaymentFilters, PaginatedResult } from '../interfaces';
+import {
+  PaymentProviderInterface,
+  CreatePaymentDTO,
+  PaymentResult,
+  CreateRefundDTO,
+  RefundResult,
+  PaymentFilters,
+  PaginatedResult,
+  CreateCheckoutSessionDTO,
+  CheckoutSessionResult,
+  ProviderCustomerInput,
+  ProviderCustomerResult,
+} from '../interfaces';
+import { resolveStripeSecretKey, resolveStripeWebhookSecret } from '../config';
 
 export class StripeProvider implements PaymentProviderInterface {
   name = 'stripe';
   private client: any;
 
-  constructor() {
-    this.client = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  constructor(secretKey?: string) {
+    this.client = new Stripe(secretKey ?? resolveStripeSecretKey());
   }
 
   async createPayment(data: CreatePaymentDTO): Promise<PaymentResult> {
     const paymentIntent = await this.client.paymentIntents.create({
-      amount: Math.round(data.amount * 100), // Stripe uses cents
+      amount: Math.round(data.amount * 100),
       currency: data.currency.toLowerCase(),
       description: data.description,
       payment_method_types: this.mapPaymentMethod(data.paymentMethod),
@@ -73,7 +86,7 @@ export class StripeProvider implements PaymentProviderInterface {
   }
 
   async listPayments(filters: PaymentFilters): Promise<PaginatedResult<PaymentResult>> {
-    const params: any = {
+    const params: { limit: number; customer?: string } = {
       limit: filters.limit || 10,
     };
 
@@ -100,37 +113,109 @@ export class StripeProvider implements PaymentProviderInterface {
 
     return {
       data,
-      total: result.data.length, // Stripe doesn't provide total count easily
+      total: result.data.length,
       limit: params.limit!,
       offset: 0,
     };
   }
 
+  async createCheckoutSession(data: CreateCheckoutSessionDTO): Promise<CheckoutSessionResult> {
+    const lineItems =
+      data.items && data.items.length > 0
+        ? data.items.map((item) => ({
+            price_data: {
+              currency: data.currency.toLowerCase(),
+              product_data: {
+                name: item.name,
+                description: item.description,
+              },
+              unit_amount: Math.round(item.amount * 100),
+            },
+            quantity: item.quantity,
+          }))
+        : [
+            {
+              price_data: {
+                currency: data.currency.toLowerCase(),
+                product_data: {
+                  name: data.description || 'Reserva RSV360',
+                },
+                unit_amount: Math.round(data.amount * 100),
+              },
+              quantity: 1,
+            },
+          ];
+
+    const session = await this.client.checkout.sessions.create({
+      mode: 'payment',
+      customer_email: data.customerEmail,
+      line_items: lineItems,
+      success_url: data.successUrl,
+      cancel_url: data.cancelUrl,
+      metadata: data.metadata,
+      payment_method_types: this.mapPaymentMethod(data.paymentMethod || 'credit_card'),
+    });
+
+    if (!session.url) {
+      throw new Error('Stripe checkout session did not return URL');
+    }
+
+    return {
+      sessionId: session.id,
+      url: session.url,
+      provider: this.name,
+    };
+  }
+
+  async createProviderCustomer(data: ProviderCustomerInput): Promise<ProviderCustomerResult> {
+    const customer = await this.client.customers.create({
+      email: data.email,
+      name: data.name,
+      phone: data.phone,
+      metadata: data.metadata,
+    });
+
+    return { externalId: customer.id };
+  }
+
   verifyWebhookSignature(payload: string | Buffer, signature: string): boolean {
     try {
-      this.client.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+      this.client.webhooks.constructEvent(
+        payload,
+        signature,
+        resolveStripeWebhookSecret(),
+      );
       return true;
-    } catch (err) {
+    } catch {
       return false;
     }
   }
 
   private mapPaymentMethod(method: string): string[] {
     switch (method) {
-      case 'credit_card': return ['card'];
-      case 'boleto': return ['boleto'];
-      case 'pix': return ['pix']; // If supported
-      default: return ['card'];
+      case 'credit_card':
+        return ['card'];
+      case 'boleto':
+        return ['boleto'];
+      case 'pix':
+        return ['pix'];
+      default:
+        return ['card'];
     }
   }
 
   private mapStatus(status: string): string {
     switch (status) {
-      case 'succeeded': return 'approved';
-      case 'processing': return 'processing';
-      case 'requires_payment_method': return 'pending';
-      case 'canceled': return 'cancelled';
-      default: return 'pending';
+      case 'succeeded':
+        return 'approved';
+      case 'processing':
+        return 'processing';
+      case 'requires_payment_method':
+        return 'pending';
+      case 'canceled':
+        return 'cancelled';
+      default:
+        return 'pending';
     }
   }
 }
