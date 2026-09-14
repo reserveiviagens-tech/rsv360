@@ -282,7 +282,7 @@ services:
       start_period: 90s
 
   # Aruanda B7 — lab-only DB/Redis exporters (opt-in profile; not in prod compose).
-  # Start: docker compose --profile lab-exporters up -d postgres-exporter redis-exporter
+  # Aruanda B7 (#380): Start — docker compose --profile lab-exporters up -d postgres-exporter redis-exporter
   postgres-exporter:
     profiles: ['lab-exporters']
     image: prometheuscommunity/postgres-exporter:v0.15.0
