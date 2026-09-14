@@ -227,12 +227,33 @@ export function LocalizacaoEditor({ value, onChange }: Props) {
             onCaptured={(lat, lng) => onChange({ ...value, lat, lng })}
           />
         </div>
-        <div
-          className="flex h-40 items-center justify-center rounded-2xl bg-slate-100 text-sm text-slate-500"
-          aria-hidden
-        >
-          Pré-visualização do mapa (em breve)
-        </div>
+        {value.lat != null && value.lng != null ? (
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <iframe
+              title="Pré-visualização do mapa"
+              className="h-40 w-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={
+                process.env.NEXT_PUBLIC_MAP_EMBED_URL?.replace('{lat}', String(value.lat)).replace(
+                  '{lng}',
+                  String(value.lng),
+                ) ||
+                `https://www.openstreetmap.org/export/embed.html?bbox=${value.lng - 0.02}%2C${value.lat - 0.02}%2C${value.lng + 0.02}%2C${value.lat + 0.02}&layer=mapnik&marker=${value.lat}%2C${value.lng}`
+              }
+            />
+            <p className="bg-slate-50 px-3 py-1.5 text-xs text-slate-500">
+              Mapa OpenStreetMap (lab). Override via `NEXT_PUBLIC_MAP_EMBED_URL` com `{'{lat}'}` / `{'{lng}'}`.
+            </p>
+          </div>
+        ) : (
+          <div
+            className="flex h-40 items-center justify-center rounded-2xl bg-slate-100 text-sm text-slate-500"
+            role="status"
+          >
+            Defina o pin GPS para ver o mapa
+          </div>
+        )}
       </div>
     );
   }
