@@ -399,7 +399,7 @@ Padrão: UI grande + `hoteisMock` / “dados mock” / TODO. **Nenhuma fatia mar
 6. App GPS nativo **ou** remover opção “app” da verificação  
 7. Reviews: resposta do host **ou** esconder quando `disponivel: false`  
 8. Twilio + migrate em prod/staging (ops humano)  
-9. Testes de rota faltando: desempenho, NFSe, sms-status, verificação admin, iCal  
+9. Testes de rota faltando: desempenho, NFSe, sms-status, verificação admin, iCal ✅ (A9)  
 
 ### Plataforma / dívida
 
@@ -608,8 +608,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | A5 rótulo GPS sem app | Merged | #371 |
 | A6 Reviews hide | Merged | #372 |
 | A7 Mapa LocalizacaoEditor | Merged | #373 |
-| A8 Perfil anfitrião | Em PR | (este) |
-| A9 Testes rota | Pendente | |
+| A8 Perfil anfitrião | Merged | #374 |
+| A9 Testes rota | Em PR | (este) |
 | A10 Podar reservei/** | Adiado | Requer GO owner |
 | A11 Cotações servidor | Adiado | Pós-payments / alto esforço |
 | A12 Mensagens unread | Pendente | |
