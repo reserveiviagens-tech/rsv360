@@ -589,9 +589,9 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | Fatia | Status | PR / nota |
 |-------|--------|-----------|
 | Onda 0 baseline | Merged | #355 |
-| A1 rota legado `[id].tsx` | Em PR | #355 |
-| A2 AppSidebar mocks | Em PR | (este) |
-| A3 rótulos NFSe/contratos | Pendente | |
+| A1 rota legado `[id].tsx` | Merged | #355 |
+| A2 AppSidebar mocks | Merged | #356 |
+| A3 rótulos NFSe/contratos | Em PR | (este) |
 | A4 HostNav tarifas/comissões/importar | Pendente | |
 | D1 Prometheus↔Alertmanager | Pendente | |
 | B1 DEAD modules | Pendente | |

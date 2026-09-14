@@ -168,12 +168,18 @@ const ContractsPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-3xl mx-auto bg-white border border-amber-300 rounded-lg p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center mb-4">
-            <FileText className="mr-3 h-7 w-7 text-amber-600" aria-hidden />
+          <h1 className="text-2xl font-bold text-gray-900 flex flex-wrap items-center gap-2 mb-4">
+            <FileText className="h-7 w-7 text-amber-600" aria-hidden />
             Gestão de Contratos
+            <span className="rounded border border-amber-400 bg-amber-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-950">
+              Indisponível
+            </span>
           </h1>
           <p className="text-amber-900 font-medium" role="status">
             {CONTRATOS_DEMO_NOTICE}
+          </p>
+          <p className="mt-3 text-sm text-gray-600">
+            GATE-PROD-01: esta tela não gera documento jurídico nem assinatura válida.
           </p>
         </div>
       </div>
@@ -193,11 +199,16 @@ const ContractsPage: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <FileText className="mr-3 h-8 w-8 text-blue-600" />
+              <h1 className="text-3xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
+                <FileText className="h-8 w-8 text-amber-600" aria-hidden />
                 Gestão de Contratos
+                <span className="rounded border border-amber-400 bg-white px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-950">
+                  Demo · sem validade jurídica
+                </span>
               </h1>
-              <p className="text-gray-600 mt-2">Gerencie contratos digitais e assinaturas</p>
+              <p className="text-gray-600 mt-2">
+                Simulação de UI apenas (GATE-PROD-01). Status “assinado” abaixo é fictício — não constitui contrato.
+              </p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
