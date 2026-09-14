@@ -817,7 +817,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Redis | 127.0.0.1:6379 | AOF inline | READY | Sem senha; sem exporter |
 | Prometheus | :9090 | `monitoring/prometheus/*.yml` | PARTIAL | Scrape só backend `/metrics`; **sem** `alerting.alertmanagers` |
 | Grafana | :3007 | `monitoring/grafana/**` | PARTIAL | 1 dashboard (conversão); sem healthcheck |
-| Alertmanager | :9093 | `monitoring/alertmanager/alertmanager.yml` | PARTIAL | Webhook stub `localhost:9999`; **não ligado** ao Prometheus |
+| Alertmanager | :9093 | `monitoring/alertmanager/alertmanager.yml` | READY (lab) | Null sink (sem webhook); ligado ao Prometheus (D1) |
 
 **Prod (`docker-compose.prod.yml`):** sem Prometheus/Grafana/Alertmanager; Postgres/Redis sem publish de porta.
 
