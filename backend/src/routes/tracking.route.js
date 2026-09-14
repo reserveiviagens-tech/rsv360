@@ -2,23 +2,23 @@ const express = require('express');
 const crypto = require('crypto');
 const { sendMetaServerEvent } = require('../../../server/modules/tracking/meta-capi.service');
 const { sendTikTokServerEvent } = require('../../../server/modules/tracking/tiktok-events-api.service');
+const { claimTrackingEventId } = require('../../../server/modules/tracking/event-dedup');
 
 const router = express.Router();
-const processedEvents = new Set();
 
 router.post('/event', async (req, res) => {
   const eventName = req.body?.eventName || 'UnknownEvent';
   const eventId = req.body?.eventId || crypto.randomUUID();
 
-  if (processedEvents.has(eventId)) {
+  const claim = await claimTrackingEventId(eventId);
+  if (!claim.claimed) {
     return res.status(200).json({
       success: true,
       deduplicated: true,
       eventId,
+      store: claim.store,
     });
   }
-
-  processedEvents.add(eventId);
 
   const payload = {
     eventName,
@@ -42,6 +42,7 @@ router.post('/event', async (req, res) => {
     success: true,
     eventId,
     dispatched: true,
+    store: claim.store,
   });
 });
 
