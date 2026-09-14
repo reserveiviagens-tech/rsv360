@@ -601,8 +601,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B3c PixService wire | Merged | #364 |
 | B3d webhook regressão | Merged | #365 |
 | B3e booking E2E pago | Merged | #366 |
-| C1 site-publico portas | Em PR | #367 |
-| C2 Guest stubs | Pendente | |
+| C1 site-publico portas | Merged | #367 |
+| C2 Guest stubs | Em PR | (este) |
 | C3 Admin honestidade | Pendente | |
 | C4 Teatro fora prod | Pendente | |
 | A5–A12 turismo produto | Pendente | |

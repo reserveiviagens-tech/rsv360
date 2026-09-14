@@ -5,10 +5,14 @@
  * @author Douglas P. Figueiredo
  * @license UNLICENSED
  */
+/** Visual stand-in only — not a scannable QR (Aruanda C2). */
 export function QRCodePlaceholder({ code }: { code: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="grid grid-cols-6 gap-1">
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4" role="img" aria-label="QR code placeholder">
+      <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-amber-950">
+        Placeholder — não é um QR válido
+      </p>
+      <div className="grid grid-cols-6 gap-1" aria-hidden>
         {Array.from({ length: 36 }, (_, index) => (
           <div
             key={index}
@@ -16,7 +20,7 @@ export function QRCodePlaceholder({ code }: { code: string }) {
           />
         ))}
       </div>
-      <p className="mt-3 text-center text-xs text-slate-500">{code}</p>
+      <p className="mt-3 text-center text-xs text-slate-600">Código de referência: {code}</p>
     </div>
   );
 }

@@ -7,21 +7,17 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { SERVICE_CATALOG } from '@/lib/static-data';
 import type { GuestService, ServiceRequestPayload } from '@/types/service';
 
 export function useServices() {
   return useQuery({
     queryKey: ['guest-portal', 'services'],
     queryFn: async () => {
-      try {
-        return await api.get<GuestService[]>('/api/guest-portal/services');
-      } catch {
-        return SERVICE_CATALOG;
-      }
+      // No silent static catalog fallback (Aruanda C2) — empty when API unavailable.
+      return api.get<GuestService[]>('/api/guest-portal/services');
     },
-    initialData: SERVICE_CATALOG,
     staleTime: 5 * 60_000,
+    retry: 1,
   });
 }
 
