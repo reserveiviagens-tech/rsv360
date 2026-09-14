@@ -131,7 +131,7 @@ Dentro de `/anfitriao/*` vale o **HostNav** (topo). Sem double shell.
 | `/anfitriao/importar` | `importar.tsx` | READY | import preview + modelo xlsx |
 | `/anfitriao/convites/aceitar` | `convites/aceitar.tsx` | READY | aceitar por `?token=` |
 | `/anfitriao/admin/verificacao-local` | `admin/verificacao-local.tsx` | READY | staff aprovar/rejeitar |
-| `/anfitriao/perfil` | `perfil.tsx` | PARTIAL | só nome/e-mail via `useAuth` |
+| `/anfitriao/perfil` | `perfil.tsx` | READY | conta (sessão) + troca senha MFA; bio no editor |
 
 ### Editor de anúncio (36 seções)
 
@@ -157,7 +157,7 @@ Dentro de `/anfitriao/*` vale o **HostNav** (topo). Sem double shell.
 | NFSe | draft UI | preparar rascunho | PARTIAL |
 | Verificação / web_gps | OK | OK (≤500 m) | Alta; app nativo ausente |
 | Tarifas / comissões / import | OK | OK | Alta; descoberta baixa (fora HostNav) |
-| Perfil | mínimo | — | PARTIAL |
+| Perfil | OK (mínimo + senha MFA) | change-password | Alta (sem PATCH perfil conta) |
 
 ---
 
@@ -393,7 +393,7 @@ Padrão: UI grande + `hoteisMock` / “dados mock” / TODO. **Nenhuma fatia mar
 
 1. Remover conflito `pages/anfitriao/unidades/[id].tsx` legado  
 2. Mapa real no `LocalizacaoEditor` (hoje “em breve”)  
-3. Perfil anfitrião completo  
+3. Perfil anfitrião completo ✅ (A8 — conta + senha MFA; bio no editor)  
 4. Expor no HostNav (ou submenu): tarifas, comissões, importar  
 5. Rotular UI NFSe como **rascunho** ou integrar prefeitura  
 6. App GPS nativo **ou** remover opção “app” da verificação  
@@ -607,8 +607,8 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | C4 Teatro fora prod | Merged | #370 |
 | A5 rótulo GPS sem app | Merged | #371 |
 | A6 Reviews hide | Merged | #372 |
-| A7 Mapa LocalizacaoEditor | Em PR | (este) |
-| A8 Perfil anfitrião | Pendente | |
+| A7 Mapa LocalizacaoEditor | Merged | #373 |
+| A8 Perfil anfitrião | Em PR | (este) |
 | A9 Testes rota | Pendente | |
 | A10 Podar reservei/** | Adiado | Requer GO owner |
 | A11 Cotações servidor | Adiado | Pós-payments / alto esforço |

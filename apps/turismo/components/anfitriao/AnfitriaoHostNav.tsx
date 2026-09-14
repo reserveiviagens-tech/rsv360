@@ -117,6 +117,17 @@ export function AnfitriaoHostNav({ className = '' }: Props) {
           ) : null}
         </nav>
         <Link
+          href="/anfitriao/perfil"
+          className={`hidden shrink-0 text-xs font-medium sm:inline ${
+            path.startsWith('/anfitriao/perfil')
+              ? 'text-slate-900'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+          prefetch={false}
+        >
+          Perfil
+        </Link>
+        <Link
           href="/dashboard"
           className="hidden shrink-0 text-xs font-medium text-slate-500 hover:text-slate-800 sm:inline"
           prefetch={false}
