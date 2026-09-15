@@ -48,6 +48,25 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- Legacy `payments` (site-publico/bookings: integer id + gateway_*) blocks P0 schema.
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'payments'
+      AND column_name = 'gateway_transaction_id'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'payments'
+      AND column_name = 'external_id'
+  ) THEN
+    ALTER TABLE public.payments RENAME TO payments_legacy_gateway;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS "payment_customers" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "enterprise_id" uuid NOT NULL,
