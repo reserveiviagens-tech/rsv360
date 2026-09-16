@@ -134,6 +134,10 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
             },
           ];
 
+    // MP rejects auto_return unless back_urls.success is a public https URL
+    // (localhost / http → "auto_return invalid. back_url.success must be defined").
+    const httpsSuccess = /^https:\/\//i.test(data.successUrl);
+
     const result = await preference.create({
       body: {
         items,
@@ -146,7 +150,7 @@ export class MercadoPagoProvider implements PaymentProviderInterface, PIXProvide
           failure: data.cancelUrl,
           pending: data.successUrl,
         },
-        auto_return: 'approved',
+        ...(httpsSuccess ? { auto_return: 'approved' as const } : {}),
         metadata: data.metadata as Record<string, string> | undefined,
         external_reference:
           typeof data.metadata?.bookingId === 'string' ||
