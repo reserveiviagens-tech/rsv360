@@ -20,6 +20,7 @@
     "import:inventario-caldas": "tsx scripts/import-inventario-caldas.mjs",
     "smoke:portal-booking": "tsx ../server/modules/guest-portal/portal-booking.smoke.ts",
     "smoke:wizard-passo2": "tsx scripts/smoke-wizard-passo2.mjs",
+    "smoke:p0-checkout": "node scripts/smoke-p0-checkout.mjs",
     "test": "jest --runInBand",
     "test:coverage": "jest --coverage --runInBand",
     "test:ci": "jest --coverage --ci --runInBand --forceExit"
