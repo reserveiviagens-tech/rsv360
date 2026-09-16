@@ -58,7 +58,7 @@
     "mercadopago": "^2.12.0",
     "multer": "^2.2.0",
     "nanoid": "^3.3.12",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^9.1.1",
     "openai": "^6.46.0",
     "opossum": "^8.5.0",
     "otplib": "^13.4.1",
