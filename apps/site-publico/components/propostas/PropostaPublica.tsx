@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, type Socket } from 'socket.io-client';
 import {
@@ -18,6 +18,7 @@ import {
   propostaAceiteBloqueado,
   useRoteiroValidade,
 } from '@/hooks/useRoteiroValidade';
+import { MgmTracker } from '@/components/propostas/MgmTracker';
 import { PropostaExpiradaPanel } from '@/components/propostas/PropostaExpiradaPanel';
 import { UrgenciaValidade } from '@/components/propostas/UrgenciaValidade';
 import { TurnstileWidget } from '@/components/security/TurnstileWidget';
@@ -234,16 +235,30 @@ export function PropostaPublica({
     }
   };
 
+  const mgmTracker = (
+    <Suspense fallback={null}>
+      <MgmTracker publicToken={publicToken} />
+    </Suspense>
+  );
+
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-600">Carregando proposta...</div>;
+    return (
+      <>
+        {mgmTracker}
+        <div className="p-8 text-center text-slate-600">Carregando proposta...</div>
+      </>
+    );
   }
 
   if (error || !proposta) {
     return (
-      <div className="mx-auto max-w-lg p-8 text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Proposta não encontrada</h1>
-        <p className="mt-2 text-slate-600">{(error as Error)?.message ?? 'Link inválido ou expirado.'}</p>
-      </div>
+      <>
+        {mgmTracker}
+        <div className="mx-auto max-w-lg p-8 text-center">
+          <h1 className="text-xl font-semibold text-slate-900">Proposta não encontrada</h1>
+          <p className="mt-2 text-slate-600">{(error as Error)?.message ?? 'Link inválido ou expirado.'}</p>
+        </div>
+      </>
     );
   }
 
@@ -255,6 +270,8 @@ export function PropostaPublica({
     (proposta as { tituloResumo?: string }).tituloResumo ?? proposta.titulo;
 
   return (
+    <>
+      {mgmTracker}
     <div className="mx-auto max-w-4xl px-4 py-8">
       <header className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm font-medium text-blue-600">Proposta comercial</p>
@@ -447,5 +464,6 @@ export function PropostaPublica({
         </div>
       </section>
     </div>
+    </>
   );
 }

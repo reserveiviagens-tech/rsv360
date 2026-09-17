@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { eq } from 'drizzle-orm';
 import { meetsWizardMinNights, WIZARD_MIN_NIGHTS } from '@rsv360/shared';
 import { cotacaoPublicaService } from '../services/cotacao-publica.service';
 import {
@@ -7,6 +8,7 @@ import {
 } from '../../acomodacoes/services/disponibilidade-reserva.hook';
 import { registrarLeadAbandono } from '../services/lead-abandono.service';
 import { isPropostaExpiradaError } from '../../propostas/proposta-validade';
+import { registrarIndicacao } from '../../propostas/mgm';
 import { publicLimiter } from '../../../middleware/public-limiter';
 import { isRoteiroInteligenteEnabled } from '../services/montar-roteiro';
 import { listRoteiroAtracoes } from '../services/roteiro-atracoes.service';
@@ -15,8 +17,27 @@ import { requireTurnstile } from '../../../middleware/turnstile.middleware';
 import { obterTaxaHospedePublica } from '../services/resolve-taxa-hospede-proposta';
 import { asRequiredString } from '../../../lib/parse';
 import { HotelMismatchError } from '../services/assert-hotel-match-proposta';
+import { db } from '../../../lib/db';
+import { propostas } from '../../../../backend/src/db/schema/propostas';
+import { users } from '../../../../backend/src/db/schema/existing';
 
 const router = Router();
+
+/** PG unique_violation — race em registrarIndicacao (SELECT→INSERT). */
+function isPgUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; message?: string; cause?: { code?: string; message?: string } };
+  const code = e?.code ?? e?.cause?.code;
+  if (code === '23505') return true;
+  const msg = `${e?.message ?? ''} ${e?.cause?.message ?? ''}`;
+  return /unique/i.test(msg);
+}
+
+function parseIndicadorId(raw: unknown): number | null {
+  if (raw == null || raw === '') return null;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
 
 function statusForGerarPropostaError(message: string): number {
   if (message.includes('Muitas solicitações')) return 429;
@@ -195,6 +216,66 @@ router.post('/proposta/:token/aceitar', publicLimiter, requireTurnstile, async (
         code: error.code,
       });
     }
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/**
+ * Tracking MGM público — capability = tokenPublico.
+ * Não usa getPropostaByToken (evita registrarVisualizacao).
+ * Rota admin POST /propostas/:id/indicacao permanece inalterada.
+ */
+router.post('/proposta/:token/indicacao', publicLimiter, async (req, res) => {
+  try {
+    const token = asRequiredString(req.params.token);
+    const indicadorId = parseIndicadorId(req.body?.indicadorId);
+    if (indicadorId == null) {
+      return res.status(400).json({ success: false, error: 'indicadorId inválido' });
+    }
+
+    const [proposta] = await db
+      .select({
+        tokenPublico: propostas.tokenPublico,
+        isPublica: propostas.isPublica,
+      })
+      .from(propostas)
+      .where(eq(propostas.tokenPublico, token))
+      .limit(1);
+
+    if (!proposta?.tokenPublico || proposta.isPublica !== true) {
+      return res.status(404).json({ success: false, error: 'Proposta não encontrada' });
+    }
+
+    const [indicador] = await db
+      .select({ id: users.id, isActive: users.isActive })
+      .from(users)
+      .where(eq(users.id, indicadorId))
+      .limit(1);
+
+    if (!indicador || indicador.isActive !== true) {
+      return res.status(400).json({ success: false, error: 'indicadorId inválido' });
+    }
+
+    const canal =
+      typeof req.body?.canal === 'string' && req.body.canal.trim()
+        ? req.body.canal.trim().slice(0, 64)
+        : undefined;
+
+    try {
+      await registrarIndicacao({
+        indicadorId,
+        tokenProposta: proposta.tokenPublico,
+        canal,
+      });
+    } catch (err) {
+      if (isPgUniqueViolation(err)) {
+        return res.status(201).json({ success: true });
+      }
+      throw err;
+    }
+
+    return res.status(201).json({ success: true });
+  } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }
 });
