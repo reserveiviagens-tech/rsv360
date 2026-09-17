@@ -5,15 +5,6 @@ on:
     branches: [main, develop, upgrade/*]
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-      - 'LICENSE'
-      - 'CODEOWNERS'
-      - 'docs/**'
-      - 'AGENTS.md'
-      - '.github/copilot-instructions.md'
-      - '.github/dependabot.yml'
 
 jobs:
   backend-tests:
@@ -145,23 +136,61 @@ jobs:
         uses: actions/checkout@v7
         with:
           lfs: false
+          fetch-depth: 0
+
+      - name: Detect backend-relevant changes
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          relevant=false
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            # push/other: keep full type-check (unchanged push semantics)
+            relevant=true
+          else
+            base='${{ github.event.pull_request.base.sha }}'
+            head='${{ github.event.pull_request.head.sha }}'
+            while IFS= read -r f; do
+              [ -z "$f" ] && continue
+              case "$f" in
+                backend/*|server/*|packages/shared/*|package.json|package-lock.json|.github/workflows/ci.yml|.github/scripts/*)
+                  relevant=true
+                  break
+                  ;;
+              esac
+            done < <(git diff --name-only "${base}...${head}")
+          fi
+          echo "backend_relevant=${relevant}" >> "$GITHUB_OUTPUT"
+          echo "backend_relevant=${relevant}"
+
+      - name: Skip heavy type-check (no backend-relevant inputs)
+        if: steps.filter.outputs.backend_relevant != 'true'
+        run: |
+          echo "No backend-relevant paths changed in this PR."
+          echo "Skipping lockfile validation, npm ci, and tsc."
+          echo "backend-typecheck: Success (no backend-relevant inputs)."
 
       - name: Setup Node.js
+        if: steps.filter.outputs.backend_relevant == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
 
       - name: Enable Corepack
+        if: steps.filter.outputs.backend_relevant == 'true'
         run: |
           corepack enable
           corepack prepare npm@10.9.7 --activate
 
       - name: Validate lockfiles
+        if: steps.filter.outputs.backend_relevant == 'true'
         run: bash .github/scripts/check-lockfiles.sh . backend
 
       - name: Install dependencies
+        if: steps.filter.outputs.backend_relevant == 'true'
         run: npm ci
 
       - name: Type check (backend)
+        if: steps.filter.outputs.backend_relevant == 'true'
         run: cd backend && npx tsc --noEmit
