@@ -601,6 +601,10 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B3c PixService wire | Merged | #364 |
 | B3d webhook regressão | Merged | #365 |
 | B3e booking E2E pago | Merged | #366 |
+| B3 P0 Checkout — idempotency, webhooks, B2C public route | Merged | #382 — `feat(payments): P0 checkout idempotency, webhooks secure validation, and B2C public route (#382)` |
+| B3 P0 Checkout — rename legacy payments table (0058) | Merged | #383 — `fix(payments): rename legacy payments table before P0 schema in 0058 (#383)` |
+| B3 P0 Checkout — smoke, HTTPS auto_return, public client helper | Merged | #384 — `chore(payments): P0 checkout smoke script, HTTPS auto_return, public client helper (#384)` |
+| Fatia MGM Public Tracking | Merged | #386 — `feat(mgm): add public referral tracking (#386)` |
 | C1 site-publico portas | Merged | #367 |
 | C2 Guest stubs | Merged | #368 |
 | C3 Admin honestidade | Merged | #369 |
@@ -666,7 +670,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 | Serviço | Container | Endereço | Papel | Maturidade stack |
 |---------|-----------|----------|-------|------------------|
-| Backend | `rsv360-backend` | http://localhost:3002 | API Express canônica | READY (com gaps críticos em payments) |
+| Backend | `rsv360-backend` | http://localhost:3002 | API Express canônica | READY (gaps críticos de Payments P0 encerrados em #382–#384) |
 | Site público | `rsv360-site-publico` | http://localhost:3000 | B2C + Lab + admin MFA + BFF | PARTIAL (híbrido) |
 | Admin | `rsv360-admin` | http://localhost:3004 | Shell ops → :3002 | PARTIAL |
 | Turismo | `rsv360-turismo` / `next dev` | http://localhost:3005 | Turismo + Anfitrião | **READY núcleo Anfitrião** — ver §§5–6 |
@@ -693,22 +697,22 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | auth (v1) | `/api/v1/auth` | READY | Login/refresh/2FA/SSO/OAuth/reset |
 | tenant | `/api/v1/tenant` | READY | `GET /context` |
 | auctions | `/api/v1/auctions` | READY | + worker settlement |
-| payments | `/api/v1/payments` | **READY*** | *Services wired (B3b/B3c); checkout session ainda “Not implemented”; E2E contrato B3e |
+| payments | `/api/v1/payments` | **READY** | P0 B2C checkout + webhooks seguros + schema 0058 (#382–#384); smoke `smoke:p0-checkout` (#384) |
 
-#### Payments — inventário B3a (contrato de fechamento)
+#### Payments — inventário B3a (histórico) + fechamento P0
 
-| Peça | Path | Estado B3a |
-|------|------|------------|
+| Peça | Path | Estado B3a (histórico) |
+|------|------|------------------------|
 | Factory | `backend/server/modules/payments/factory.ts` | `PAYMENT_PROVIDER` → MP/Stripe; default `mercadopago` |
-| PaymentService | `…/services/payment.service.ts` | **Mock silencioso** (ignora `this.provider`) |
-| PIXService | `…/services/pix.service.ts` | **Mock silencioso** (não chama `getPIXProvider`) |
+| PaymentService | `…/services/payment.service.ts` | Era mock silencioso na B3a; supersedido pelo wire P0 (#382) |
+| PIXService | `…/services/pix.service.ts` | Era mock silencioso na B3a; supersedido pelo wire P0 (#382) |
 | MercadoPagoProvider | `…/providers/mercadopago.provider.ts` | Implementação real (`MP_ACCESS_TOKEN`) |
 | StripeProvider | `…/providers/stripe.provider.ts` | Implementação real |
 | OpenFinance PIX | `…/providers/openfinance-pix.provider.ts` | Alt via `PIX_PROVIDER` |
-| Webhooks | `…/services/webhook.service.ts` + HMAC lib | Maduro; teste `pr02-mp-webhook-hmac.test.ts` |
-| Rotas | `payment.routes.ts` / `pix.routes.ts` | Delega aos services mock |
+| Webhooks | `…/services/webhook.service.ts` + HMAC lib | Maduro; reforçado no P0 (#382); teste `pr02-mp-webhook-hmac.test.ts` |
+| Rotas | `payment.routes.ts` / `pix.routes.ts` + checkout B2C público | P0: rota pública B2C + idempotência (#382) |
 
-**Critérios de aceite (B3b–B3e):**
+**Critérios de aceite (B3b–B3e) — histórico do contrato; P0 (#382–#384) encerrou o gap crítico de checkout:**
 
 1. `create`/`list`/`get`/`cancel` **deixam de retornar mock** quando o provider está configurado (credenciais presentes).
 2. Sem provider utilizável (`PAYMENT_PROVIDER=none|disabled` **ou** credencial ausente) → **erro explícito** (4xx/5xx de domínio), nunca mock silencioso.
@@ -756,8 +760,8 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 |---------|--------|---------------|
 | Auth | READY | — |
 | Anfitrião / acomodações | READY | Detalhe §§5–6 |
-| Cotação → proposta → hub | READY | Elo pagamento frágil |
-| Pagamento | **PARTIAL** | Services mock; checkout session “Not implemented” |
+| Cotação → proposta → hub | READY | Checkout P0 entregue (#382–#384); E2E oferta→portal ainda PARTIAL |
+| Pagamento | **READY** | P0 checkout B2C + webhooks + 0058 (#382–#384) |
 | Booking E2E | PARTIAL | Falta suite oferta→pagamento→inventário→portal |
 | Guest portal API | READY | — |
 | CRM | READY | Poucos testes Jest de domínio |
@@ -766,9 +770,9 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 | Categoria | Itens |
 |-----------|--------|
-| **Pronto** | Auth v1, Fase1 CRUD, acomodações/anfitrião, cotação pública, propostas+WS, auctions, guest-portal, revenue, CRM, CMS, comissões, agentes, health/metrics |
+| **Pronto** | Auth v1, Fase1 CRUD, acomodações/anfitrião, cotação pública, propostas+WS, auctions, payments P0 (#382–#384), guest-portal, revenue, CRM, CMS, comissões, agentes, health/metrics |
 | **Falta concluir** | — (B7 exporters lab opcional entregue) |
-| **Não implantado** | Módulos pricing/cloud/comm/marketing no boot; `/api/core/token` legado; checkout session payments |
+| **Não implantado** | Módulos pricing/cloud/comm/marketing no boot; `/api/core/token` legado |
 | **Melhorar** | Remover ou montar DEAD modules com auth fail-closed; default `PORT=3002` no `server.js`; OpenAPI sincronizado com módulos vivos |
 
 ---
@@ -887,43 +891,39 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 #### Falta concluir (alta prioridade)
 
-1. **Payments:** tirar mock dos services e fechar elo reserva→pagamento  
-2. **Prometheus→Alertmanager** + receiver real  
-3. Drift de portas no site-publico (`:5000`/`:3001`)  
-4. Admin: login/MFA unificado ou documentar dependência do site-publico  
-5. Guest: remover stubs (propostas/QR/serviços estáticos)  
-6. Decisão explícita sobre módulos DEAD (pricing/cloud/comm/marketing)
+1. **Prometheus→Alertmanager** + receiver real  
+2. Drift de portas no site-publico (`:5000`/`:3001`)  
+3. Admin: login/MFA unificado ou documentar dependência do site-publico  
+4. Guest: remover stubs (propostas/QR/serviços estáticos)  
+5. Decisão explícita sobre módulos DEAD (pricing/cloud/comm/marketing)
 
 #### Não implantado
 
 1. Observabilidade na stack **prod** compose  
 2. `/api/core/token` no backend canônico  
-3. Checkout session payments completo  
-4. A/B marketing real, background-check/OCR/smart-lock reais  
-5. `apps/atendimento-ia` (script existe, pasta não)
+3. A/B marketing real, background-check/OCR/smart-lock reais  
+4. `apps/atendimento-ia` (script existe, pasta não)
 
 #### Melhorar (backlog stack)
 
 | # | Ação | Impacto | Esforço |
 |---|------|---------|---------|
-| 1 | Wire payments reais + teste contrato | Crítico | Alto |
-| 2 | Ligar Alertmanager + webhook útil | Alto | Baixo |
-| 3 | Arquivar ou montar DEAD modules | Alto | Médio |
-| 4 | Booking E2E pago (sem PII) | Alto | Alto |
-| 5 | Unificar auth admin (um lugar) | Médio | Médio |
-| 6 | Limpar teatro site-publico/admin do caminho prod | Médio | Médio |
-| 7 | Exporters Postgres/Redis | Médio | Médio |
-| 8 | Guest QR + propostas reais | Médio | Médio |
-| 9 | Default PORT 3002 no server.js | Baixo | Baixo |
-| 10 | Tracking dedup Redis | Médio | Baixo |
+| 1 | Ligar Alertmanager + webhook útil | Alto | Baixo |
+| 2 | Arquivar ou montar DEAD modules | Alto | Médio |
+| 3 | Booking E2E pago (sem PII) | Alto | Alto |
+| 4 | Unificar auth admin (um lugar) | Médio | Médio |
+| 5 | Limpar teatro site-publico/admin do caminho prod | Médio | Médio |
+| 6 | Exporters Postgres/Redis | Médio | Médio |
+| 7 | Guest QR + propostas reais | Médio | Médio |
+| 8 | Default PORT 3002 no server.js | Baixo | Baixo |
+| 9 | Tracking dedup Redis | Médio | Baixo |
 
 ### 19.8 Sequência sugerida (stack, pós-Turismo)
 
-1. **Payments wire** (bloqueia confiança comercial)  
-2. **Observabilidade lab** (Prometheus↔Alertmanager) — baixo risco  
-3. **DEAD modules** — cortar clients ou montar com auth  
-4. **Site-publico porta drift** + **Guest stubs**  
-5. Continuar backlog Turismo (§14) em paralelo se produto host for prioridade
+1. **Observabilidade lab** (Prometheus↔Alertmanager) — baixo risco  
+2. **DEAD modules** — cortar clients ou montar com auth  
+3. **Site-publico porta drift** + **Guest stubs**  
+4. Continuar backlog Turismo (§14) em paralelo se produto host for prioridade
 
 ---
 
