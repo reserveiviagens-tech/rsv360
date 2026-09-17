@@ -605,6 +605,7 @@ Programa: 1 fatia → 1 PR → CI gate → merge. Baseline Onda 0: `main` @ `247
 | B3 P0 Checkout — rename legacy payments table (0058) | Merged | #383 — `fix(payments): rename legacy payments table before P0 schema in 0058 (#383)` |
 | B3 P0 Checkout — smoke, HTTPS auto_return, public client helper | Merged | #384 — `chore(payments): P0 checkout smoke script, HTTPS auto_return, public client helper (#384)` |
 | Fatia MGM Public Tracking | Merged | #386 — `feat(mgm): add public referral tracking (#386)` |
+| Observabilidade Lab — Alertmanager webhook opcional | Implementado (local) | `ALERTMANAGER_WEBHOOK_URL` no compose lab; null sink se vazio; PR pendente |
 | C1 site-publico portas | Merged | #367 |
 | C2 Guest stubs | Merged | #368 |
 | C3 Admin honestidade | Merged | #369 |
@@ -679,7 +680,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Redis | `rsv360-redis` | 127.0.0.1:6379 | Cache / filas / rate-limit | READY |
 | Prometheus | `rsv360-prometheus` | :9090 | Scrape `/metrics` | PARTIAL |
 | Grafana | `rsv360-grafana` | :3007 | 1 dashboard | PARTIAL |
-| Alertmanager | `rsv360-alertmanager` | :9093 | Null sink (UI only) | READY (lab D1) |
+| Alertmanager | `rsv360-alertmanager` | :9093 | Null sink default; webhook lab opcional | READY (lab D1) |
 
 ---
 
@@ -863,7 +864,7 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 | Redis | 127.0.0.1:6379 | AOF inline | READY | Sem senha; exporter lab (`lab-exporters`) |
 | Prometheus | :9090 | `monitoring/prometheus/*.yml` | READY | Scrape backend `/metrics`; `alerting.alertmanagers` → `alertmanager:9093` |
 | Grafana | :3007 | `monitoring/grafana/**` | PARTIAL | 1 dashboard (conversão); sem healthcheck |
-| Alertmanager | :9093 | `monitoring/alertmanager/alertmanager.yml` | READY (lab) | Null sink (sem webhook); ligado ao Prometheus (D1) |
+| Alertmanager | :9093 | `monitoring/alertmanager/alertmanager.yml` + `ALERTMANAGER_WEBHOOK_URL` | READY (lab) | Null sink se URL vazia; webhook HTTP opcional (lab); ligado ao Prometheus (D1) |
 
 **Prod (`docker-compose.prod.yml`):** sem Prometheus/Grafana/Alertmanager; Postgres/Redis sem publish de porta.
 
@@ -871,8 +872,8 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 | Categoria | Itens |
 |-----------|--------|
-| **Pronto** | Postgres+Redis healthy gate; scrape backend com Bearer; Grafana→Prometheus; Alertmanager lab (D1); exporters lab opt-in (B7) |
-| **Falta concluir** | receivers reais Alertmanager; obs no compose **prod** (GO) |
+| **Pronto** | Postgres+Redis healthy gate; scrape backend com Bearer; Grafana→Prometheus; Alertmanager lab (D1 + webhook opcional); exporters lab opt-in (B7) |
+| **Falta concluir** | obs no compose **prod** (GO) |
 | **Não implantado** | Observabilidade no compose **prod**; multi-job scrape avançado |
 | **Melhorar** | Mais dashboards; healthchecks nos monitores; alinhar healthcheck PG ao `.env` |
 
@@ -891,11 +892,10 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 #### Falta concluir (alta prioridade)
 
-1. **Prometheus→Alertmanager** + receiver real  
-2. Drift de portas no site-publico (`:5000`/`:3001`)  
-3. Admin: login/MFA unificado ou documentar dependência do site-publico  
-4. Guest: remover stubs (propostas/QR/serviços estáticos)  
-5. Decisão explícita sobre módulos DEAD (pricing/cloud/comm/marketing)
+1. Drift de portas no site-publico (`:5000`/`:3001`)  
+2. Admin: login/MFA unificado ou documentar dependência do site-publico  
+3. Guest: remover stubs (propostas/QR/serviços estáticos)  
+4. Decisão explícita sobre módulos DEAD (pricing/cloud/comm/marketing)
 
 #### Não implantado
 
@@ -908,22 +908,20 @@ Rede: rsv360_internal · Compose: docker-compose.yml · Projeto: rsv360
 
 | # | Ação | Impacto | Esforço |
 |---|------|---------|---------|
-| 1 | Ligar Alertmanager + webhook útil | Alto | Baixo |
-| 2 | Arquivar ou montar DEAD modules | Alto | Médio |
-| 3 | Booking E2E pago (sem PII) | Alto | Alto |
-| 4 | Unificar auth admin (um lugar) | Médio | Médio |
-| 5 | Limpar teatro site-publico/admin do caminho prod | Médio | Médio |
-| 6 | Exporters Postgres/Redis | Médio | Médio |
-| 7 | Guest QR + propostas reais | Médio | Médio |
-| 8 | Default PORT 3002 no server.js | Baixo | Baixo |
-| 9 | Tracking dedup Redis | Médio | Baixo |
+| 1 | Arquivar ou montar DEAD modules | Alto | Médio |
+| 2 | Booking E2E pago (sem PII) | Alto | Alto |
+| 3 | Unificar auth admin (um lugar) | Médio | Médio |
+| 4 | Limpar teatro site-publico/admin do caminho prod | Médio | Médio |
+| 5 | Exporters Postgres/Redis | Médio | Médio |
+| 6 | Guest QR + propostas reais | Médio | Médio |
+| 7 | Default PORT 3002 no server.js | Baixo | Baixo |
+| 8 | Tracking dedup Redis | Médio | Baixo |
 
 ### 19.8 Sequência sugerida (stack, pós-Turismo)
 
-1. **Observabilidade lab** (Prometheus↔Alertmanager) — baixo risco  
-2. **DEAD modules** — cortar clients ou montar com auth  
-3. **Site-publico porta drift** + **Guest stubs**  
-4. Continuar backlog Turismo (§14) em paralelo se produto host for prioridade
+1. **DEAD modules** — cortar clients ou montar com auth  
+2. **Site-publico porta drift** + **Guest stubs**  
+3. Continuar backlog Turismo (§14) em paralelo se produto host for prioridade
 
 ---
 

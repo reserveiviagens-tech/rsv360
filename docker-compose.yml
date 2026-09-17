@@ -370,9 +370,45 @@ services:
     networks:
       - rsv360_net
     restart: unless-stopped
+    environment:
+      # Optional lab webhook; empty = null sink (same as mounted alertmanager.yml).
+      ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:-}
+    # Copy RO config to /tmp; optionally append webhook_configs without logging the URL.
+    # Avoid Compose $$/`$VAR` pitfalls (v5 leaves $$ literal); use printenv + literal paths only.
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - --config.file=/etc/alertmanager/alertmanager.yml
-      - --storage.path=/alertmanager
+      - |
+        set -eu
+        cp /etc/alertmanager/alertmanager.yml /tmp/alertmanager.yml
+        if [ -n "$(printenv ALERTMANAGER_WEBHOOK_URL 2>/dev/null || true)" ]; then
+          case "$(printenv ALERTMANAGER_WEBHOOK_URL)" in
+            http://*|https://*) ;;
+            *)
+              echo "ALERTMANAGER_WEBHOOK_URL must start with http:// or https://" >&2
+              exit 1
+              ;;
+          esac
+          # printenv appends one trailing newline; embedded CR/LF => wc -l > 1
+          if [ "$(printenv ALERTMANAGER_WEBHOOK_URL | wc -l)" -ne 1 ]; then
+            echo "ALERTMANAGER_WEBHOOK_URL must be a single line" >&2
+            exit 1
+          fi
+          # Lab: reject single quote to keep YAML single-quoted url without nested sed.
+          case "$(printenv ALERTMANAGER_WEBHOOK_URL)" in
+            *"'"*)
+              echo "ALERTMANAGER_WEBHOOK_URL must not contain single quotes" >&2
+              exit 1
+              ;;
+          esac
+          printf '%s\n' '    webhook_configs:' >> /tmp/alertmanager.yml
+          printf '%s' "      - url: '" >> /tmp/alertmanager.yml
+          printenv ALERTMANAGER_WEBHOOK_URL | tr -d '\n\r' >> /tmp/alertmanager.yml
+          printf '%s\n' "'" >> /tmp/alertmanager.yml
+          echo "Alertmanager: optional webhook receiver enabled (URL redacted)"
+        else
+          echo "Alertmanager: null sink (ALERTMANAGER_WEBHOOK_URL unset)"
+        fi
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
     ports:
       - '9093:9093'
     volumes:
