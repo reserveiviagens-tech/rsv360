@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useRouter } from 'next/router';
 import { tryCreateDpopProof } from '@rsv360/shared';
 import {
   AUTH_V1,
@@ -10,6 +11,10 @@ import {
   parseAuthV1LoginResponse,
   parseAuthV1RefreshResponse,
 } from '../lib/auth-v1';
+import {
+  createAuthExpiredListener,
+  SESSION_EXPIRED_LOGIN_PATH,
+} from '../lib/auth-refresh-request';
 
 async function dpopHeaders(
   base: HeadersInit,
@@ -69,6 +74,7 @@ function isLegacyFabricatedToken(token: string | null | undefined): boolean {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   // Start loading until client initAuth resolves (avoids SSR redirect races)
   const [isLoading, setIsLoading] = useState(true);
@@ -91,6 +97,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     setIsLoading(false);
   }, []);
+
+  // FASE 0 REWORK — api.ts dispatches auth:expired; navigate via Next Router (no SSR).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const listener = createAuthExpiredListener(() => {
+      clearAuth();
+      void router.replace(SESSION_EXPIRED_LOGIN_PATH);
+    });
+    listener.attach();
+    return () => {
+      listener.detach();
+    };
+  }, [clearAuth, router]);
 
   const verifyToken = useCallback(async (token: string): Promise<boolean> => {
     try {

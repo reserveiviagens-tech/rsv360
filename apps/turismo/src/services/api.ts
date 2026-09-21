@@ -1,7 +1,34 @@
 // Serviço de API centralizado para Onion RSV 360
 // Conecta com todos os microsserviços do backend
+// FASE 0 — refresh alinhado a POST /api/v1/auth/refresh (cookie-first).
+
+import {
+  AUTH_REFRESH_PATH,
+  buildAuthRefreshBody,
+  buildAuthRefreshFetchInit,
+  isNonEmptyRefreshToken,
+  notifySessionExpired,
+} from '../lib/auth-refresh-request';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+
+function clearLocalAuthTokens(): void {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('refreshToken');
+}
+
+function logAuthRefreshFailure(kind: 'http' | 'network', detail?: string): void {
+  // Structured log — never include token/PII values.
+  console.error(
+    JSON.stringify({
+      event: 'auth_refresh_failed',
+      kind,
+      path: AUTH_REFRESH_PATH,
+      detail: detail || undefined,
+    }),
+  );
+}
 
 // Configuração base do cliente fetch
 const createApiClient = (baseURL: string) => {
@@ -14,12 +41,13 @@ const createApiClient = (baseURL: string) => {
       const token = localStorage.getItem('access_token');
       
       const config: RequestInit = {
+        ...options,
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
-          ...options.headers,
+          ...(options.headers as Record<string, string> | undefined),
         },
-        ...options,
+        credentials: options.credentials ?? 'include',
       };
 
       try {
@@ -27,22 +55,26 @@ const createApiClient = (baseURL: string) => {
         
         if (!response.ok) {
           if (response.status === 401) {
-            // Token expirado, tentar renovar
-            const refreshToken = localStorage.getItem('refresh_token');
-            if (refreshToken) {
-              try {
-                const refreshResponse = await fetch(`${API_BASE_URL}/api/core/refresh`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ refresh_token: refreshToken }),
-                });
-                
-                if (refreshResponse.ok) {
-                  const { access_token, refresh_token } = await refreshResponse.json();
+            // Cookie-first refresh; legacy LS string only when present and non-empty.
+            const legacyRefresh = localStorage.getItem('refresh_token');
+            try {
+              const refreshResponse = await fetch(
+                `${API_BASE_URL}${AUTH_REFRESH_PATH}`,
+                buildAuthRefreshFetchInit(legacyRefresh),
+              );
+
+              if (refreshResponse.ok) {
+                const payload = await refreshResponse.json();
+                const access_token =
+                  payload?.access_token ||
+                  payload?.data?.access_token ||
+                  null;
+                if (typeof access_token === 'string' && access_token.length > 0) {
                   localStorage.setItem('access_token', access_token);
-                  localStorage.setItem('refresh_token', refresh_token);
-                  
-                  // Retry original request
+                  // Refresh lives in HttpOnly cookie; do not persist rotated refresh in LS.
+                  localStorage.removeItem('refresh_token');
+                  localStorage.removeItem('refreshToken');
+
                   config.headers = {
                     ...config.headers,
                     Authorization: `Bearer ${access_token}`,
@@ -53,13 +85,28 @@ const createApiClient = (baseURL: string) => {
                   }
                   return await retryResponse.json();
                 }
-              } catch (_refreshError) {
-                // Refresh failed, redirect to login
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                window.location.href = '/login';
-                throw new Error('Sessão expirada. Faça login novamente.');
               }
+
+              logAuthRefreshFailure('http', `status=${refreshResponse.status}`);
+              clearLocalAuthTokens();
+              notifySessionExpired();
+              throw new Error('Sessão expirada. Faça login novamente.');
+            } catch (refreshError) {
+              if (
+                refreshError instanceof Error &&
+                refreshError.message === 'Sessão expirada. Faça login novamente.'
+              ) {
+                throw refreshError;
+              }
+              logAuthRefreshFailure(
+                'network',
+                refreshError instanceof Error ? refreshError.name : 'unknown',
+              );
+              clearLocalAuthTokens();
+              notifySessionExpired();
+              throw new Error(
+                'Não foi possível renovar a sessão. Verifique sua conexão e faça login novamente.',
+              );
             }
           }
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -135,9 +182,15 @@ export const notificationsApi = createApiClient(`${API_BASE_URL.replace('5000', 
 export const authService = {
   login: (email: string, password: string) =>
     coreApi.post('/api/core/token', { email, password }),
-  
-  refresh: (refreshToken: string) =>
-    coreApi.post('/api/core/refresh', { refresh_token: refreshToken }),
+
+  /** FASE 0 — POST /api/v1/auth/refresh; body only when legacy string present. */
+  refresh: (refreshToken?: unknown) =>
+    coreApi.post(
+      AUTH_REFRESH_PATH,
+      buildAuthRefreshBody(
+        isNonEmptyRefreshToken(refreshToken) ? refreshToken : undefined,
+      ),
+    ),
   
   verify: () => coreApi.post('/api/core/verify'),
   
@@ -297,7 +350,7 @@ export const useApiService = () => {
 export const handleApiError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('401')) {
-    window.location.href = '/login';
+    notifySessionExpired();
   } else if (message.includes('403')) {
     console.error('Acesso negado:', error);
   } else if (message.includes('500')) {
