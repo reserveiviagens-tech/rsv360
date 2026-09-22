@@ -84,7 +84,7 @@
     "embla-carousel-react": "^8.6.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.23.26",
-    "google-auth-library": "^10.5.0",
+    "google-auth-library": "^10.6.0",
     "googleapis": "^169.0.0",
     "html2canvas": "^1.4.1",
     "ioredis": "^5.8.2",
