@@ -64,3 +64,11 @@ VALIDATION_REQUESTED for FASE 1. No FASE 2.
 - SoT property remains open; Inc1 does not touch inventory
 - Status: FASE5_PARTNERS_SPEC_CONDITIONS_CLOSED — human SPEC_APPROVED pending
 - Cursor IDLE; no product code
+
+## 2026-09-22 — SPEC_APPROVED + INC1_PREFLIGHT_PASS
+
+- Orquestrador: SPEC_APPROVED (baseline 6d320174); INC1_AUTHORIZED NOT emitted
+- Antigravity: Inc1 pre-flight vs real repo → PASS
+- Artifact: FASE5_INC1_PREFLIGHT.md (exact CREATE-only DDL proposal)
+- No SQL/migration/schema/API; Cursor IDLE
+- Next human gate: INC1_AUTHORIZED
