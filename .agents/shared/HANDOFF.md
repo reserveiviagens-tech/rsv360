@@ -1,26 +1,31 @@
-# HANDOFF — FASE 2 CLOSED
+# HANDOFF — FASE 3 CLOSED
 
-**Status:** COMMITTED + PUSHED (após push)  
-**Executor:** Cursor  
-**Orchestrator:** Antigravity  
-**Branch:** `chore/fase2-node-setup-bumps`  
-**Base (FASE 1 tip):** `8dd5dd6b9d4b4d1c44c7015b4b2df09fa29d3478`  
-**FASE 0 (paralela, fora do histórico):** `c42222848bf27bfcb38e50faecbf979d5fe5c240`
+**Status:** COMMITTED + PUSHED (após push)
+**Executor:** Cursor
+**Orchestrator:** Antigravity
+**Branch:** `chore/tailwind-v4`
+**Base (FASE 2 tip):** `b8f328965c2852249729a04ab77486058b07b286`
+**FASE 0 (paralela):** `c42222848bf27bfcb38e50faecbf979d5fe5c240`
 
 ## Escopo commit
 
-- setup-node → v6 + node-version 24 nos 5 workflows autorizados
-- Bridge `.agents/shared` (CURRENT_TASK, HANDOFF, FASE2_PLAN)
-- Sem `@types/node`, `react-dropzone`, Dockerfiles, engines, FASE 0, untracked
+Somente evidência/auditoria TW4:
+- `.agents/shared/FASE3_PLAN.md`
+- `.agents/shared/FASE3_MATRIX.md`
+- `.agents/shared/CURRENT_TASK.md`
+- `.agents/shared/HANDOFF.md`
+
+Sem alteração de produto, Dockerfiles, engines, auth ou reservei.
 
 ## Gates
 
 | Gate | Estado |
 |------|--------|
-| G2.0–G2.3 | VALIDATED |
-| G2.4 commit/push | autorizado nesta mensagem |
-| G2.5 integração FASE 0 | aberto |
-| FASE 3 | não autorizada |
+| G3.0–G3.3 | VALIDATED |
+| G3.6 | VALIDATED |
+| G3.7 commit/push | autorizado nesta mensagem |
+| G3.5 FASE 0 | paralela |
+| FASE 4 | não autorizada |
 
 ## Untracked preservados
 
@@ -30,4 +35,4 @@
 
 ## Next
 
-**STOP.** Aguardar Orquestrador (fechamento formal + próxima etapa). Sem FASE 3.
+**STOP.** Aguardar Orquestrador. Sem FASE 4.

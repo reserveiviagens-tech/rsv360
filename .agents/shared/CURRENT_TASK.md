@@ -1,14 +1,14 @@
 # CURRENT_TASK
 
-**Task ID:** FASE-2-CLOSE
+**Task ID:** FASE-3-CLOSE
 **Status:** COMMITTED_PUSHED
 **Executor:** Cursor
-**Authorized:** Orquestrador — FASE 2 VALIDATED → commit/push
+**Authorized:** Orquestrador — G3.6 VALIDATED → commit/push
 
 ## Checkpoint
-- Branch: `chore/fase2-node-setup-bumps`
-- Base: `8dd5dd6b9d4b4d1c44c7015b4b2df09fa29d3478`
+- Branch: `chore/tailwind-v4`
+- Base: `b8f328965c2852249729a04ab77486058b07b286`
 - FASE 0 (paralela): `c42222848bf27bfcb38e50faecbf979d5fe5c240`
 
 ## Proibido
-FASE 3; merge; integração FASE 0; tocar untracked preservados
+FASE 4; merge; integração FASE 0; migrar reservei; untracked preservados
