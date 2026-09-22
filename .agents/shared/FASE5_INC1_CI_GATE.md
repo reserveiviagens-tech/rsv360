@@ -1,13 +1,28 @@
 # FASE 5 Inc1 — CI Gate Report (PR #389)
 
-**Status:** `INC1_CI_BLOCKED`  
+**Status:** `INC1_CI_FIX_COMPLETE_PENDING_REVIEW`  
+**Fix commit:** `21f13260`  
+**PR tip:** `21f13260`  
 **Date:** 2026-09-22  
-**PR:** https://github.com/reserveiviagens-tech/rsv360/pull/389  
-**Branch:** `feat/fase5-partners-inc1`  
-**Tip:** `212f3c21` · Impl: `e5fbb302`  
-**Staging migrate:** **NOT AUTHORIZED**  
-**Production:** **BLOCKED**  
-**Inc 2:** NOT STARTED  
+
+## Fix applied (authorized)
+
+| Finding | Resolution |
+|---------|------------|
+| L38 log injection | `record(name, ok)` only — no DB detail logged |
+| L117/L124 untrusted→query | `FIXED_PARTNER_ID` constant for INSERT + membership + UPDATE params |
+
+Local: Jest 6/6 PASS · `INC1_EPHEMERAL_PASS`
+
+## CI after push
+
+Re-run **in progress** at time of this note — **PENDING ≠ PASS**.  
+Do **not** emit `INC1_CI_PASS` until CodeQL + route-smoke + Playwright + críticos all PASS.
+
+Staging: **NOT AUTHORIZED**  
+Inc2: NOT STARTED  
+
+**PARAR** — revisão humana após CI completo.  
 
 ---
 
