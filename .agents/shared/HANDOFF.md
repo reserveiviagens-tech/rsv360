@@ -1,40 +1,33 @@
-# HANDOFF — FASE 1 Safe Bumps
+# HANDOFF — FASE 2 CLOSED
 
-**Status:** VALIDATION_REQUESTED  
+**Status:** COMMITTED + PUSHED (após push)  
 **Executor:** Cursor  
 **Orchestrator:** Antigravity  
-**Branch:** `chore/fase1-safe-bumps`  
-**HEAD (no FASE 1 commit yet):** `8c9efe9d` (== origin/main base)  
-**FASE 0 checkpoint (untouched):** `fix/auth-refresh-contract` @ `c42222848bf27bfcb38e50faecbf979d5fe5c240`
+**Branch:** `chore/fase2-node-setup-bumps`  
+**Base (FASE 1 tip):** `8dd5dd6b9d4b4d1c44c7015b4b2df09fa29d3478`  
+**FASE 0 (paralela, fora do histórico):** `c42222848bf27bfcb38e50faecbf979d5fe5c240`
 
-## Impact analysis (before implement)
+## Escopo commit
 
-| Item | Evidence | Action |
-|------|----------|--------|
-| `google-auth-library` | `apps/site-publico/package.json` was `^10.5.0`; used by `google-calendar-service.ts` / `google-calendar-sync.ts` via `OAuth2Client` | Bump to `^10.6.0` |
-| `docker/login-action` / `metadata-action` | Root `.github/workflows/cd-*.yml` **already** `@v4` / `@v6` | No change |
-| Same actions in apps | `apps/site-publico/.github/workflows/ci-cd.yml` and `apps/turismo/.github/workflows/ci-cd-pipeline.yml` still `@v3` / `@v5` | Bump to `@v4` / `@v6` |
-| Changelog 10.6.0 | Internal gtoken; no public API break noted for OAuth2Client usage | Safe |
+- setup-node → v6 + node-version 24 nos 5 workflows autorizados
+- Bridge `.agents/shared` (CURRENT_TASK, HANDOFF, FASE2_PLAN)
+- Sem `@types/node`, `react-dropzone`, Dockerfiles, engines, FASE 0, untracked
 
-## Files changed (working tree only — not committed)
+## Gates
 
-- `apps/site-publico/package.json` — `google-auth-library`: `^10.5.0` → `^10.6.0`
-- `package-lock.json` — resolved `google-auth-library@10.9.1` (satisfies `^10.6.0`)
-- `apps/site-publico/.github/workflows/ci-cd.yml` — login `@v4`, metadata `@v6`
-- `apps/turismo/.github/workflows/ci-cd-pipeline.yml` — login `@v4`, metadata `@v6`
+| Gate | Estado |
+|------|--------|
+| G2.0–G2.3 | VALIDATED |
+| G2.4 commit/push | autorizado nesta mensagem |
+| G2.5 integração FASE 0 | aberto |
+| FASE 3 | não autorizada |
 
-## Baseline type-check (Orchestrator gate)
+## Untracked preservados
 
-| Ambiente | Comando | Exit | Erros TS |
-|----------|---------|------|----------|
-| Worktree `origin/main` @ `8c9efe9d` + `npm ci --ignore-scripts` (sem `.next`) | `npm run type-check --workspace=apps/site-publico` | **0** | **0** |
-| Branch `chore/fase1-safe-bumps` **com** `.next` (pós-build) | mesmo comando | **≠0** | **36** (inclui `.next/types/*` + fontes) |
-| Branch `chore/fase1-safe-bumps` **sem** `.next` (rename temporário do artefato) | mesmo comando | **0** | **0** |
+- `Aruanda2.md`
+- `docs/governance/PROTOCOLO-CONVIVENCIA-ANTIGRAVITY-CURSOR.md`
+- `test-compose.yml`
 
-**Classificação:** falha observada na FASE 1 **não** é regressão dos bumps. É artefato de typecheck com `.next/types` gerado pelo `next build`. Em condições equivalentes ao baseline (sem `.next`), FASE 1 **passa**.
+## Next
 
-**Status permanece:** `VALIDATION_REQUESTED` — decisão de commit/push fica com o Orquestrador.
-
-## Next step
-
-**STOP.** Aguardar decisão do Orquestrador (VALIDATED vs outro). Não FASE 2. Não commit/push sem autorização.
+**STOP.** Aguardar Orquestrador (fechamento formal + próxima etapa). Sem FASE 3.

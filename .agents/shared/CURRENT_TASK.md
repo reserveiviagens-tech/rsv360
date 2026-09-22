@@ -1,22 +1,14 @@
-# CURRENT_TASK — FASE 1 Safe Dependency Bumps
+# CURRENT_TASK
 
-**Task ID:** FASE-1-SAFE-BUMPS  
-**Status:** VALIDATION_REQUESTED  
-**Executor:** Cursor  
-**Authorized by Owner:** Gate FASE 0 → FASE 1 APPROVED
+**Task ID:** FASE-2-CLOSE
+**Status:** COMMITTED_PUSHED
+**Executor:** Cursor
+**Authorized:** Orquestrador — FASE 2 VALIDATED → commit/push
 
-## Objective
+## Checkpoint
+- Branch: `chore/fase2-node-setup-bumps`
+- Base: `8dd5dd6b9d4b4d1c44c7015b4b2df09fa29d3478`
+- FASE 0 (paralela): `c42222848bf27bfcb38e50faecbf979d5fe5c240`
 
-Safe bumps only:
-- `google-auth-library` 10.5 → ^10.6 (site-publico)
-- `docker/login-action` v3 → v4 (app workflows still on v3)
-- `docker/metadata-action` v5 → v6 (app workflows still on v5)
-- Validate site-publico build
-
-## Out of scope
-
-FASE 2+; FASE 0 reopen; untracked preserve list; Enterprise Rules; migrations; production; secret files; opportunistic refactors.
-
-## Checkpoint preserved
-
-FASE 0 tip `fix/auth-refresh-contract` @ `c42222848bf27bfcb38e50faecbf979d5fe5c240` — not modified.
+## Proibido
+FASE 3; merge; integração FASE 0; tocar untracked preservados
