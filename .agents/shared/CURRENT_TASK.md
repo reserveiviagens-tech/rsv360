@@ -1,14 +1,17 @@
 # CURRENT_TASK
 
-**Task ID:** FASE-4-CLOSE
-**Status:** COMMITTED_PUSHED
-**Executor:** Cursor
-**Authorized:** Orquestrador — G4.6 VALIDATED → autonomous commit/push
+**Task ID:** PROTOCOL-INSTALL
+**Status:** EXECUTING → COMMIT_GATE
+**Protocol:** `.agents/shared/AUTONOMOUS_EXECUTION_PROTOCOL.md`
+**Policy:** `.agents/shared/AUTONOMOUS_POLICY.md`
+**Manifest:** `.agents/shared/COMMIT_MANIFEST.md`
 
-## Checkpoint
+## Context
+- FASE 4 CLOSED @ `4827c575` — **não** reabrir
+- FASE 5: bloqueada
+- FASE 0: paralela `c4222284`
 - Branch: `chore/fase4-node24-runtime`
-- Base: `dc9a9fc9a45b89d04774bfad8b8c433354dfa619`
-- FASE 0 (paralela): `c42222848bf27bfcb38e50faecbf979d5fe5c240`
 
-## Proibido
-FASE 5; merge; integração FASE 0; migrar reservei; untracked preservados
+## Esta tarefa
+Instalar protocolo autônomo Cursor↔Antigravity (risco LOW).  
+Commit/push automático se dual gate + manifest PASS.

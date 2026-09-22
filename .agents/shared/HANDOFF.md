@@ -1,33 +1,40 @@
-# HANDOFF — FASE 4 CLOSED
+# HANDOFF
 
-**Status:** COMMITTED + PUSHED (após push)
-**Executor:** Cursor
-**Orchestrator:** Antigravity
-**Branch:** `chore/fase4-node24-runtime`
-**Base (FASE 3 tip):** `dc9a9fc9a45b89d04774bfad8b8c433354dfa619`
-**FASE 0 (paralela):** `c42222848bf27bfcb38e50faecbf979d5fe5c240`
+```text
+FASE: PROTOCOL_INSTALL
+ETAPA: dual review + commit gate
+AGENTE: ANTIGRAVITY + CURSOR
+STATUS: PASS (pending C1/C2)
 
-## Escopo commit
+AÇÃO EXECUTADA:
+- Criados AUTONOMOUS_EXECUTION_PROTOCOL.md (v1.1, commit/push com dual gate)
+- Criado AUTONOMOUS_POLICY.md (LOW/MEDIUM/HIGH)
+- Criado COMMIT_MANIFEST.md (allowlist desta instalação)
+- CURRENT_TASK aponta para o protocolo
+- FASE 4 permanece CLOSED; FASE 5 não iniciada
 
-Somente evidência/auditoria runtime Node 24:
-- `.agents/shared/FASE4_PLAN.md`
-- `.agents/shared/FASE4_MATRIX.md`
-- `.agents/shared/CURRENT_TASK.md`
-- `.agents/shared/HANDOFF.md`
-- `.agents/shared/EXECUTION_LOG.md`
+EVIDÊNCIA:
+- Artefatos em .agents/shared/
+- Risco LOW (somente docs de governança operacional)
 
-Sem Dockerfile/engines/produto/auth/reservei.
+ARQUIVOS ALTERADOS:
+- .agents/shared/AUTONOMOUS_EXECUTION_PROTOCOL.md
+- .agents/shared/AUTONOMOUS_POLICY.md
+- .agents/shared/COMMIT_MANIFEST.md
+- .agents/shared/CURRENT_TASK.md
+- .agents/shared/HANDOFF.md
+- .agents/shared/EXECUTION_LOG.md (após commit gate)
 
-## Camadas
+ARQUIVOS PRESERVADOS:
+- Aruanda2.md
+- docs/governance/PROTOCOLO-CONVIVENCIA-ANTIGRAVITY-CURSOR.md
+- test-compose.yml
+- Dockerfiles/engines/produto/auth
 
-DECLARADO/CONSTRUÍDO/EXECUTADO/HEALTH/SMOKE = PASS (backend + frontend)
+PRÓXIMA ETAPA: CURSOR C1–C3 (manifest match → commit → push → verify)
+AGENTE RESPONSÁVEL: CURSOR
+BLOQUEIOS: nenhum se MANIFEST_MATCH
 
-## Untracked preservados
-
-- `Aruanda2.md`
-- `docs/governance/PROTOCOLO-CONVIVENCIA-ANTIGRAVITY-CURSOR.md`
-- `test-compose.yml`
-
-## Next
-
-**STOP.** Sem FASE 5 até protocolo/orquestrador.
+ANTIGRAVITY_REVIEW: PASS
+CURSOR_REVIEW: pending gate Git
+```
