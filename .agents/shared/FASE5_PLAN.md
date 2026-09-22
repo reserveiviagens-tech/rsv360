@@ -1,10 +1,11 @@
 # FASE 5 — STATE/IMPACT AUDIT + SCOPE GATE
 
-**Status:** `FASE5_SCOPE_DEFINITION_REQUIRED`  
+**Status:** `FASE5_PARTNERS_SPEC_COMPLETE` (trilha F selecionada; Spec pack entregue)  
 **Agente:** Antigravity (Tech Lead)  
 **Data:** 2026-09-22  
 **Protocolo:** ACTIVE (`AUTONOMOUS_EXECUTION_PROTOCOL.md`)  
-**Implementação Cursor:** **NÃO iniciada** (escopo ainda não único)
+**Implementação Cursor:** **NÃO iniciada** — aguarda `SPEC_APPROVED` humano (HIGH)  
+**Spec:** `.agents/shared/FASE5_PARTNERS_SPEC.md` · ADR: `ADR-FASE5-PARTNER-DOMAIN.md`
 
 ## Checkpoints
 
