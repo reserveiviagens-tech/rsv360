@@ -2,37 +2,26 @@
 
 ```text
 FASE: 5.0
-ETAPA: Inc1 COMMIT/PR
-AGENTE: CURSOR
-STATUS: FASE5_INC1_COMMIT_PR_COMPLETE
+ETAPA: Inc1 CodeQL minimal fix
+AGENTE: CURSOR (+ Antigravity strategy)
+STATUS: INC1_CI_FIX_COMPLETE_PENDING_REVIEW (após push; CI a confirmar)
 
 AÇÃO EXECUTADA:
-- INC1_HUMAN_REVIEW_APPROVED
-- Commit tip: e5fbb302 (feat(db): FASE5 Inc1 Partner domain CREATE-only)
-- Branch: feat/fase5-partners-inc1 (from main + FASE5 trail cherry-picks)
-- Push: origin/feat/fase5-partners-inc1
-- PR: https://github.com/reserveiviagens-tech/rsv360/pull/389
-- Shared/staging/prod NOT migrated
-- Inc 2 NOT STARTED
-
-ARQUIVOS NO TIP (Inc1):
-- backend/drizzle/0059_partner_domain.sql
-- backend/drizzle/meta/_journal.json
-- backend/drizzle/meta/0059_snapshot.json
-- backend/src/db/schema/partners.ts
-- backend/src/db/schema/index.ts
-- backend/src/__tests__/unit/partner-domain-migration.test.ts
-- backend/scripts/validate-partner-domain-0059.mjs
-- .agents/shared/FASE5_INC1_* + handoff/manifest
+- Lidos 3 findings CodeQL (L38 log injection; L117/L124 untrusted→query)
+- Estratégia: FASE5_INC1_CODEQL_FIX.md
+- Fix: record() sem detail; FIXED_PARTNER_ID constante nos params
+- Sem alteração SQL/partners.ts/domínio
+- Jest 6/6 + INC1_EPHEMERAL_PASS local
+- Staging NÃO autorizado
 
 PRÓXIMA ETAPA:
-Gate humano CI + INC1_STAGING_MIGRATION_AUTHORIZED (separado)
-Não iniciar Inc 2
+Aguardar CI completo PR #389 (CodeQL + Playwright + route-smoke)
+Não emitir INC1_CI_PASS enquanto PENDING/FAIL
+Não staging
 
-AGENTE RESPONSÁVEL: ORQUESTRADOR (humano)
-BLOQUEIOS: staging/prod migrate; Inc 2
+AGENTE RESPONSÁVEL: ORQUESTRADOR (humano) pós-CI
+BLOQUEIOS: staging; prod; Inc2; CodeQL até verde
 
-ANTIGRAVITY_REVIEW: PASS
-CURSOR_REVIEW: PASS
-HUMAN_REVIEW: APPROVED
+ANTIGRAVITY_REVIEW: PASS (strategy)
+CURSOR_REVIEW: PASS (script-only)
 ```

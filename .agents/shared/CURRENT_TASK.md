@@ -1,16 +1,14 @@
 # CURRENT_TASK
 
-**Task ID:** FASE-5-PARTNERS-INC1
-**Status:** FASE5_INC1_COMMIT_PR_COMPLETE
+**Task ID:** FASE-5-PARTNERS-INC1-CODEQL-FIX
+**Status:** INC1_CI_FIX_PUSHED — awaiting full CI
 **Risk:** HIGH
 
 | Item | Valor |
 |------|-------|
-| Branch | `feat/fase5-partners-inc1` |
-| Tip SHA | `e5fbb302` |
-| PR | https://github.com/reserveiviagens-tech/rsv360/pull/389 |
-| Staging migrate | NOT AUTHORIZED |
-| Production | BLOCKED |
-| Inc 2 | NOT STARTED |
+| Auth | INC1 CI FIX AUTHORIZATION |
+| File | `validate-partner-domain-0059.mjs` only |
+| Local validate | INC1_EPHEMERAL_PASS + Jest 6/6 |
+| Staging | NOT AUTHORIZED |
 
-**PARAR** — aguardar CI / `INC1_STAGING_MIGRATION_AUTHORIZED`.
+Strategy: `.agents/shared/FASE5_INC1_CODEQL_FIX.md`
