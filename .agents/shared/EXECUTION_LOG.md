@@ -95,3 +95,10 @@ VALIDATION_REQUESTED for FASE 1. No FASE 2.
 - PR: https://github.com/reserveiviagens-tech/rsv360/pull/389
 - Staging/prod migrate: NOT DONE / NOT AUTHORIZED
 - Inc2: NOT STARTED
+
+## 2026-09-22 — INC1_CI_PASS + STAGING PREFLIGHT
+
+- Human: INC1_CI_HUMAN_REVIEW_APPROVED → INC1_CI_PASS registered
+- Staging preflight COMPLETE; migration NOT executed
+- Gaps: tip not on main; CD staging=develop/no runs; no GH staging env; no DB backup evidenced
+- STOP awaiting INC1_STAGING_MIGRATION_AUTHORIZED
