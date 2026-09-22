@@ -27,3 +27,15 @@
 ## Stop
 
 VALIDATION_REQUESTED for FASE 1. No FASE 2.
+
+## 2026-09-22 — FASE 4 G4.6 BACKEND_RUNTIME_VALIDATION
+
+- Status before: BACKEND_HEALTH/SMOKE NOT_EXECUTED (isolated run lacked DATABASE_URL; no .env used).
+- Antigravity strategy: reuse existing docker-compose stack (rsv360-backend + postgres already healthy).
+- Cursor execution:
+  - docker exec rsv360-backend node -v → v24.21.0
+  - GET http://127.0.0.1:3002/health → HTTP 200 status OK
+  - Backend smoke → same endpoint HTTP 200
+  - Owner stack not destroyed
+- No Dockerfile/engines/product changes; no commit/push.
+- Result: BACKEND_RUNTIME_VALIDATION_COMPLETE — await Orchestrator G4.6.
