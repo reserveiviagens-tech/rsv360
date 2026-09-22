@@ -2,24 +2,20 @@
 
 ```text
 FASE: 5.0
-ETAPA: Inc1 Partner domain CREATE-only
-AGENTE: CURSOR (+ Antigravity supervision)
-STATUS: FASE5_INC1_IMPLEMENTATION_COMPLETE_PENDING_REVIEW
+ETAPA: Inc1 COMMIT/PR
+AGENTE: CURSOR
+STATUS: FASE5_INC1_COMMIT_PR_COMPLETE
 
 AÇÃO EXECUTADA:
-- INC1_AUTHORIZED registrado
-- Criados 0059_partner_domain.sql + journal + snapshot + schema partners.ts
-- Unit tests PASS; ephemeral UP/DOWN/re-UP PASS
-- Shared rsv360-postgres NÃO migrado
-- Sem API/FE/ALTER legado; sem commit/push (HIGH)
+- INC1_HUMAN_REVIEW_APPROVED
+- Commit tip: e5fbb302 (feat(db): FASE5 Inc1 Partner domain CREATE-only)
+- Branch: feat/fase5-partners-inc1 (from main + FASE5 trail cherry-picks)
+- Push: origin/feat/fase5-partners-inc1
+- PR: https://github.com/reserveiviagens-tech/rsv360/pull/389
+- Shared/staging/prod NOT migrated
+- Inc 2 NOT STARTED
 
-EVIDÊNCIA:
-- FASE5_INC1_EVIDENCE.md
-- INC1_EPHEMERAL_PASS
-- jest partner-domain-migration 6/6
-- db:validate-journal PASS
-
-ARQUIVOS (allowlist):
+ARQUIVOS NO TIP (Inc1):
 - backend/drizzle/0059_partner_domain.sql
 - backend/drizzle/meta/_journal.json
 - backend/drizzle/meta/0059_snapshot.json
@@ -27,15 +23,16 @@ ARQUIVOS (allowlist):
 - backend/src/db/schema/index.ts
 - backend/src/__tests__/unit/partner-domain-migration.test.ts
 - backend/scripts/validate-partner-domain-0059.mjs
-- .agents/shared/* (evidence/manifest/handoff)
+- .agents/shared/FASE5_INC1_* + handoff/manifest
 
 PRÓXIMA ETAPA:
-Gate humano HIGH — review + commit/PR; migrate staging só com OK
-Inc 2 NÃO iniciado
+Gate humano CI + INC1_STAGING_MIGRATION_AUTHORIZED (separado)
+Não iniciar Inc 2
 
 AGENTE RESPONSÁVEL: ORQUESTRADOR (humano)
-BLOQUEIOS: HIGH — no auto push; no prod migrate
+BLOQUEIOS: staging/prod migrate; Inc 2
 
 ANTIGRAVITY_REVIEW: PASS
 CURSOR_REVIEW: PASS
+HUMAN_REVIEW: APPROVED
 ```

@@ -87,3 +87,11 @@ VALIDATION_REQUESTED for FASE 1. No FASE 2.
 - Orquestrador: INC1_HUMAN_REVIEW_APPROVED
 - Authorized: commit + PR only
 - NOT authorized: shared/staging/prod migrate, Inc 2, adapters, API
+
+## 2026-09-22 — FASE5_INC1_COMMIT_PR_COMPLETE
+
+- Branch: feat/fase5-partners-inc1
+- Tip: e5fbb302
+- PR: https://github.com/reserveiviagens-tech/rsv360/pull/389
+- Staging/prod migrate: NOT DONE / NOT AUTHORIZED
+- Inc2: NOT STARTED
