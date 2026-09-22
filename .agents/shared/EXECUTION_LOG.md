@@ -48,3 +48,11 @@ VALIDATION_REQUESTED for FASE 1. No FASE 2.
 - Result: FASE5_SCOPE_DEFINITION_REQUIRED
 - No product changes; no Cursor implementation; no commit/push
 - Waiting Orchestrator pick slice A–E (see FASE5_PLAN.md)
+
+## 2026-09-22 — FASE 5.0 Partners Spec-first
+
+- Orquestrador selecionou trilha F Partners Spec-first (HIGH)
+- Antigravity discovery: no partners table; affiliates/marketplace SQL orphan APIs; split+comissoes alive; dual property stacks
+- Deliverables: FASE5_PARTNERS_SPEC.md + ADR-FASE5-PARTNER-DOMAIN.md
+- Status: FASE5_PARTNERS_SPEC_COMPLETE — STOP for human SPEC_APPROVED
+- No product code, no migrations, no Cursor implementation
