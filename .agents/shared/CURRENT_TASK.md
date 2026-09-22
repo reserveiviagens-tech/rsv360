@@ -1,20 +1,19 @@
 # CURRENT_TASK
 
-**Task ID:** FASE-5-PARTNERS-INC1-STAGING-PREFLIGHT
-**Status:** INC1_CI_PASS + INC1_STAGING_PREFLIGHT_COMPLETE
+**Task ID:** FASE-5-PARTNERS-INC1-STAGING-GAPS
+**Status:** INC1_STAGING_PREFLIGHT_BLOCKED
 **Risk:** HIGH
 
 | Gate | Estado |
 |------|--------|
-| INC1_CI_HUMAN_REVIEW_APPROVED | YES |
-| INC1_CI_PASS | **YES** (formal) |
-| Staging preflight | COMPLETE (gaps §7) |
-| INC1_STAGING_MIGRATION_AUTHORIZED | **NO** |
-| Migration executed | **NO** |
-| Production / Inc2 | BLOCKED / NOT STARTED |
+| INC1_CI_PASS | YES |
+| CODE_PROVENANCE | FAIL |
+| STAGING_IDENTITY | FAIL |
+| DATABASE_TARGET | FAIL |
+| BACKUP_READY | FAIL |
+| ROLLBACK_READY | FAIL |
+| PRODUCTION_ISOLATION | FAIL |
+| PREFLIGHT_PASS | **NÃO** |
+| Migration | **NÃO EXECUTADA** |
 
-Artifacts:
-- `.agents/shared/FASE5_INC1_CI_PASS.md`
-- `.agents/shared/FASE5_INC1_STAGING_PREFLIGHT.md`
-
-**PARAR** — aguardar `INC1_STAGING_MIGRATION_AUTHORIZED` + resolução dos bloqueios.
+**PARAR** — aguardar fechamento ops/humano + depois AUTHORIZED.
