@@ -1,11 +1,12 @@
 # FASE 5.0 — PARTNERS SPEC (Architecture-First)
 
-**Status:** `FASE5_PARTNERS_SPEC_CONDITIONS_CLOSED` → aguarda **`SPEC_APPROVED` humano** (risco **HIGH**)  
+**Status:** `SPEC_APPROVED` (Orquestrador) — Inc 1 pre-flight: ver `FASE5_INC1_PREFLIGHT.md`  
 **Agente:** Antigravity (Tech Lead / Architect)  
 **Data:** 2026-09-22  
-**Baseline Spec original:** `bacf9ecb`  
-**Review:** `.agents/shared/FASE5_PARTNERS_SPEC_REVIEW.md` (§C aplicado abaixo)  
-**Implementação Cursor:** **PROIBIDA** até `SPEC_APPROVED` **e** `INC1_AUTHORIZED`  
+**Baseline Spec:** `6d320174`  
+**Review:** `.agents/shared/FASE5_PARTNERS_SPEC_REVIEW.md`  
+**Pre-flight Inc 1:** `INC1_PREFLIGHT_PASS`  
+**INC1_AUTHORIZED:** **NÃO** — Cursor **IDLE** (sem schema/SQL/API)  
 
 **Direção de produto (Orquestrador):**  
 `PARTNER → PROPERTIES / ACCOMMODATIONS / ROLES → BOOKINGS → EARNINGS → LEDGER → PAYOUTS`  
