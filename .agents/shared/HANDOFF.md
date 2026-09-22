@@ -2,34 +2,40 @@
 
 ```text
 FASE: 5.0
-ETAPA: SPEC_APPROVED + Inc1 pre-flight
-AGENTE: ANTIGRAVITY
-STATUS: INC1_PREFLIGHT_PASS
+ETAPA: Inc1 Partner domain CREATE-only
+AGENTE: CURSOR (+ Antigravity supervision)
+STATUS: FASE5_INC1_IMPLEMENTATION_COMPLETE_PENDING_REVIEW
 
 AÇÃO EXECUTADA:
-- Registrado SPEC_APPROVED (Orquestrador) — baseline Spec 6d320174
-- INC1_AUTHORIZED NÃO emitido (gate separado preservado)
-- Pre-flight Inc1 vs repo real (drizzle 0058, users serial, sem tabela partners,
-  comissoes vivo, split vivo, journal forward-only)
-- Artefato: .agents/shared/FASE5_INC1_PREFLIGHT.md com DDL exata proposta
-- Nenhuma migration criada; nenhum SQL executado; Cursor IDLE
+- INC1_AUTHORIZED registrado
+- Criados 0059_partner_domain.sql + journal + snapshot + schema partners.ts
+- Unit tests PASS; ephemeral UP/DOWN/re-UP PASS
+- Shared rsv360-postgres NÃO migrado
+- Sem API/FE/ALTER legado; sem commit/push (HIGH)
 
 EVIDÊNCIA:
-- partners table ABSENT
-- next migration tag: 0059_partner_domain
-- UUID gen_random_uuid OK
-- user_id FK = integer (users.serial)
-- enterprise_id UUID omitted (payments debt); use partner_links
-- zero ALTER/DROP legado no plano Inc1
-- /api/v1/comissoes untouched
+- FASE5_INC1_EVIDENCE.md
+- INC1_EPHEMERAL_PASS
+- jest partner-domain-migration 6/6
+- db:validate-journal PASS
+
+ARQUIVOS (allowlist):
+- backend/drizzle/0059_partner_domain.sql
+- backend/drizzle/meta/_journal.json
+- backend/drizzle/meta/0059_snapshot.json
+- backend/src/db/schema/partners.ts
+- backend/src/db/schema/index.ts
+- backend/src/__tests__/unit/partner-domain-migration.test.ts
+- backend/scripts/validate-partner-domain-0059.mjs
+- .agents/shared/* (evidence/manifest/handoff)
 
 PRÓXIMA ETAPA:
-Gate humano INC1_AUTHORIZED → só então Cursor implementa 0059 + schema TS
-Até lá: PARAR
+Gate humano HIGH — review + commit/PR; migrate staging só com OK
+Inc 2 NÃO iniciado
 
 AGENTE RESPONSÁVEL: ORQUESTRADOR (humano)
-BLOQUEIOS: HIGH; Cursor IDLE; no implicit auth
+BLOQUEIOS: HIGH — no auto push; no prod migrate
 
-ANTIGRAVITY_REVIEW: INC1_PREFLIGHT_PASS
-CURSOR_REVIEW: N/A (idle)
+ANTIGRAVITY_REVIEW: PASS
+CURSOR_REVIEW: PASS
 ```

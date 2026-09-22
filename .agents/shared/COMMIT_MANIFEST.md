@@ -1,40 +1,37 @@
-# COMMIT_MANIFEST
+# COMMIT_MANIFEST — FASE 5 Inc 1 Partner Domain
 
-**Phase:** FASE 5.0 Partners Spec pack  
-**Risk:** LOW (documentation only)  
-**Branch:** `chore/fase4-node24-runtime`  
-**Base:** `754e9b9ca23d3023a2a4a869d5fa4bb0460922e6`
+**Risk:** HIGH  
+**Gate:** INC1_HUMAN_REVIEW_APPROVED  
+**Spec baseline:** `6d320174`  
+**Pre-flight:** `32312409`
 
-## Allowed files
+## Allowlist (commit)
 
-- `.agents/shared/FASE5_PARTNERS_SPEC.md`
-- `.agents/shared/ADR-FASE5-PARTNER-DOMAIN.md`
+- `backend/drizzle/0059_partner_domain.sql`
+- `backend/drizzle/meta/_journal.json`
+- `backend/drizzle/meta/0059_snapshot.json`
+- `backend/src/db/schema/partners.ts`
+- `backend/src/db/schema/index.ts`
+- `backend/src/__tests__/unit/partner-domain-migration.test.ts`
+- `backend/scripts/validate-partner-domain-0059.mjs`
+- `.agents/shared/FASE5_INC1_EVIDENCE.md`
+- `.agents/shared/FASE5_INC1_PREFLIGHT.md`
+- `.agents/shared/FASE5_INC1_HUMAN_REVIEW.md`
 - `.agents/shared/CURRENT_TASK.md`
 - `.agents/shared/HANDOFF.md`
 - `.agents/shared/EXECUTION_LOG.md`
 - `.agents/shared/COMMIT_MANIFEST.md`
-- `.agents/shared/FASE5_PLAN.md` (se atualizado)
 
-## Forbidden
+## Forbidden in this commit
 
-- Qualquer código/produto/migration
-- FASE 0 / auth
-- untracked protegidos
-- `.env`
+Staging/prod migrate, Inc 2, API, FE, legado, `.env`, untracked protegidos
 
-## Dual review
+## Dual + Human
 
-| Review | Result |
-|--------|--------|
+| Gate | Result |
+|------|--------|
 | ANTIGRAVITY_REVIEW | PASS |
-| CURSOR_REVIEW | PASS se allowlist |
+| CURSOR_REVIEW | PASS |
+| INC1_HUMAN_REVIEW_APPROVED | YES |
 
-## Authorization
-
-```text
-AUTOMATICALLY_GRANTED (LOW docs)
-```
-
-Message: `docs(spec): FASE 5.0 Partner domain architecture pack (HIGH gate pending)`
-
-**Nota:** Aprovar Spec ≠ autorizar Incremento 1 de código.
+Message: `feat(db): FASE5 Inc1 Partner domain CREATE-only (0059)`

@@ -72,3 +72,18 @@ VALIDATION_REQUESTED for FASE 1. No FASE 2.
 - Artifact: FASE5_INC1_PREFLIGHT.md (exact CREATE-only DDL proposal)
 - No SQL/migration/schema/API; Cursor IDLE
 - Next human gate: INC1_AUTHORIZED
+
+## 2026-09-22 — INC1_AUTHORIZED + implementation pending human review
+
+- Orquestrador: INC1_AUTHORIZED
+- Implemented 0059_partner_domain CREATE-only + Drizzle schema + tests
+- Ephemeral validation INC1_EPHEMERAL_PASS (shared DB not touched)
+- Unit: partner-domain-migration 6/6 PASS; journal PASS
+- Dual gate PASS; NO commit/push (HIGH)
+- Status: FASE5_INC1_IMPLEMENTATION_COMPLETE_PENDING_REVIEW
+
+## 2026-09-22 — INC1_HUMAN_REVIEW_APPROVED → COMMIT/PR
+
+- Orquestrador: INC1_HUMAN_REVIEW_APPROVED
+- Authorized: commit + PR only
+- NOT authorized: shared/staging/prod migrate, Inc 2, adapters, API

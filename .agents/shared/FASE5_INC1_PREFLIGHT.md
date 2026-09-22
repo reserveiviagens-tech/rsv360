@@ -1,10 +1,11 @@
 # FASE 5 — Incremento 1 Pre-flight
 
-**Status:** `INC1_PREFLIGHT_PASS`  
+**Status:** `INC1_AUTHORIZED` → implementação entregue; ver `FASE5_INC1_EVIDENCE.md`  
 **Date:** 2026-09-22  
 **Spec baseline:** `6d320174`  
 **SPEC_APPROVED:** YES (Orquestrador)  
-**INC1_AUTHORIZED:** **NO** — Cursor IDLE  
+**INC1_AUTHORIZED:** **YES** (Orquestrador)  
+**Implementation:** `FASE5_INC1_IMPLEMENTATION_COMPLETE_PENDING_REVIEW`  
 **Risk:** HIGH  
 
 ---
