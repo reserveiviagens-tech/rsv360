@@ -1,17 +1,14 @@
 # CURRENT_TASK
 
-**Task ID:** PROTOCOL-INSTALL
-**Status:** EXECUTING → COMMIT_GATE
+**Task ID:** FASE-5-AUDIT
+**Status:** FASE5_SCOPE_DEFINITION_REQUIRED
 **Protocol:** `.agents/shared/AUTONOMOUS_EXECUTION_PROTOCOL.md`
-**Policy:** `.agents/shared/AUTONOMOUS_POLICY.md`
-**Manifest:** `.agents/shared/COMMIT_MANIFEST.md`
+**Plan:** `.agents/shared/FASE5_PLAN.md`
 
 ## Context
-- FASE 4 CLOSED @ `4827c575` — **não** reabrir
-- FASE 5: bloqueada
-- FASE 0: paralela `c4222284`
-- Branch: `chore/fase4-node24-runtime`
+- HEAD: `c27c26a6` (`chore/fase4-node24-runtime`)
+- FASE 0–4: CLOSED (0 paralela)
+- FASE 5: audit done — **escopo multi-trilha sem prioridade**
 
-## Esta tarefa
-Instalar protocolo autônomo Cursor↔Antigravity (risco LOW).  
-Commit/push automático se dual gate + manifest PASS.
+## Cursor
+**NÃO** implementar até Orquestrador escolher trilha (A–E no FASE5_PLAN).
