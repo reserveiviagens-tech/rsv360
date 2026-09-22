@@ -1,40 +1,41 @@
 # HANDOFF
 
 ```text
-FASE: PROTOCOL_INSTALL
-ETAPA: dual review + commit gate
-AGENTE: ANTIGRAVITY + CURSOR
-STATUS: PASS (pending C1/C2)
+FASE: 5
+ETAPA: State/Impact Audit
+AGENTE: ANTIGRAVITY
+STATUS: FASE5_SCOPE_DEFINITION_REQUIRED
 
 AÇÃO EXECUTADA:
-- Criados AUTONOMOUS_EXECUTION_PROTOCOL.md (v1.1, commit/push com dual gate)
-- Criado AUTONOMOUS_POLICY.md (LOW/MEDIUM/HIGH)
-- Criado COMMIT_MANIFEST.md (allowlist desta instalação)
-- CURRENT_TASK aponta para o protocolo
-- FASE 4 permanece CLOSED; FASE 5 não iniciada
+- Lidos protocolo, policy, manifest, plano canônico FASE 5
+- Git topology confirmada (HEAD c27c26a6; FASE 0 fora do histórico)
+- Impact audit C5/D/E/F/G2 (evidência em FASE5_PLAN.md)
+- Nenhuma implementação; nenhum commit
 
 EVIDÊNCIA:
-- Artefatos em .agents/shared/
-- Risco LOW (somente docs de governança operacional)
+- C5 partial no HEAD; cenários 3–4 dependem FASE 0 paralela
+- D partial (falta Zod/edit/E2E)
+- E missing API canônica
+- F missing PARTNER/EARNING unificado
+- G2: cubic-bezier inventariado
 
 ARQUIVOS ALTERADOS:
-- .agents/shared/AUTONOMOUS_EXECUTION_PROTOCOL.md
-- .agents/shared/AUTONOMOUS_POLICY.md
-- .agents/shared/COMMIT_MANIFEST.md
+- .agents/shared/FASE5_PLAN.md
 - .agents/shared/CURRENT_TASK.md
 - .agents/shared/HANDOFF.md
-- .agents/shared/EXECUTION_LOG.md (após commit gate)
+- .agents/shared/EXECUTION_LOG.md
 
 ARQUIVOS PRESERVADOS:
-- Aruanda2.md
-- docs/governance/PROTOCOLO-CONVIVENCIA-ANTIGRAVITY-CURSOR.md
-- test-compose.yml
-- Dockerfiles/engines/produto/auth
+- untracked protegidos; FASE 0; Dockerfiles; produto
 
-PRÓXIMA ETAPA: CURSOR C1–C3 (manifest match → commit → push → verify)
-AGENTE RESPONSÁVEL: CURSOR
-BLOQUEIOS: nenhum se MANIFEST_MATCH
+PRÓXIMA ETAPA:
+Orquestrador escolhe fatia FASE 5.0 (opções A–E)
 
-ANTIGRAVITY_REVIEW: PASS
-CURSOR_REVIEW: pending gate Git
+AGENTE RESPONSÁVEL: ORQUESTRADOR (humano)
+BLOQUEIOS:
+- Escopo multi-trilha sem prioridade
+- C5 bloqueado por FASE 0 não integrada (se escolhido A)
+
+CURSOR_REVIEW: N/A (sem implementação)
+ANTIGRAVITY_REVIEW: PASS (audit only)
 ```
