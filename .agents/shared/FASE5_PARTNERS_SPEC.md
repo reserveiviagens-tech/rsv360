@@ -1,10 +1,11 @@
 # FASE 5.0 — PARTNERS SPEC (Architecture-First)
 
-**Status:** `FASE5_PARTNERS_SPEC_COMPLETE` → aguarda **aprovação humana** (risco **HIGH**)  
+**Status:** `FASE5_PARTNERS_SPEC_CONDITIONS_CLOSED` → aguarda **`SPEC_APPROVED` humano** (risco **HIGH**)  
 **Agente:** Antigravity (Tech Lead / Architect)  
 **Data:** 2026-09-22  
-**Branch base de trabalho:** `chore/fase4-node24-runtime` @ `754e9b9c` (audit) / tip atual  
-**Implementação Cursor:** **PROIBIDA** até gate humano da Spec  
+**Baseline Spec original:** `bacf9ecb`  
+**Review:** `.agents/shared/FASE5_PARTNERS_SPEC_REVIEW.md` (§C aplicado abaixo)  
+**Implementação Cursor:** **PROIBIDA** até `SPEC_APPROVED` **e** `INC1_AUTHORIZED`  
 
 **Direção de produto (Orquestrador):**  
 `PARTNER → PROPERTIES / ACCOMMODATIONS / ROLES → BOOKINGS → EARNINGS → LEDGER → PAYOUTS`  
@@ -122,10 +123,11 @@ Introduzir **Partner** como identidade comercial **canônica**, com **adapters**
 5. Marketplace listing = **canal de distribuição** (`source_type=marketplace_order`).  
 6. Split = **mecanismo de settlement** MP, não substitui ledger interno.
 
-### 3.4 Identificadores
-- `partners.id` UUID ou bigserial (alinhar padrão Drizzle do monorepo)  
-- `partners.code` unique (público)  
-- Soft link: `affiliates.id`, `owners.id`, `empreendimentos.id` via tabela `partner_links(kind, external_id)`
+### 3.4 Identificadores (**fechado**)
+- `partners.id` — **UUID** `gen_random_uuid()` (alinha domínio financeiro Drizzle `0058_payments_*`, agentes, auditoria)  
+- FKs internas Partner\* → UUID  
+- `partners.code` UNIQUE (público, string estável)  
+- Soft link: `partner_links(kind, external_id TEXT)` — `external_id` guarda IDs legados (int/serial) como texto; **não** exige unificar tipos no dia 1
 
 ---
 
@@ -175,11 +177,14 @@ Contratos Zod/OpenAPI: a produzir no Incremento 0 (este pacote Spec) como arquiv
 - `partner_ledger_entries`  
 - `partner_payouts` (+ `partner_payout_items`)
 
-### 5.2 Alterações não destrutivas
-- Colunas nullable `partner_id` em: `empreendimentos`, `acomodacoes` (opcional), `comissoes_lancamento`, `marketplace_split_transactions` (se seguro)  
-- **Sem DROP** de 007/008/011  
+### 5.2 Alterações em tabelas existentes (**fora do Inc 1**)
+Adiadas para incrementos posteriores (com gate próprio), **somente** quando SoT/produto autorizar:
+- nullable `partner_id` em inventário (`empreendimentos` / eventualmente legado) — **após** decisão SoT  
+- nullable `partner_id` em `comissoes_lancamento` — Inc 5 (dual-write)  
+- **Proibido** alterar `marketplace_split_transactions` / receivers no Inc 1 (Split vivo)  
+- **Sem DROP** de 007/008/011 em qualquer incremento sem OK humano dedicado  
 
-### 5.3 Índices / constraints
+### 5.3 Índices / constraints (tabelas novas)
 - UNIQUE `partners.code`  
 - UNIQUE `partner_memberships(partner_id, user_id)`  
 - UNIQUE `partner_links(kind, external_id)`  
@@ -198,16 +203,16 @@ Contratos Zod/OpenAPI: a produzir no Incremento 0 (este pacote Spec) como arquiv
 
 | Fase | Ação | Rollback |
 |------|------|----------|
-| M0 | Spec/ADR aprovados | N/A |
-| M1 | CREATE tabelas Partner* (additive) | DROP IF EXISTS apenas se vazio / feature flag off |
-| M2 | Backfill `partners` + `partner_links` a partir de affiliates/owners/empreendimentos | DELETE partners sem earnings |
+| M0 | Spec/ADR + condições fechadas + `SPEC_APPROVED` | N/A |
+| M1 | **CREATE ONLY** tabelas Partner\* (additive); sem ALTER em tabelas vivas | Migration **down** Drizzle em DB efêmero/staging; **proibido** DROP ad-hoc em produção |
+| M2 | Backfill `partners` + `partner_links` (staging first) | Reverter script; DELETE partners sem earnings/ledger |
 | M3 | Facades affiliates/marketplace read | Remover rotas facade |
 | M4 | Dual-write earnings←comissoes_lancamento (flag) | Desligar flag |
 | M5 | UI aponta Partner APIs | Reverter UI |
 | M6 | Deprecated docs; **não** DROP legado até ≥1 ciclo + OK humano | — |
 
 **Preservar:** Affiliate/Marketplace/Split operacionais durante M1–M5.  
-**Proibido nesta Spec:** migration destrutiva, payout real em produção, alteração MP credentials.
+**Proibido nesta Spec:** migration destrutiva, payout real em produção, alteração MP credentials, DROP ad-hoc em prod.
 
 ---
 
@@ -254,12 +259,12 @@ Cada incremento: `SPEC → IMPLEMENT → TEST → REVIEW → EVIDENCE → GATE`
 
 | Inc | Nome | Entrega | Gate |
 |-----|------|---------|------|
-| **0** | Spec pack (este) | Domain/API/DER/Migration/RBAC/ADR/Tests | **HUMANO Spec approval** ← STOP atual |
-| **1** | Schema additive | Drizzle migrations Partner* (sem backfill prod) | HIGH humano + DB review |
-| **2** | Partner core API | POST/GET/PATCH partners + memberships + OpenAPI | HIGH |
+| **0** | Spec pack + condições §15 | Domain/API/DER/Migration/RBAC/ADR/Tests/Review | **HUMANO `SPEC_APPROVED`** ← STOP atual |
+| **1** | Schema CREATE-only | Ver §15.1 — só tabelas Partner\*; sem ALTER vivo; sem API; sem backfill | `INC1_AUTHORIZED` + HIGH + DB review |
+| **2** | Partner core API | OpenAPI/Zod + POST/GET/PATCH partners + memberships | HIGH |
 | **3** | Links + backfill staging | partner_links; script backfill | HIGH |
 | **4** | Facades read affiliates/marketplace | Desbloqueia UIs órfãs sem duplicar domínio | HIGH |
-| **5** | Earnings + ledger write path | Dual-write comissoes_lancamento | HIGH |
+| **5** | Earnings + ledger write path | Dual-write comissoes_lancamento (flag) | HIGH |
 | **6** | Payouts (não-prod first) | State machine + idempotency; **sem** money real até OK | HIGH + payments review |
 | **7** | UI Partner console | Substituir stubs; remover hardcoded ids | MEDIUM–HIGH |
 
@@ -296,18 +301,47 @@ Cada incremento: `SPEC → IMPLEMENT → TEST → REVIEW → EVIDENCE → GATE`
 
 ## 13. Gates necessários antes de código
 
-1. **Humano:** aprovar esta Spec + ADR (`SPEC_APPROVED`)  
-2. Abrir branch `feat/fase5-partners-inc1` a partir de base acordada  
-3. Dual gate + COMMIT_MANIFEST por incremento  
-4. HIGH → sem commit/push automático  
+1. **Humano:** `SPEC_APPROVED` (esta Spec + ADR + §15)  
+2. **Humano:** `INC1_AUTHORIZED` com allowlist = somente schema Partner\* CREATE  
+3. Abrir branch `feat/fase5-partners-inc1`  
+4. Dual gate + COMMIT_MANIFEST; HIGH → sem commit/push automático  
+
+`bacf9ecb` e commits de Spec/docs = **baseline de especificação**, **não** autorização de implementação.
 
 ---
 
-## 14. Lacunas remanescentes (não bloqueiam Spec; bloqueiam Inc 1+)
+## 14. Lacunas remanescentes (não bloqueiam `SPEC_APPROVED`; bloqueiam incrementos posteriores)
 
-- Confirmar SoT oficial property: **empreendimentos** vs **properties** (decisão produto)  
-- Confirmar se Affiliate vira *tipo de Partner* ou *programa sob Partner* (Spec assume programa sob Partner)  
-- Notion/GitHub issues externos: não consultados nesta sessão (limitação ambiente) — docs locais + SQL/código usados  
+| Lacuna | Estado | Bloqueia |
+|--------|--------|----------|
+| SoT property `empreendimentos` vs `properties` | **Aberto de propósito** | Inc ≥2 tocante a inventário / `ALTER partner_id` em inventário |
+| Affiliate = programa sob Partner | **Fechado** (§15.2) | — |
+| OpenAPI/Zod arquivos | Texto na Spec; artefatos no Inc 2 | Inc 2 |
+| Notion/GitHub issues sync | Não consultados | Só se Orquestrador exigir → `SPEC_BLOCKED` |
 
-Se Orquestrador exigir Notion obrigatório: elevar para `FASE5_PARTNERS_SPEC_BLOCKED` até sync.  
-Com evidência de código/SQL/docs locais: **SPEC_COMPLETE** para revisão humana.
+---
+
+## 15. CONDIÇÕES FECHADAS (pre–SPEC_APPROVED) — Review §C
+
+### 15.1 Incremento 1 — escopo fechado
+
+**IN SCOPE**
+- CREATE Drizzle: `partners`, `partner_memberships`, `partner_links`, `partner_earnings`, `partner_ledger_entries`, `partner_payouts`, `partner_payout_items` (se itemizado)
+- PK UUID; constraints/índices **somente** nessas tabelas
+- Migration up/down testada em **DB efêmero**
+- Sem seed/backfill de produção
+
+**OUT OF SCOPE**
+- ALTER em `comissoes_lancamento`, `affiliates*`, `marketplace_*`, split tables, `empreendimentos`, `acomodacoes`, `properties`, `enterprises`
+- Qualquer rota API, facade, UI, job, webhook
+- Dual-write, payouts reais, feature flags de dinheiro
+- FASE 0, `.env`, Split BFF
+
+### 15.2 Decisões de produto fechadas nesta revisão
+- **Affiliate** = **programa sob Partner** (`source_type=affiliate` + `partner_links.kind=affiliate`), não tipo paralelo de Partner no dia 1  
+- **ID** = **UUID** (§3.4)  
+- **SoT inventário** = permanece aberto; Inc 1 **não toca** inventário → não bloqueia `SPEC_APPROVED` nem Inc 1  
+- **Rollback M1** = migration down / revert de PR em ambiente controlado; **nunca** DROP ad-hoc em produção  
+
+### 15.3 Liberação Cursor
+Só após: `SPEC_APPROVED` **e** `INC1_AUTHORIZED`. Até lá: **IDLE**.

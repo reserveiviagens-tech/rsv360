@@ -56,3 +56,11 @@ VALIDATION_REQUESTED for FASE 1. No FASE 2.
 - Deliverables: FASE5_PARTNERS_SPEC.md + ADR-FASE5-PARTNER-DOMAIN.md
 - Status: FASE5_PARTNERS_SPEC_COMPLETE — STOP for human SPEC_APPROVED
 - No product code, no migrations, no Cursor implementation
+
+## 2026-09-22 — Spec conditions closed (pre-SPEC_APPROVED)
+
+- Applied review §C into FASE5_PARTNERS_SPEC.md §15 + ADR Addendum
+- Locked: Inc1 CREATE-only, UUID, rollback down-only, Affiliate=program-under-Partner
+- SoT property remains open; Inc1 does not touch inventory
+- Status: FASE5_PARTNERS_SPEC_CONDITIONS_CLOSED — human SPEC_APPROVED pending
+- Cursor IDLE; no product code

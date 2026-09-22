@@ -1,14 +1,15 @@
 # CURRENT_TASK
 
 **Task ID:** FASE-5-PARTNERS-SPEC
-**Status:** FASE5_PARTNERS_SPEC_COMPLETE — aguarda SPEC_APPROVED (humano)
+**Status:** FASE5_PARTNERS_SPEC_CONDITIONS_CLOSED — aguarda `SPEC_APPROVED` humano
 **Risk:** HIGH
-**Protocol:** `.agents/shared/AUTONOMOUS_EXECUTION_PROTOCOL.md`
 
-## Artefatos
-- `.agents/shared/FASE5_PARTNERS_SPEC.md`
-- `.agents/shared/ADR-FASE5-PARTNER-DOMAIN.md`
-- `.agents/shared/FASE5_PLAN.md` (audit prioridade)
+## Fechado (§15 Spec + ADR Addendum)
+- Inc 1 = CREATE Partner* only
+- partners.id = UUID
+- Rollback M1 = migration down (sem DROP ad-hoc prod)
+- SoT property aberto; Inc 1 não toca inventário
+- Affiliate = programa sob Partner
 
 ## Cursor
-**NÃO** implementar até Orquestrador emitir `SPEC_APPROVED` / liberar Incremento 1.
+**IDLE** até `SPEC_APPROVED` + `INC1_AUTHORIZED`.
