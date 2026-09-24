@@ -1,0 +1,19 @@
+# CURRENT_TASK
+
+**Task ID:** FASE-5-PARTNERS-INC1-STAGING-GAPS
+**Status:** INC1_STAGING_PREFLIGHT_BLOCKED
+**Risk:** HIGH
+
+| Gate | Estado |
+|------|--------|
+| INC1_CI_PASS | YES |
+| CODE_PROVENANCE | FAIL |
+| STAGING_IDENTITY | FAIL |
+| DATABASE_TARGET | FAIL |
+| BACKUP_READY | FAIL |
+| ROLLBACK_READY | FAIL |
+| PRODUCTION_ISOLATION | FAIL |
+| PREFLIGHT_PASS | **NÃO** |
+| Migration | **NÃO EXECUTADA** |
+
+**PARAR** — aguardar fechamento ops/humano + depois AUTHORIZED.
