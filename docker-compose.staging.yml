@@ -1,0 +1,153 @@
+# RSV360 — Docker Compose STAGING
+# Uso no servidor de staging:
+#   cp .env.staging.example .env
+#   # preencha CHANGE_ME_* (NUNCA copie senhas/URL de produção)
+#   docker compose -f docker-compose.staging.yml up -d
+#
+# Isolamento obrigatório vs produção:
+#   - rede/volumes/container names com prefixo staging
+#   - POSTGRES_DB / POSTGRES_USER distintos (ver .env.staging.example)
+#   - NÃO usar docker-compose.prod.yml nem volumes rsv360_prod_*
+#
+# CD (.github/workflows/cd-staging.yml) espera este arquivo em STAGING_PATH
+# e imagens com tags :staging (backend + frontend).
+
+x-staging-env: &staging-env
+  NODE_ENV: production
+  NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+  NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+  INTERNAL_API_URL: http://backend:3002
+  JWT_SECRET: ${JWT_SECRET}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
+
+networks:
+  rsv360_staging:
+    name: rsv360_staging
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-postgres
+    restart: always
+    networks: [rsv360_staging]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - rsv360_staging_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    # Sem publish de 5432 no host — acesso só via rede Docker interna
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-redis
+    restart: always
+    networks: [rsv360_staging]
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - rsv360_staging_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    image: ${RSV360_BACKEND_IMAGE:-ghcr.io/reserveiviagens/rsv360/backend:staging}
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        NODE_ENV: staging
+    container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-backend
+    restart: always
+    networks: [rsv360_staging]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      # CD health check: http://STAGING_HOST:8080/health
+      - '8080:3002'
+    environment:
+      PORT: 3002
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      FORNECEDORES_ENCRYPTION_KEY: ${FORNECEDORES_ENCRYPTION_KEY:-}
+      JWT_SECRET: ${JWT_SECRET}
+      OAUTH_BFF_SECRET: ${OAUTH_BFF_SECRET}
+      OAUTH_DEV_MOCK: ${OAUTH_DEV_MOCK:-true}
+      PASSWORD_RESET_BASE_URL: ${PASSWORD_RESET_BASE_URL}
+      PASSWORD_RESET_EMAIL_FROM: ${PASSWORD_RESET_EMAIL_FROM}
+      PASSWORD_RESET_EMAIL_WEBHOOK: ${PASSWORD_RESET_EMAIL_WEBHOOK:-}
+      PASSWORD_RESET_EMAIL_WEBHOOK_SECRET: ${PASSWORD_RESET_EMAIL_WEBHOOK_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      FACEBOOK_REDIRECT_URI: ${FACEBOOK_REDIRECT_URI:-}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Nome "frontend" alinhado ao sed do cd-staging.yml
+  frontend:
+    image: ${RSV360_FRONTEND_IMAGE:-ghcr.io/reserveiviagens/rsv360/frontend:staging}
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        APP_DIR: apps/site-publico
+        APP_PORT: 3000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+        INTERNAL_API_URL: http://backend:3002
+        NODE_ENV: staging
+    container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-frontend
+    restart: always
+    networks: [rsv360_staging]
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '8081:3000'
+    environment:
+      <<: *staging-env
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://redis:6379
+      BACKEND_INTERNAL_URL: http://backend:3002
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      OAUTH_BFF_SECRET: ${OAUTH_BFF_SECRET}
+      OAUTH_DEV_MOCK: ${OAUTH_DEV_MOCK:-true}
+
+volumes:
+  rsv360_staging_pgdata:
+  rsv360_staging_redis:
