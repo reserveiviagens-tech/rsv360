@@ -18,6 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     timeout-minutes: 30
+    # C36-Y: GITHUB_TOKEN needs packages write to create/push GHCR images under
+    # repo Actions default_workflow_permissions=read (least privilege: job only).
+    permissions:
+      contents: read
+      packages: write
 
     environment:
       name: staging
