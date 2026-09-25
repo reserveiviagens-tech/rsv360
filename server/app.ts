@@ -15,6 +15,7 @@ import { registerVouchersModule } from './modules/vouchers';
 import { registerRoteiroAnalyticsModule } from './modules/roteiro-analytics';
 import { registerRoteiroModule } from './modules/roteiro';
 import { registerComissoesModule } from './modules/comissoes';
+import { registerPartnersModule } from './modules/partners';
 import { registerCmsModule } from './modules/cms';
 import { registerAgentesModule } from './modules/agentes';
 
@@ -38,10 +39,11 @@ export function registerMigracaoFase1Modules(app: Express, io?: Server) {
   registerRoteiroAnalyticsModule(app);
   registerRoteiroModule(app);
   registerComissoesModule(app);
+  registerPartnersModule(app);
   registerCmsModule(app);
   registerAgentesModule(app);
   console.log(
-    '[BOOT] Módulos Fase 1 (7/7) + Fornecedores Hub + Acomodações + Cotação Pública + Configurações + Analytics Roteiro + Mapa Roteiro + Comissões + CMS Vitrine + Agentes registrados ✓',
+    '[BOOT] Módulos Fase 1 (7/7) + Fornecedores Hub + Acomodações + Cotação Pública + Configurações + Analytics Roteiro + Mapa Roteiro + Comissões + Partners + CMS Vitrine + Agentes registrados ✓',
   );
 }
 
