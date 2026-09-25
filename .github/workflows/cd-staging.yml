@@ -108,6 +108,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
+            APP_DIR=apps/site-publico
             NODE_ENV=staging
 
       - name: Deploy to staging server
