@@ -414,6 +414,13 @@
       "when": 1788567000000,
       "tag": "0058_payments_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1788568000000,
+      "tag": "0059_partner_domain",
+      "breakpoints": true
     }
   ]
 }
