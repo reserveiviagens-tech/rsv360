@@ -10,6 +10,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { users } from './existing';
+import { empreendimentos } from './empreendimentos';
 
 /** FASE 5 Inc1 - Partner domain (additive). No enterprise_id UUID column. */
 export const partners = pgTable('partners', {
@@ -126,3 +127,37 @@ export const partnerLedgerEntries = pgTable('partner_ledger_entries', {
 
 export type Partner = typeof partners.$inferSelect;
 export type NovoPartner = typeof partners.$inferInsert;
+/** FASE 5 Inc2 - L3 Partner <-> Empreendimento association (0060 CREATE-only). */
+export const partnerEmpreendimentoAssociations = pgTable(
+  'partner_empreendimento_associations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    partnerId: uuid('partner_id')
+      .notNull()
+      .references(() => partners.id, { onDelete: 'cascade' }),
+    empreendimentoId: integer('empreendimento_id')
+      .notNull()
+      .references(() => empreendimentos.id, { onDelete: 'restrict' }),
+    associationRole: text('association_role').notNull(),
+    status: text('status').notNull().default('active'),
+    effectiveFrom: timestamp('effective_from', { withTimezone: true }),
+    effectiveTo: timestamp('effective_to', { withTimezone: true }),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    createdByUserId: integer('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => ({
+    partnerEmpreendimentoUnique: unique('pea_partner_empreendimento_unique').on(
+      t.partnerId,
+      t.empreendimentoId,
+    ),
+  }),
+);
+
+export type PartnerEmpreendimentoAssociation =
+  typeof partnerEmpreendimentoAssociations.$inferSelect;
+export type NovaPartnerEmpreendimentoAssociation =
+  typeof partnerEmpreendimentoAssociations.$inferInsert;

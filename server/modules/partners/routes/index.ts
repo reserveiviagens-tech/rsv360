@@ -2,12 +2,20 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import {
+  createAssociationSchema,
   createMembershipSchema,
   createPartnerSchema,
+  listAssociationsQuerySchema,
   listPartnersQuerySchema,
+  partnerEmpreendimentoParamsSchema,
   partnerIdParamSchema,
+  updateAssociationSchema,
   updatePartnerSchema,
 } from '../schema';
+import {
+  PartnerValidationError,
+  partnerAssociationsService,
+} from '../services/partner-associations.service';
 import {
   PartnerConflictError,
   PartnerForbiddenError,
@@ -34,6 +42,9 @@ function requireActor(req: Request): PartnerActor {
 function mapError(res: Response, error: unknown) {
   if (error instanceof PartnerForbiddenError) {
     return res.status(403).json({ success: false, error: error.message });
+  }
+  if (error instanceof PartnerValidationError) {
+    return res.status(400).json({ success: false, error: error.message });
   }
   if (error instanceof PartnerNotFoundError) {
     return res.status(404).json({ success: false, error: error.message });
@@ -163,6 +174,144 @@ router.get('/:id/memberships/:membershipId', ...staffAuth, async (req, res) => {
     return mapError(res, error);
   }
 });
+
+/* ——— API L3: Partner ↔ Empreendimento associations (C36-BD) ——— */
+
+router.get('/:id/empreendimentos', ...staffAuth, async (req, res) => {
+  try {
+    const params = partnerIdParamSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const query = listAssociationsQuerySchema.safeParse(req.query ?? {});
+    if (!query.success) {
+      return res.status(400).json({ success: false, error: query.error.flatten() });
+    }
+    const data = await partnerAssociationsService.list(
+      requireActor(req),
+      params.data.id,
+      query.data,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.post('/:id/empreendimentos', ...staffAuth, async (req, res) => {
+  try {
+    const params = partnerIdParamSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const parsed = createAssociationSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: parsed.error.flatten() });
+    }
+    const data = await partnerAssociationsService.create(
+      requireActor(req),
+      params.data.id,
+      parsed.data,
+    );
+    return res.status(201).json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.get('/:id/empreendimentos/:empreendimentoId', ...staffAuth, async (req, res) => {
+  try {
+    const params = partnerEmpreendimentoParamsSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const data = await partnerAssociationsService.get(
+      requireActor(req),
+      params.data.id,
+      params.data.empreendimentoId,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.patch('/:id/empreendimentos/:empreendimentoId', ...staffAuth, async (req, res) => {
+  try {
+    const params = partnerEmpreendimentoParamsSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const parsed = updateAssociationSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: parsed.error.flatten() });
+    }
+    const data = await partnerAssociationsService.update(
+      requireActor(req),
+      params.data.id,
+      params.data.empreendimentoId,
+      parsed.data,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.post('/:id/empreendimentos/:empreendimentoId/suspend', ...staffAuth, async (req, res) => {
+  try {
+    const params = partnerEmpreendimentoParamsSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const data = await partnerAssociationsService.suspend(
+      requireActor(req),
+      params.data.id,
+      params.data.empreendimentoId,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.post('/:id/empreendimentos/:empreendimentoId/end', ...staffAuth, async (req, res) => {
+  try {
+    const params = partnerEmpreendimentoParamsSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const data = await partnerAssociationsService.end(
+      requireActor(req),
+      params.data.id,
+      params.data.empreendimentoId,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.post(
+  '/:id/empreendimentos/:empreendimentoId/reactivate',
+  ...staffAuth,
+  async (req, res) => {
+    try {
+      const params = partnerEmpreendimentoParamsSchema.safeParse(req.params);
+      if (!params.success) {
+        return res.status(400).json({ success: false, error: params.error.flatten() });
+      }
+      const data = await partnerAssociationsService.reactivate(
+        requireActor(req),
+        params.data.id,
+        params.data.empreendimentoId,
+      );
+      return res.json({ success: true, data });
+    } catch (error) {
+      return mapError(res, error);
+    }
+  },
+);
 
 export default router;
 module.exports = router;

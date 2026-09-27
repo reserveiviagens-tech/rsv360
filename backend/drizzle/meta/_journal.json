@@ -421,6 +421,13 @@
       "when": 1788568000000,
       "tag": "0059_partner_domain",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1788569000000,
+      "tag": "0060_partner_empreendimento_associations",
+      "breakpoints": true
     }
   ]
 }
