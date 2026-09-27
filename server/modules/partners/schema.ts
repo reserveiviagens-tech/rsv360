@@ -142,3 +142,25 @@ export const listAssociationsQuerySchema = z
   .strict();
 
 export type ListAssociationsQuery = z.infer<typeof listAssociationsQuerySchema>;
+
+export const ACOMODACAO_STATUS_PUBLICACAO = [
+  'rascunho',
+  'completo',
+  'em_aprovacao',
+  'publicado',
+  'rejeitado',
+] as const;
+export type AcomodacaoStatusPublicacao = (typeof ACOMODACAO_STATUS_PUBLICACAO)[number];
+
+/** C36-BT L3-INHERIT — Partner-scoped acomodacoes list (read-only). */
+export const listPartnerAcomodacoesQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+    ativo: z.enum(['true', 'false', 'all']).optional().default('true'),
+    statusPublicacao: z.enum(ACOMODACAO_STATUS_PUBLICACAO).optional(),
+  })
+  .strict();
+
+export type ListPartnerAcomodacoesQuery = z.infer<typeof listPartnerAcomodacoesQuerySchema>;
+

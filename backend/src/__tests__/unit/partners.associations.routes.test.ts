@@ -5,6 +5,7 @@ const mockUpdate = jest.fn();
 const mockSuspend = jest.fn();
 const mockEnd = jest.fn();
 const mockReactivate = jest.fn();
+const mockListInherited = jest.fn();
 
 jest.mock('../../../../server/modules/partners/services/partner-associations.service', () => {
   const actual = jest.requireActual(
@@ -20,6 +21,7 @@ jest.mock('../../../../server/modules/partners/services/partner-associations.ser
       suspend: (...args: unknown[]) => mockSuspend(...args),
       end: (...args: unknown[]) => mockEnd(...args),
       reactivate: (...args: unknown[]) => mockReactivate(...args),
+      listInheritedAcomodacoes: (...args: unknown[]) => mockListInherited(...args),
     },
   };
 });
@@ -344,4 +346,236 @@ describe('partners API L3 associations (C36-BD)', () => {
       expect(res.status).toBe(200);
     });
   });
+
+  describe('C36-BT L3-INHERIT acomodacoes', () => {
+    const inheritPath = `/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}/acomodacoes`;
+
+    const sampleInheritEmpty = {
+      partnerId: PARTNER_A,
+      empreendimentoId: EMP_ID,
+      empreendimento: {
+        id: EMP_ID,
+        hotelId: 'c36bt-hotel',
+        slug: 'c36bt-hotel',
+        nomeOficial: 'C36BT Hotel',
+        ativo: true,
+      },
+      association: {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        status: 'active',
+        associationRole: 'agency',
+      },
+      items: [] as Array<Record<string, unknown>>,
+      page: 1,
+      pageSize: 20,
+      total: 0,
+    };
+
+    const sampleInheritItems = {
+      ...sampleInheritEmpty,
+      total: 2,
+      items: [
+        {
+          id: 101,
+          hotelId: 'c36bt-hotel',
+          titulo: 'Apto 1',
+          ativo: true,
+          statusPublicacao: 'publicado',
+          capacidadeMax: 4,
+          proprietarioId: 7,
+          tipoId: 1,
+          precoDiaria: '200.00',
+          atualizadoEm: new Date('2026-01-02T00:00:00Z'),
+        },
+        {
+          id: 102,
+          hotelId: 'c36bt-hotel',
+          titulo: 'Apto 2',
+          ativo: true,
+          statusPublicacao: 'rascunho',
+          capacidadeMax: 2,
+          proprietarioId: 8,
+          tipoId: 1,
+          precoDiaria: '150.00',
+          atualizadoEm: new Date('2026-01-03T00:00:00Z'),
+        },
+      ],
+    };
+
+    // T1
+    it('T1 inherit sem token → 401', async () => {
+      const res = await request(buildApp()).get(inheritPath);
+      expect(res.status).toBe(401);
+      expect(mockListInherited).not.toHaveBeenCalled();
+    });
+
+    // T2
+    it('T2 inherit role user → 403', async () => {
+      const res = await request(buildApp())
+        .get(inheritPath)
+        .set(authHeaders('user'));
+      expect(res.status).toBe(403);
+      expect(mockListInherited).not.toHaveBeenCalled();
+    });
+
+    // T3
+    it('T3 partner inexistente → 404', async () => {
+      mockListInherited.mockRejectedValueOnce(new PartnerNotFoundError('Partner não encontrado'));
+      const res = await request(buildApp())
+        .get(inheritPath)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(404);
+    });
+
+    // T4 IDOR / PEA missing
+    it('T4 IDOR PEA inexistente neste partner → 404', async () => {
+      mockListInherited.mockRejectedValueOnce(
+        new PartnerNotFoundError('Associação não encontrada neste Partner'),
+      );
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_B}/empreendimentos/${EMP_ID}/acomodacoes`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(404);
+    });
+
+    // T5
+    it('T5 PEA suspended → 404', async () => {
+      mockListInherited.mockRejectedValueOnce(
+        new PartnerNotFoundError('Associação não encontrada neste Partner'),
+      );
+      const res = await request(buildApp())
+        .get(inheritPath)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(404);
+    });
+
+    // T6
+    it('T6 PEA ended → 404', async () => {
+      mockListInherited.mockRejectedValueOnce(
+        new PartnerNotFoundError('Associação não encontrada neste Partner'),
+      );
+      const res = await request(buildApp())
+        .get(inheritPath)
+        .set(authHeaders('manager'));
+      expect(res.status).toBe(404);
+    });
+
+    // T7
+    it('T7 PEA active sem acomodações → 200 total 0', async () => {
+      mockListInherited.mockResolvedValueOnce(sampleInheritEmpty);
+      const res = await request(buildApp())
+        .get(inheritPath)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.total).toBe(0);
+      expect(res.body.data.items).toEqual([]);
+      expect(mockListInherited).toHaveBeenCalled();
+    });
+
+    // T8
+    it('T8 PEA active com items → 200 e hotelId consistente', async () => {
+      mockListInherited.mockResolvedValueOnce(sampleInheritItems);
+      const res = await request(buildApp())
+        .get(inheritPath)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(2);
+      const hotelId = res.body.data.empreendimento.hotelId;
+      for (const item of res.body.data.items) {
+        expect(item.hotelId).toBe(hotelId);
+      }
+    });
+
+    // T9
+    it('T9 pagination page/pageSize passed to service', async () => {
+      mockListInherited.mockResolvedValueOnce({
+        ...sampleInheritEmpty,
+        page: 2,
+        pageSize: 10,
+      });
+      const res = await request(buildApp())
+        .get(`${inheritPath}?page=2&pageSize=10`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(mockListInherited).toHaveBeenCalledWith(
+        expect.anything(),
+        PARTNER_A,
+        EMP_ID,
+        expect.objectContaining({ page: 2, pageSize: 10 }),
+      );
+    });
+
+    // T10
+    it('T10 ativo inválido → 400', async () => {
+      const res = await request(buildApp())
+        .get(`${inheritPath}?ativo=maybe`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(400);
+      expect(mockListInherited).not.toHaveBeenCalled();
+    });
+
+    // T11
+    it('T11 unknown query key → 400 strict', async () => {
+      const res = await request(buildApp())
+        .get(`${inheritPath}?hotelId=evil`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(400);
+      expect(mockListInherited).not.toHaveBeenCalled();
+    });
+
+    // T12 already covered by partner_links static test; reinforce inherit path source
+    it('T12 inherit service source does not use partner_links', () => {
+      const fs = require('fs') as typeof import('fs');
+      const path = require('path') as typeof import('path');
+      const src = fs.readFileSync(
+        path.join(
+          __dirname,
+          '../../../../server/modules/partners/services/partner-associations.service.ts',
+        ),
+        'utf8',
+      );
+      expect(src).not.toMatch(/['"]partner_links['"]/);
+      expect(src).not.toMatch(/partnerLinks/);
+      expect(src).toContain('listInheritedAcomodacoes');
+    });
+
+    // T13
+    it('T13 active gate appears before acomodacoes query in source', () => {
+      const fs = require('fs') as typeof import('fs');
+      const path = require('path') as typeof import('path');
+      const src = fs.readFileSync(
+        path.join(
+          __dirname,
+          '../../../../server/modules/partners/services/partner-associations.service.ts',
+        ),
+        'utf8',
+      );
+      const start = src.indexOf('listInheritedAcomodacoes');
+      expect(start).toBeGreaterThan(-1);
+      const chunk = src.slice(start, start + 1200);
+      const activeGate = chunk.indexOf("status !== 'active'");
+      const acoQuery = chunk.indexOf('acomodacoes.hotelId');
+      expect(activeGate).toBeGreaterThan(-1);
+      expect(acoQuery).toBeGreaterThan(-1);
+      expect(activeGate).toBeLessThan(acoQuery);
+    });
+
+    it('T-extra empreendimento path invalid → 400', async () => {
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_A}/empreendimentos/abc/acomodacoes`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(400);
+    });
+
+    it('T-extra existing GET empreendimentos still works (regression)', async () => {
+      mockGet.mockResolvedValueOnce(sampleAssoc);
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(mockGet).toHaveBeenCalled();
+    });
+  });
+
 });

@@ -1,5 +1,6 @@
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../../lib/db';
+import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { empreendimentos } from '../../../../backend/src/db/schema/empreendimentos';
 import {
   partnerEmpreendimentoAssociations,
@@ -10,6 +11,7 @@ import type {
   AssociationStatus,
   CreateAssociationInput,
   ListAssociationsQuery,
+  ListPartnerAcomodacoesQuery,
   PartnerMembershipRole,
   UpdateAssociationInput,
 } from '../schema';
@@ -354,5 +356,81 @@ export const partnerAssociationsService = {
 
   async reactivate(actor: PartnerActor, partnerId: string, empreendimentoId: number) {
     return this.update(actor, partnerId, empreendimentoId, { status: 'active' });
+  },
+
+  async listInheritedAcomodacoes(
+    actor: PartnerActor,
+    partnerId: string,
+    empreendimentoId: number,
+    query: ListPartnerAcomodacoesQuery,
+  ) {
+    assertAssociationAccess(actor, 'read');
+    await requirePartner(partnerId);
+
+    const pea = await getAssociationForPartner(partnerId, empreendimentoId);
+    if (pea.status !== 'active') {
+      throw new PartnerNotFoundError('Associação não encontrada neste Partner');
+    }
+
+    const emp = await requireEmpreendimento(empreendimentoId);
+    const hotelId = emp.hotelId.trim();
+    if (!hotelId) {
+      throw new PartnerValidationError('Empreendimento sem hotel_id utilizável');
+    }
+
+    const offset = (query.page - 1) * query.pageSize;
+    const ativoCond =
+      query.ativo === 'false'
+        ? eq(acomodacoes.ativo, false)
+        : query.ativo === 'all'
+          ? undefined
+          : sql`${acomodacoes.ativo} IS DISTINCT FROM false`;
+    const statusCond = query.statusPublicacao
+      ? eq(acomodacoes.statusPublicacao, query.statusPublicacao)
+      : undefined;
+    const where = and(eq(acomodacoes.hotelId, hotelId), ativoCond, statusCond);
+
+    const [rows, totalRow] = await Promise.all([
+      db
+        .select({
+          id: acomodacoes.id,
+          hotelId: acomodacoes.hotelId,
+          titulo: acomodacoes.titulo,
+          ativo: acomodacoes.ativo,
+          statusPublicacao: acomodacoes.statusPublicacao,
+          capacidadeMax: acomodacoes.capacidadeMax,
+          proprietarioId: acomodacoes.proprietarioId,
+          tipoId: acomodacoes.tipoId,
+          precoDiaria: acomodacoes.precoDiaria,
+          atualizadoEm: acomodacoes.atualizadoEm,
+        })
+        .from(acomodacoes)
+        .where(where)
+        .orderBy(asc(acomodacoes.id))
+        .limit(query.pageSize)
+        .offset(offset),
+      db.select({ value: count() }).from(acomodacoes).where(where),
+    ]);
+
+    return {
+      partnerId,
+      empreendimentoId,
+      empreendimento: {
+        id: emp.id,
+        hotelId: emp.hotelId,
+        slug: emp.slug,
+        nomeOficial: emp.nomeOficial,
+        ativo: emp.ativo,
+      },
+      association: {
+        id: pea.id,
+        status: pea.status,
+        associationRole: pea.associationRole,
+      },
+      items: rows,
+      page: query.page,
+      pageSize: query.pageSize,
+      total: Number(totalRow[0]?.value ?? 0),
+    };
   },
 };
