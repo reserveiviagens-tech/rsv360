@@ -6,6 +6,7 @@ import {
   createMembershipSchema,
   createPartnerSchema,
   listAssociationsQuerySchema,
+  listPartnerAcomodacoesQuerySchema,
   listPartnersQuerySchema,
   partnerEmpreendimentoParamsSchema,
   partnerIdParamSchema,
@@ -257,6 +258,33 @@ router.patch('/:id/empreendimentos/:empreendimentoId', ...staffAuth, async (req,
     return mapError(res, error);
   }
 });
+
+
+router.get(
+  '/:id/empreendimentos/:empreendimentoId/acomodacoes',
+  ...staffAuth,
+  async (req, res) => {
+    try {
+      const params = partnerEmpreendimentoParamsSchema.safeParse(req.params);
+      if (!params.success) {
+        return res.status(400).json({ success: false, error: params.error.flatten() });
+      }
+      const query = listPartnerAcomodacoesQuerySchema.safeParse(req.query ?? {});
+      if (!query.success) {
+        return res.status(400).json({ success: false, error: query.error.flatten() });
+      }
+      const data = await partnerAssociationsService.listInheritedAcomodacoes(
+        requireActor(req),
+        params.data.id,
+        params.data.empreendimentoId,
+        query.data,
+      );
+      return res.json({ success: true, data });
+    } catch (error) {
+      return mapError(res, error);
+    }
+  },
+);
 
 router.post('/:id/empreendimentos/:empreendimentoId/suspend', ...staffAuth, async (req, res) => {
   try {
