@@ -1,0 +1,300 @@
+const mockList = jest.fn();
+const mockGet = jest.fn();
+const mockCreate = jest.fn();
+const mockUpdate = jest.fn();
+const mockSuspend = jest.fn();
+const mockEnd = jest.fn();
+const mockReactivate = jest.fn();
+
+jest.mock('../../../../server/modules/partners/services/partner-associations.service', () => {
+  const actual = jest.requireActual(
+    '../../../../server/modules/partners/services/partner-associations.service',
+  );
+  return {
+    ...actual,
+    partnerAssociationsService: {
+      list: (...args: unknown[]) => mockList(...args),
+      get: (...args: unknown[]) => mockGet(...args),
+      create: (...args: unknown[]) => mockCreate(...args),
+      update: (...args: unknown[]) => mockUpdate(...args),
+      suspend: (...args: unknown[]) => mockSuspend(...args),
+      end: (...args: unknown[]) => mockEnd(...args),
+      reactivate: (...args: unknown[]) => mockReactivate(...args),
+    },
+  };
+});
+
+jest.mock('../../../../server/middleware/auth.middleware', () => ({
+  authenticateJwt: (
+    req: { headers: Record<string, string | undefined>; user?: unknown },
+    res: { status: (n: number) => { json: (b: unknown) => void } },
+    next: () => void,
+  ) => {
+    const role = req.headers['x-test-role'];
+    const userId = req.headers['x-test-user-id'];
+    if (!role || !userId) {
+      return res.status(401).json({ success: false, error: 'Token ausente' });
+    }
+    req.user = { id: Number(userId), role, email: 't@test.com', name: 'Test' };
+    next();
+  },
+  requireRole:
+    (...roles: string[]) =>
+    (
+      req: { user?: { role?: string } },
+      res: { status: (n: number) => { json: (b: unknown) => void } },
+      next: () => void,
+    ) => {
+      if (!req.user?.role || !roles.includes(req.user.role)) {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      next();
+    },
+}));
+
+import express from 'express';
+import request from 'supertest';
+import partnersRouter from '../../../../server/modules/partners/routes/index';
+import {
+  PartnerValidationError,
+  assertAssociationAccess,
+  l1AllowsAssociationAction,
+} from '../../../../server/modules/partners/services/partner-associations.service';
+import {
+  PartnerConflictError,
+  PartnerForbiddenError,
+  PartnerNotFoundError,
+} from '../../../../server/modules/partners/services/partners.service';
+import { L1_ASSOCIATION_CAPABILITIES } from '../../../../server/modules/partners/schema';
+
+function buildApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/v1/partners', partnersRouter);
+  return app;
+}
+
+function authHeaders(role: string, userId = 10) {
+  return { 'x-test-role': role, 'x-test-user-id': String(userId) };
+}
+
+const PARTNER_A = '11111111-1111-4111-8111-111111111111';
+const PARTNER_B = '22222222-2222-4222-8222-222222222222';
+const EMP_ID = 42;
+
+const sampleAssoc = {
+  id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  partnerId: PARTNER_A,
+  empreendimentoId: EMP_ID,
+  associationRole: 'agency',
+  status: 'active',
+  effectiveFrom: null,
+  effectiveTo: null,
+  metadata: null,
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
+  createdByUserId: 10,
+  empreendimento: {
+    id: EMP_ID,
+    hotelId: 'hotel-demo',
+    slug: 'hotel-demo',
+    nomeOficial: 'Hotel Demo',
+    ativo: true,
+  },
+};
+
+describe('partners API L3 associations (C36-BD)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('AuthZ structure (L1 matrix + staff v1)', () => {
+    it('L1 matrix: owner/partner_admin mutate; ops/finance/member read-only', () => {
+      expect(l1AllowsAssociationAction('owner', 'mutate')).toBe(true);
+      expect(l1AllowsAssociationAction('partner_admin', 'mutate')).toBe(true);
+      expect(l1AllowsAssociationAction('ops', 'mutate')).toBe(false);
+      expect(l1AllowsAssociationAction('finance', 'read')).toBe(true);
+      expect(l1AllowsAssociationAction('member', 'mutate')).toBe(false);
+      expect(L1_ASSOCIATION_CAPABILITIES.ops.read).toBe(true);
+    });
+
+    it('v1 assertAssociationAccess allows staff and denies others', () => {
+      expect(() => assertAssociationAccess({ id: 1, role: 'admin' }, 'mutate')).not.toThrow();
+      expect(() => assertAssociationAccess({ id: 1, role: 'manager' }, 'read')).not.toThrow();
+      expect(() => assertAssociationAccess({ id: 1, role: 'user' }, 'read')).toThrow(
+        PartnerForbiddenError,
+      );
+    });
+
+    it('association service does not import soft-link AuthZ tables', () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs') as typeof import('fs');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require('path') as typeof import('path');
+      const src = fs.readFileSync(
+        path.join(
+          __dirname,
+          '../../../../server/modules/partners/services/partner-associations.service.ts',
+        ),
+        'utf8',
+      );
+      expect(src).not.toMatch(/\bpartnerLinks\b/);
+      expect(src).not.toMatch(/['"]partner_links['"]/);
+    });
+  });
+
+  describe('401', () => {
+    it('GET empreendimentos sem token → 401', async () => {
+      const res = await request(buildApp()).get(`/api/v1/partners/${PARTNER_A}/empreendimentos`);
+      expect(res.status).toBe(401);
+      expect(mockList).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('403', () => {
+    it.each(['user', 'anfitriao', 'corretor'])('role %s → 403', async (role) => {
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders(role));
+      expect(res.status).toBe(403);
+      expect(mockList).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('400', () => {
+    it('POST body inválido (missing role) → 400', async () => {
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders('admin'))
+        .send({ empreendimentoId: EMP_ID });
+      expect(res.status).toBe(400);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('POST rejects partnerId in body (strict) → 400', async () => {
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders('admin'))
+        .send({
+          partnerId: PARTNER_B,
+          empreendimentoId: EMP_ID,
+          associationRole: 'agency',
+        });
+      expect(res.status).toBe(400);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('lifecycle inválido → 400', async () => {
+      mockSuspend.mockRejectedValueOnce(
+        new PartnerValidationError('Transição de status inválida: ended → suspended'),
+      );
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}/suspend`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('404 / 409 / IDOR', () => {
+    it('Partner inexistente → 404', async () => {
+      mockList.mockRejectedValueOnce(new PartnerNotFoundError());
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders('manager'));
+      expect(res.status).toBe(404);
+    });
+
+    it('IDOR cross-partner assoc → 404', async () => {
+      mockGet.mockRejectedValueOnce(
+        new PartnerNotFoundError('Associação não encontrada neste Partner'),
+      );
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_B}/empreendimentos/${EMP_ID}`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(404);
+      expect(mockGet).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'admin' }),
+        PARTNER_B,
+        EMP_ID,
+      );
+    });
+
+    it('duplicate association → 409', async () => {
+      mockCreate.mockRejectedValueOnce(
+        new PartnerConflictError('Associação já existe para este Partner e Empreendimento'),
+      );
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders('admin'))
+        .send({ empreendimentoId: EMP_ID, associationRole: 'agency' });
+      expect(res.status).toBe(409);
+    });
+  });
+
+  describe('happy path + lifecycle', () => {
+    it('POST create → 201 (partnerId from path only)', async () => {
+      mockCreate.mockResolvedValueOnce(sampleAssoc);
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders('admin', 99))
+        .send({ empreendimentoId: EMP_ID, associationRole: 'agency' });
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        { id: 99, role: 'admin' },
+        PARTNER_A,
+        expect.objectContaining({ empreendimentoId: EMP_ID, associationRole: 'agency' }),
+      );
+    });
+
+    it('GET list → 200', async () => {
+      mockList.mockResolvedValueOnce({
+        items: [sampleAssoc],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+      });
+      const res = await request(buildApp())
+        .get(`/api/v1/partners/${PARTNER_A}/empreendimentos`)
+        .set(authHeaders('manager'));
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+    });
+
+    it('suspend → 200', async () => {
+      mockSuspend.mockResolvedValueOnce({ ...sampleAssoc, status: 'suspended' });
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}/suspend`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('suspended');
+    });
+
+    it('end → 200', async () => {
+      mockEnd.mockResolvedValueOnce({ ...sampleAssoc, status: 'ended' });
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}/end`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('ended');
+    });
+
+    it('reactivate → 200', async () => {
+      mockReactivate.mockResolvedValueOnce({ ...sampleAssoc, status: 'active' });
+      const res = await request(buildApp())
+        .post(`/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}/reactivate`)
+        .set(authHeaders('admin'));
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('active');
+    });
+
+    it('PATCH status → 200', async () => {
+      mockUpdate.mockResolvedValueOnce({ ...sampleAssoc, status: 'suspended' });
+      const res = await request(buildApp())
+        .patch(`/api/v1/partners/${PARTNER_A}/empreendimentos/${EMP_ID}`)
+        .set(authHeaders('admin'))
+        .send({ status: 'suspended' });
+      expect(res.status).toBe(200);
+    });
+  });
+});
