@@ -67,14 +67,67 @@ function assertTransition(from: AssociationStatus, to: AssociationStatus): void 
   }
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  const e = error as { code?: string; message?: string };
-  return e?.code === '23505' || /unique/i.test(e?.message ?? '');
+/** Drizzle UK name from 0060 (`pea_partner_empreendimento_unique`). */
+export const PEA_PARTNER_EMPREENDIMENTO_UNIQUE = 'pea_partner_empreendimento_unique';
+
+type PgErrorLike = {
+  code?: string;
+  message?: string;
+  constraint?: string;
+  cause?: unknown;
+};
+
+/**
+ * Walk Error.cause chain (Drizzle wraps node-pg). Collect PG code / constraint / messages.
+ * C36-BL: live duplicate returned 500 because only the outer Drizzle error was inspected.
+ */
+function collectPgErrorParts(error: unknown): {
+  code?: string;
+  constraint?: string;
+  message: string;
+} {
+  const messages: string[] = [];
+  let code: string | undefined;
+  let constraint: string | undefined;
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current);
+    const e = current as PgErrorLike;
+    if (typeof e.code === 'string' && e.code.length > 0) {
+      code = code ?? e.code;
+    }
+    if (typeof e.constraint === 'string' && e.constraint.length > 0) {
+      constraint = constraint ?? e.constraint;
+    }
+    if (typeof e.message === 'string' && e.message.length > 0) {
+      messages.push(e.message);
+    }
+    current = e.cause;
+  }
+
+  return { code, constraint, message: messages.join('\n') };
+}
+
+/**
+ * True only for the PEA partner↔empreendimento unique constraint (23505).
+ * Does not treat other unique constraints or unrelated DB errors as conflict.
+ */
+export function isPeaAssociationUniqueViolation(error: unknown): boolean {
+  const { code, constraint, message } = collectPgErrorParts(error);
+  const namesPeaUk =
+    constraint === PEA_PARTNER_EMPREENDIMENTO_UNIQUE ||
+    message.includes(PEA_PARTNER_EMPREENDIMENTO_UNIQUE);
+  if (!namesPeaUk) {
+    return false;
+  }
+  return code === '23505' || /unique|duplicate key/i.test(message);
 }
 
 function isFkViolation(error: unknown): boolean {
-  const e = error as { code?: string };
-  return e?.code === '23503';
+  const { code } = collectPgErrorParts(error);
+  return code === '23503';
 }
 
 function toAssociationDto(
@@ -243,7 +296,7 @@ export const partnerAssociationsService = {
       const emp = await requireEmpreendimento(input.empreendimentoId);
       return toAssociationDto(row, emp);
     } catch (error) {
-      if (isUniqueViolation(error)) {
+      if (isPeaAssociationUniqueViolation(error)) {
         throw new PartnerConflictError('Associação já existe para este Partner e Empreendimento');
       }
       if (isFkViolation(error)) {

@@ -58,7 +58,9 @@ import partnersRouter from '../../../../server/modules/partners/routes/index';
 import {
   PartnerValidationError,
   assertAssociationAccess,
+  isPeaAssociationUniqueViolation,
   l1AllowsAssociationAction,
+  PEA_PARTNER_EMPREENDIMENTO_UNIQUE,
 } from '../../../../server/modules/partners/services/partner-associations.service';
 import {
   PartnerConflictError,
@@ -228,6 +230,51 @@ describe('partners API L3 associations (C36-BD)', () => {
         .set(authHeaders('admin'))
         .send({ empreendimentoId: EMP_ID, associationRole: 'agency' });
       expect(res.status).toBe(409);
+      expect(res.body).toEqual({
+        success: false,
+        error: 'Associação já existe para este Partner e Empreendimento',
+      });
+    });
+  });
+
+  describe('C36-BL PEA unique → 409 mapping', () => {
+    it('detects Drizzle-wrapped PG 23505 for pea_partner_empreendimento_unique', () => {
+      const cause = Object.assign(
+        new Error(
+          `duplicate key value violates unique constraint "${PEA_PARTNER_EMPREENDIMENTO_UNIQUE}"`,
+        ),
+        { code: '23505', constraint: PEA_PARTNER_EMPREENDIMENTO_UNIQUE },
+      );
+      const wrapped = Object.assign(new Error('Failed query: insert into "partner_empreendimento_associations"'), {
+        cause,
+      });
+      expect(isPeaAssociationUniqueViolation(wrapped)).toBe(true);
+    });
+
+    it('detects 23505 when constraint only appears in cause message', () => {
+      const cause = Object.assign(
+        new Error(
+          `duplicate key value violates unique constraint "${PEA_PARTNER_EMPREENDIMENTO_UNIQUE}"`,
+        ),
+        { code: '23505' },
+      );
+      const wrapped = Object.assign(new Error('Failed query'), { cause });
+      expect(isPeaAssociationUniqueViolation(wrapped)).toBe(true);
+    });
+
+    it('rejects unrelated unique constraints (does not mask)', () => {
+      const err = Object.assign(new Error('duplicate key'), {
+        code: '23505',
+        constraint: 'partners_code_unique',
+      });
+      expect(isPeaAssociationUniqueViolation(err)).toBe(false);
+    });
+
+    it('rejects non-unique DB failures', () => {
+      expect(isPeaAssociationUniqueViolation(new Error('connection terminated'))).toBe(false);
+      expect(
+        isPeaAssociationUniqueViolation(Object.assign(new Error('fk'), { code: '23503' })),
+      ).toBe(false);
     });
   });
 
