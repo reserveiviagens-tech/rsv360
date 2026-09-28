@@ -1,27 +1,38 @@
-# C36-CN / C36-CO — Staging earning + snapshot
+# C36-CN — Controlled Staging Earning Result
 
-**Branch:** `feat/c36cn-staging-earning-probe`  
-**Predecessor:** C36-CM PASS / `7617a030` (#409)
+**Status:** `PASS / STAGING_EARNING_VALIDATED`  
+**Run:** https://github.com/reserveiviagens-tech/rsv360/actions/runs/36413700193  
+**SHA tip:** `ec63f779`  
+**Date:** 2026-09-28
 
-## C36-CN
-
-| Item | Status |
-|------|--------|
-| Unit scenarios (writer/CM) | covered |
-| Staging WF | `.github/workflows/c36-staging-earning-validate.yml` |
-| Probe script | `backend/scripts/c36cn-earning-probe.ts` |
-| Namespace | `c36cn_*` + cleanup residual=0 |
-
-Dispatch: `VALIDATE_EARNING_C36CN` after staging CD includes CL/CM SHA.
-
-## C36-CO
-
-| Item | Path |
-|------|------|
-| Snapshot immutability + concurrency tests | `partner-earning-snapshot-idempotency.test.ts` |
-
-## Barriers
+## Probe output
 
 ```text
-LEDGER / PAYOUT / PRODUCTION = BLOCKED
+C36CN_PROBE_OK {
+  "A1":"created",
+  "B":"idempotent",
+  "C":"skipped:ATTR_NO_OWNER",
+  "D":"fail_closed:ATTR_AMBIGUOUS_OWNERS",
+  "E":"skipped:NO_EFFECTIVE_TERMS",
+  "snapshotRateBps":"1500"
+}
+C36-CN VALIDATE = SUCCESS residual=0
 ```
+
+## Scenarios
+
+| Case | Expected | Result |
+|------|----------|--------|
+| 1 PEA + terms | CREATE | created |
+| Retry same payment | IDEMPOTENT | idempotent |
+| Agency only | SKIP ATTR_NO_OWNER | skipped |
+| 2 commercial_owners | FAIL-CLOSED | fail_closed |
+| Owner without terms | SKIP NO_EFFECTIVE_TERMS | skipped |
+| Cleanup c36cn_* | residual=0 | PASS |
+
+## Workflow fixes during gate
+
+- #411 seed user when users empty
+- #412 bash quoting
+- #413 YAML heredoc broke workflow_dispatch
+- #414 linearize SSH script (no nested functions)

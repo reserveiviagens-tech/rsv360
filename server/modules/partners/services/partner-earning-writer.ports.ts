@@ -9,6 +9,7 @@ import {
   partnerCommercialTerms,
   partnerEarnings,
   partnerEmpreendimentoAssociations,
+  partnerLedgerEntries,
 } from '../../../../backend/src/db/schema/partners';
 import {
   createDrizzleBookingInventoryLookup,
@@ -157,19 +158,33 @@ export function createDrizzlePartnerEarningWriterPorts(
     },
 
     async insertEarning(params) {
-      const [row] = await db
-        .insert(partnerEarnings)
-        .values({
+      // C36-CP: earning INSERT + ledger credit MUST be atomic.
+      const idempotencyKey = `booking_payment_credit:${params.sourceId}`;
+      return await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(partnerEarnings)
+          .values({
+            partnerId: params.partnerId,
+            sourceType: params.sourceType,
+            sourceId: params.sourceId,
+            amountCents: params.amountCents,
+            currency: params.currency,
+            status: params.status,
+            metadata: params.metadata,
+          })
+          .returning();
+
+        await tx.insert(partnerLedgerEntries).values({
           partnerId: params.partnerId,
-          sourceType: params.sourceType,
-          sourceId: params.sourceId,
+          entryType: 'credit',
           amountCents: params.amountCents,
           currency: params.currency,
-          status: params.status,
-          metadata: params.metadata,
-        })
-        .returning();
-      return mapEarningRow(row);
+          earningId: row.id,
+          idempotencyKey,
+        });
+
+        return mapEarningRow(row);
+      });
     },
   };
 
