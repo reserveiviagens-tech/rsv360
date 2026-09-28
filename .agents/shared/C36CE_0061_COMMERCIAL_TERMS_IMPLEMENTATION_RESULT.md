@@ -26,7 +26,7 @@ NEXT              = Owner GO â†’ push/PR (CI) Â· apply staging only with 
 |-------|--------|
 | **base SHA** | `f8b29835` (`origin/main` @ PR #400 BookingInventoryResolver) |
 | **branch** | `feat/c36ce-0061-commercial-terms` |
-| **tip SHA** | `69a36eab` |
+| **tip SHA** | `89e19336` |
 | **commit** | `feat(partners): add 0061 commercial terms foundation (C36-CE)` |
 | **journal tip (prÃ©)** | `0060_partner_empreendimento_associations` |
 | **journal tip (pÃ³s)** | `0061_partner_earnings_booking_payment_and_terms` (idx 61, when `1788570000000`) |
