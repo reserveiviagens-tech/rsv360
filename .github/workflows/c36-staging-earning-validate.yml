@@ -178,21 +178,24 @@ jobs:
               npx tsx /workspace/backend/scripts/c36cn-earning-probe.ts
 
             echo "=== CLEANUP ==="
-            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 <<SQL
-            DELETE FROM partner_earnings pe
-             USING payments p
-             WHERE pe.source_id = p.id::text AND p.metadata->>'ns' = '${NS}';
-            DELETE FROM payments WHERE metadata->>'ns' = '${NS}';
-            DELETE FROM bookings WHERE metadata->>'ns' = '${NS}';
-            DELETE FROM partner_commercial_terms pct
-             USING partner_empreendimento_associations pea
-             WHERE pct.pea_id = pea.id AND pea.metadata->>'ns' = '${NS}';
-            DELETE FROM partner_empreendimento_associations WHERE metadata->>'ns' = '${NS}';
-            DELETE FROM partners WHERE metadata->>'ns' = '${NS}';
-            DELETE FROM acomodacoes WHERE hotel_id LIKE '${NS}-h-%';
-            DELETE FROM empreendimentos WHERE metadata->>'ns' = '${NS}';
-            DELETE FROM users WHERE email = '${NS}@example.invalid';
-SQL
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM partner_earnings pe USING payments p WHERE pe.source_id = p.id::text AND p.metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM payments WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM bookings WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM partner_commercial_terms pct USING partner_empreendimento_associations pea WHERE pct.pea_id = pea.id AND pea.metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM partner_empreendimento_associations WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM partners WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM acomodacoes WHERE hotel_id LIKE '${NS}-h-%';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM empreendimentos WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM users WHERE email = '${NS}@example.invalid';"
 
             LEFT=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
               "SELECT (SELECT COUNT(*) FROM partners WHERE metadata->>'ns'='${NS}')
