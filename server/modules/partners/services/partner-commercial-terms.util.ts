@@ -1,6 +1,6 @@
 /**
- * C36-CE — pure helpers for commercial terms window / rate math.
- * No DB writes. Earning writer remains blocked.
+ * C36-CE / C36-CL — pure helpers for commercial terms window / rate math / PEA eligibility.
+ * No DB writes here; earning INSERT lives in partner-earning-writer.service.
  */
 
 export type TermsWindow = {
@@ -39,6 +39,45 @@ export function computeEarningCents(baseCents: number, rateBps: number): number 
     throw new Error('rateBps must be an integer in [0, 10000]');
   }
   return Math.floor((baseCents * rateBps) / 10000);
+}
+
+/** Half-open PEA window [effectiveFrom, effectiveTo) — same semantics as terms. */
+export function isPeaEffectiveAt(
+  pea: {
+    status: string;
+    effectiveFrom: Date | string | null;
+    effectiveTo: Date | string | null;
+  },
+  tPay: Date | string,
+): boolean {
+  if (pea.status !== 'active') return false;
+  const t = asDate(tPay);
+  if (!t) return false;
+  const from = asDate(pea.effectiveFrom);
+  const to = asDate(pea.effectiveTo);
+  if (from && t < from) return false;
+  if (to && !(t < to)) return false;
+  return true;
+}
+
+/** Filter commercial_owner PEAs effective at T_pay (no arbitrary first-row). */
+export function filterCommercialOwnersAt(
+  peas: Array<{
+    peaId: string;
+    partnerId: string;
+    associationRole: string;
+    status: string;
+    effectiveFrom: Date | string | null;
+    effectiveTo: Date | string | null;
+  }>,
+  tPay: Date | string,
+): Array<{ peaId: string; partnerId: string }> {
+  return peas
+    .filter(
+      (p) =>
+        p.associationRole === 'commercial_owner' && isPeaEffectiveAt(p, tPay),
+    )
+    .map((p) => ({ peaId: p.peaId, partnerId: p.partnerId }));
 }
 
 /** C36-CC multi-PEA: 0 skip, 1 ok, >1 fail-closed */
