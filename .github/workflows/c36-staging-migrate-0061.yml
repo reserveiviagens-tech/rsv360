@@ -50,7 +50,15 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.STAGING_PATH }}"
-            if [ -f .env ]; then set -a; . ./.env; set +a; fi
+            if [ -f .env ]; then
+              # Staging .env may be CRLF (Windows-saved); strip CR before source.
+              set -a
+              # shellcheck disable=SC1091
+              . <(sed 's/\r$//' .env)
+              set +a
+            fi
+            : "${POSTGRES_USER:?POSTGRES_USER missing after .env load}"
+            : "${POSTGRES_DB:?POSTGRES_DB missing after .env load}"
             COMPOSE="docker compose -f docker-compose.staging.yml"
             test -f docker-compose.staging.yml
 
