@@ -149,13 +149,61 @@ export class WebhookService {
 
     if (!event.length) return;
 
-    // Process based on event type
-    // Update payment/subscription status accordingly
+    // C36-CM: when webhook payload indicates payment approval, confirm local payment
+    // row (by external_id) and trigger partner earning writer (idempotent).
+    await this.maybeConfirmBookingPayment(event[0]);
 
     await db
       .update(webhookEvents)
       .set({ processed: true, processedAt: new Date() })
       .where(eq(webhookEvents.id, event[0].id));
+  }
+
+  /**
+   * Best-effort payment confirm + earning. Never throws out of processEvent —
+   * webhook idempotency row still gets processed=true.
+   */
+  private async maybeConfirmBookingPayment(eventRow: {
+    eventType: string;
+    payload: unknown;
+    externalEventId: string;
+  }): Promise<void> {
+    try {
+      const payload =
+        eventRow.payload && typeof eventRow.payload === 'object'
+          ? (eventRow.payload as Record<string, unknown>)
+          : {};
+      const data =
+        payload.data && typeof payload.data === 'object'
+          ? (payload.data as Record<string, unknown>)
+          : {};
+
+      const statusRaw = String(
+        data.status ?? payload.status ?? '',
+      ).toLowerCase();
+
+      // Only authorize earning on explicit approved settlement — never on booking create.
+      // MP payloads without status in body are skipped (no false earning).
+      if (statusRaw !== 'approved') return;
+
+      // Prefer provider payment id from data.id; fallback external_event_id.
+      const externalId =
+        data.id != null
+          ? String(data.id)
+          : payload.id != null
+            ? String(payload.id)
+            : eventRow.externalEventId;
+
+      const { paymentConfirmationService } = await import(
+        './payment-confirmation.service'
+      );
+      await paymentConfirmationService.confirmByExternalId(externalId);
+    } catch (err) {
+      console.error('[C36-CM] webhook payment confirm skipped', {
+        eventId: eventRow.externalEventId,
+        message: err instanceof Error ? err.message : 'unknown',
+      });
+    }
   }
 
   async retryFailedEvents(): Promise<void> {
