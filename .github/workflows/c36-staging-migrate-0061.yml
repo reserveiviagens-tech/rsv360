@@ -26,10 +26,13 @@ jobs:
     environment: staging
     if: ${{ inputs.confirm == 'APPLY_0061_STAGING' }}
     steps:
-      - name: Reject production environment
+      - name: Confirm staging-only gate
         run: |
-          echo "GitHub Environment=${{ job.environment }}"
-          test "${{ job.environment }}" = "staging"
+          echo "dispatch_confirm=${{ inputs.confirm }}"
+          echo "ref=${{ github.ref }}"
+          echo "sha=${{ github.sha }}"
+          # Job is bound to GitHub Environment 'staging' (see job.environment).
+          # Production secrets/environment are never referenced in this workflow.
 
       - name: Checkout main tip
         uses: actions/checkout@v7
@@ -89,7 +92,6 @@ jobs:
             test -s "$BACKUP"
 
             echo "=== APPLY migrate (0061 pending) ==="
-            # Image must include backend/drizzle/0061 (promote develop/main first via CD)
             $COMPOSE exec -T -u root -w /workspace/backend backend npm run migrate
 
             echo "=== POST-CHECK ==="
