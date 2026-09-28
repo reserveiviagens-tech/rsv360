@@ -1,0 +1,106 @@
+# C36-CI — Controlled staging DB migrate (0061 only)
+# Trigger: workflow_dispatch with confirm = APPLY_0061_STAGING
+# Barriers: production environment NEVER used; payout NEVER; 0059 NEVER edited.
+name: C36 Staging Migrate 0061
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type exactly APPLY_0061_STAGING"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c36-staging-migrate
+  cancel-in-progress: false
+
+jobs:
+  preflight-and-migrate:
+    name: Staging preflight + 0061 migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: staging
+    if: ${{ inputs.confirm == 'APPLY_0061_STAGING' }}
+    steps:
+      - name: Reject production environment
+        run: |
+          echo "GitHub Environment=${{ job.environment }}"
+          test "${{ job.environment }}" = "staging"
+
+      - name: Checkout main tip
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Staging SSH — backup + tip check + migrate + verify
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.STAGING_PATH }}"
+            if [ -f .env ]; then set -a; . ./.env; set +a; fi
+            COMPOSE="docker compose -f docker-compose.staging.yml"
+            test -f docker-compose.staging.yml
+
+            echo "=== C36-CI PREFLIGHT ==="
+            echo "host=$(hostname)"
+            echo "path=$(pwd)"
+            $COMPOSE ps
+            curl -fsS --max-time 20 "http://127.0.0.1:8080/health" || curl -fsS --max-time 20 "http://localhost:8080/health"
+
+            echo "=== CURRENT MIGRATION TIP (hashes) ==="
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "SELECT id, left(hash,16) AS hash_prefix, created_at FROM drizzle.__drizzle_migrations ORDER BY id DESC LIMIT 8;"
+
+            HAS_PEA=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "SELECT CASE WHEN to_regclass('public.partner_empreendimento_associations') IS NULL THEN 0 ELSE 1 END;")
+            HAS_TERMS=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "SELECT CASE WHEN to_regclass('public.partner_commercial_terms') IS NULL THEN 0 ELSE 1 END;")
+            echo "HAS_PEA=$HAS_PEA HAS_TERMS=$HAS_TERMS"
+
+            if [ "$HAS_PEA" != "1" ]; then
+              echo "BLOCKED: PEA table missing — expected tip at least 0060 before applying 0061"
+              exit 2
+            fi
+            if [ "$HAS_TERMS" = "1" ]; then
+              echo "IDEMPOTENT: partner_commercial_terms already exists — verifying constraints then exit 0"
+              $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+                "SELECT conname FROM pg_constraint WHERE conrelid='partner_commercial_terms'::regclass ORDER BY 1;"
+              $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+                "SELECT 1 FROM pg_indexes WHERE indexname='partner_commercial_terms_one_active_per_pea';"
+              exit 0
+            fi
+
+            echo "=== BACKUP ==="
+            mkdir -p backups/postgres_staging
+            STAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP="backups/postgres_staging/staging_pre_0061_${STAMP}.sql.gz"
+            $COMPOSE exec -T postgres pg_dump -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" | gzip -9 > "$BACKUP"
+            ls -lh "$BACKUP"
+            test -s "$BACKUP"
+
+            echo "=== APPLY migrate (0061 pending) ==="
+            # Image must include backend/drizzle/0061 (promote develop/main first via CD)
+            $COMPOSE exec -T -u root -w /workspace/backend backend npm run migrate
+
+            echo "=== POST-CHECK ==="
+            HAS_TERMS2=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "SELECT CASE WHEN to_regclass('public.partner_commercial_terms') IS NULL THEN 0 ELSE 1 END;")
+            test "$HAS_TERMS2" = "1"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "SELECT indexname FROM pg_indexes WHERE tablename='partner_commercial_terms' ORDER BY 1;"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "SELECT 1 FROM information_schema.columns WHERE table_name='partner_earnings' AND column_name='metadata';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='partner_earnings_source_type_check';"
+            curl -fsS --max-time 20 "http://127.0.0.1:8080/health" || curl -fsS --max-time 20 "http://localhost:8080/health"
+            echo "C36-CI APPLY_0061 = SUCCESS"
