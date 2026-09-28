@@ -164,3 +164,49 @@ export const listPartnerAcomodacoesQuerySchema = z
 
 export type ListPartnerAcomodacoesQuery = z.infer<typeof listPartnerAcomodacoesQuerySchema>;
 
+/** C36-CK — commercial terms v1 (percent_bps only). */
+export const TERMS_STATUSES = ['draft', 'active', 'superseded'] as const;
+export type TermsStatus = (typeof TERMS_STATUSES)[number];
+
+export const peaIdParamSchema = z
+  .object({
+    peaId: z.string().uuid(),
+  })
+  .strict();
+
+export const termsIdParamSchema = z
+  .object({
+    termsId: z.string().uuid(),
+  })
+  .strict();
+
+export const activateTermsParamsSchema = z
+  .object({
+    peaId: z.string().uuid(),
+    termsId: z.string().uuid(),
+  })
+  .strict();
+
+export const createCommercialTermsSchema = z
+  .object({
+    rateBps: z.number().int().min(0).max(10000),
+    effectiveFrom: z.coerce.date().nullable().optional(),
+    effectiveTo: z.coerce.date().nullable().optional(),
+  })
+  .strict()
+  .refine(
+    (b) =>
+      b.effectiveFrom == null ||
+      b.effectiveTo == null ||
+      b.effectiveTo > b.effectiveFrom,
+    { message: 'effectiveTo must be > effectiveFrom when both set' },
+  );
+
+export type CreateCommercialTermsInput = z.infer<typeof createCommercialTermsSchema>;
+
+export const resolveTermsQuerySchema = z
+  .object({
+    tPay: z.coerce.date(),
+  })
+  .strict();
+

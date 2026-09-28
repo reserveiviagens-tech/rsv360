@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import {
   createAssociationSchema,
+  createCommercialTermsSchema,
   createMembershipSchema,
   createPartnerSchema,
   listAssociationsQuerySchema,
@@ -10,6 +11,9 @@ import {
   listPartnersQuerySchema,
   partnerEmpreendimentoParamsSchema,
   partnerIdParamSchema,
+  peaIdParamSchema,
+  resolveTermsQuerySchema,
+  activateTermsParamsSchema,
   updateAssociationSchema,
   updatePartnerSchema,
 } from '../schema';
@@ -17,6 +21,7 @@ import {
   PartnerValidationError,
   partnerAssociationsService,
 } from '../services/partner-associations.service';
+import { partnerCommercialTermsService } from '../services/partner-commercial-terms.service';
 import {
   PartnerConflictError,
   PartnerForbiddenError,
@@ -60,6 +65,85 @@ function mapError(res: Response, error: unknown) {
 router.get('/health', (_req, res) => {
   res.json({ module: 'partners', status: 'ok' });
 });
+
+/** C36-CK — commercial terms (no earning writer). BEFORE /:id so "associations" is not captured. */
+router.get('/associations/:peaId/commercial-terms/resolve', ...staffAuth, async (req, res) => {
+  try {
+    const params = peaIdParamSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const query = resolveTermsQuerySchema.safeParse(req.query ?? {});
+    if (!query.success) {
+      return res.status(400).json({ success: false, error: query.error.flatten() });
+    }
+    const data = await partnerCommercialTermsService.resolveEffectiveAt(
+      requireActor(req),
+      params.data.peaId,
+      query.data.tPay,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.get('/associations/:peaId/commercial-terms', ...staffAuth, async (req, res) => {
+  try {
+    const params = peaIdParamSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const data = await partnerCommercialTermsService.listByPea(
+      requireActor(req),
+      params.data.peaId,
+    );
+    return res.json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.post('/associations/:peaId/commercial-terms', ...staffAuth, async (req, res) => {
+  try {
+    const params = peaIdParamSchema.safeParse(req.params);
+    if (!params.success) {
+      return res.status(400).json({ success: false, error: params.error.flatten() });
+    }
+    const parsed = createCommercialTermsSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: parsed.error.flatten() });
+    }
+    const data = await partnerCommercialTermsService.createDraft(
+      requireActor(req),
+      params.data.peaId,
+      parsed.data,
+    );
+    return res.status(201).json({ success: true, data });
+  } catch (error) {
+    return mapError(res, error);
+  }
+});
+
+router.post(
+  '/associations/:peaId/commercial-terms/:termsId/activate',
+  ...staffAuth,
+  async (req, res) => {
+    try {
+      const params = activateTermsParamsSchema.safeParse(req.params);
+      if (!params.success) {
+        return res.status(400).json({ success: false, error: params.error.flatten() });
+      }
+      const data = await partnerCommercialTermsService.activate(
+        requireActor(req),
+        params.data.termsId,
+      );
+      return res.json({ success: true, data });
+    } catch (error) {
+      return mapError(res, error);
+    }
+  },
+);
 
 router.post('/', ...staffAuth, async (req, res) => {
   try {
