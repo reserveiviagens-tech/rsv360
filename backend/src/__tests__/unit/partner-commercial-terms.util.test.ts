@@ -4,7 +4,7 @@ import {
   resolveExclusiveCommercialOwner,
 } from '../../../../server/modules/partners/services/partner-commercial-terms.util';
 
-describe('partner-commercial-terms.util (C36-CE)', () => {
+describe('partner-commercial-terms.util (C36-CJ)', () => {
   describe('vigência [from, to)', () => {
     const tPay = new Date('2026-06-15T12:00:00.000Z');
 
@@ -24,6 +24,28 @@ describe('partner-commercial-terms.util (C36-CE)', () => {
           tPay,
         ),
       ).toBe(false);
+    });
+
+    it('superseded nunca é elegível', () => {
+      expect(
+        isCommercialTermsEffectiveAt(
+          { status: 'superseded', effectiveFrom: null, effectiveTo: null },
+          tPay,
+        ),
+      ).toBe(false);
+    });
+
+    it('T_pay === effective_from (incluso) é elegível', () => {
+      expect(
+        isCommercialTermsEffectiveAt(
+          {
+            status: 'active',
+            effectiveFrom: '2026-06-15T12:00:00.000Z',
+            effectiveTo: null,
+          },
+          tPay,
+        ),
+      ).toBe(true);
     });
 
     it('antes de effective_from é inelegível', () => {
@@ -52,6 +74,32 @@ describe('partner-commercial-terms.util (C36-CE)', () => {
       ).toBe(false);
     });
 
+    it('um instante antes de effective_to é elegível', () => {
+      expect(
+        isCommercialTermsEffectiveAt(
+          {
+            status: 'active',
+            effectiveFrom: '2026-01-01T00:00:00.000Z',
+            effectiveTo: '2026-06-15T12:00:00.001Z',
+          },
+          tPay,
+        ),
+      ).toBe(true);
+    });
+
+    it('expirado (após to) é inelegível', () => {
+      expect(
+        isCommercialTermsEffectiveAt(
+          {
+            status: 'active',
+            effectiveFrom: '2026-01-01T00:00:00.000Z',
+            effectiveTo: '2026-06-01T00:00:00.000Z',
+          },
+          tPay,
+        ),
+      ).toBe(false);
+    });
+
     it('dentro da janela é elegível', () => {
       expect(
         isCommercialTermsEffectiveAt(
@@ -64,9 +112,26 @@ describe('partner-commercial-terms.util (C36-CE)', () => {
         ),
       ).toBe(true);
     });
+
+    it('tPay inválido é inelegível', () => {
+      expect(
+        isCommercialTermsEffectiveAt(
+          { status: 'active', effectiveFrom: null, effectiveTo: null },
+          'not-a-date',
+        ),
+      ).toBe(false);
+    });
   });
 
   describe('rate_bps → amount_cents', () => {
+    it('mínimo 0 bps → 0', () => {
+      expect(computeEarningCents(100_000, 0)).toBe(0);
+    });
+
+    it('máximo 10000 bps = 100%', () => {
+      expect(computeEarningCents(100_000, 10_000)).toBe(100_000);
+    });
+
     it('1500 bps de 100000 = 15000', () => {
       expect(computeEarningCents(100_000, 1500)).toBe(15_000);
     });
@@ -79,6 +144,15 @@ describe('partner-commercial-terms.util (C36-CE)', () => {
     it('rejeita rate_bps fora de [0,10000]', () => {
       expect(() => computeEarningCents(100, 10001)).toThrow(/rateBps/);
       expect(() => computeEarningCents(100, -1)).toThrow(/rateBps/);
+    });
+
+    it('rejeita rate_bps não-inteiro', () => {
+      expect(() => computeEarningCents(100, 1.5)).toThrow(/rateBps/);
+    });
+
+    it('rejeita baseCents inválido', () => {
+      expect(() => computeEarningCents(-1, 100)).toThrow(/baseCents/);
+      expect(() => computeEarningCents(1.2, 100)).toThrow(/baseCents/);
     });
   });
 

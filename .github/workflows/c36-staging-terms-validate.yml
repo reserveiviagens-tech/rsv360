@@ -1,0 +1,125 @@
+# C36-CJ — Staging commercial-terms invariant probe (no earnings)
+# confirm = VALIDATE_TERMS_C36CJ
+name: C36 Staging Terms Validate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type exactly VALIDATE_TERMS_C36CJ"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c36-staging-terms-validate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Staging terms invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    if: ${{ inputs.confirm == 'VALIDATE_TERMS_C36CJ' }}
+    steps:
+      - name: Confirm gate
+        run: echo "C36-CJ staging validation"
+
+      - name: SSH probe + cleanup
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.STAGING_PATH }}"
+            if [ -f .env ]; then set -a; . <(sed 's/\r$//' .env); set +a; fi
+            : "${POSTGRES_USER:?}"; : "${POSTGRES_DB:?}"
+            COMPOSE="docker compose -f docker-compose.staging.yml"
+            NS="c36cj_$(date +%s)"
+            echo "NAMESPACE=$NS"
+
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 <<SQL
+            INSERT INTO partners (id, code, display_name, status, metadata, created_at, updated_at)
+            VALUES (
+              gen_random_uuid(),
+              left('${NS}', 64),
+              '${NS}_partner',
+              'active',
+              jsonb_build_object('c36cj', true, 'ns', '${NS}'),
+              now(), now()
+            );
+            SQL
+
+            # Resolve partner id + pick any empreendimento
+            PID=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "SELECT id::text FROM partners WHERE metadata->>'ns'='${NS}' LIMIT 1;")
+            EID=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "SELECT id::text FROM empreendimentos ORDER BY id LIMIT 1;")
+            echo "PID=$PID EID=$EID"
+            test -n "$PID"
+            test -n "$EID"
+
+            PEA=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "INSERT INTO partner_empreendimento_associations (id, partner_id, empreendimento_id, association_role, status, metadata, created_at, updated_at)
+               VALUES (gen_random_uuid(), '$PID'::uuid, '$EID'::int, 'commercial_owner', 'active',
+                       jsonb_build_object('c36cj', true, 'ns', '${NS}'), now(), now())
+               RETURNING id::text;")
+            echo "PEA=$PEA"
+
+            echo "=== rate_bps CHECK ==="
+            set +e
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version)
+               VALUES ('$PEA'::uuid, 'percent_bps', 10001, 'booking_total', 'draft', 1);"
+            RC_HIGH=$?
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version)
+               VALUES ('$PEA'::uuid, 'percent_bps', -1, 'booking_total', 'draft', 1);"
+            RC_NEG=$?
+            set -e
+            test "$RC_HIGH" -ne 0
+            test "$RC_NEG" -ne 0
+            echo "rate_bps invalid rejected OK"
+
+            echo "=== window CHECK ==="
+            set +e
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version, effective_from, effective_to)
+               VALUES ('$PEA'::uuid, 'percent_bps', 1000, 'booking_total', 'draft', 1,
+                       '2026-06-02', '2026-06-01');"
+            RC_WIN=$?
+            set -e
+            test "$RC_WIN" -ne 0
+            echo "window invalid rejected OK"
+
+            echo "=== one active per PEA ==="
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version)
+               VALUES ('$PEA'::uuid, 'percent_bps', 1500, 'booking_total', 'active', 1);"
+            set +e
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version)
+               VALUES ('$PEA'::uuid, 'percent_bps', 2000, 'booking_total', 'active', 2);"
+            RC_DUP=$?
+            set -e
+            test "$RC_DUP" -ne 0
+            echo "second active rejected OK"
+
+            echo "=== CLEANUP ==="
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
+              "DELETE FROM partner_commercial_terms WHERE pea_id IN (
+                 SELECT id FROM partner_empreendimento_associations WHERE metadata->>'ns'='${NS}');
+               DELETE FROM partner_empreendimento_associations WHERE metadata->>'ns'='${NS}';
+               DELETE FROM partners WHERE metadata->>'ns'='${NS}';"
+            LEFT=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              "SELECT COUNT(*) FROM partners WHERE metadata->>'ns'='${NS}';")
+            test "$LEFT" = "0"
+            echo "C36-CJ VALIDATE = SUCCESS residual=0"
