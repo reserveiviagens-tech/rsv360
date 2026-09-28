@@ -70,6 +70,8 @@ export const partnerEarnings = pgTable(
     amountCents: bigint('amount_cents', { mode: 'number' }).notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
     status: text('status').notNull().default('pending'),
+    /** C36-CE / 0061 — policy snapshot bag (rate, terms, booking, payment, T_pay). */
+    metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
@@ -161,3 +163,33 @@ export type PartnerEmpreendimentoAssociation =
   typeof partnerEmpreendimentoAssociations.$inferSelect;
 export type NovaPartnerEmpreendimentoAssociation =
   typeof partnerEmpreendimentoAssociations.$inferInsert;
+
+/**
+ * C36-CE / 0061 — PEA-scoped commercial terms (percent_bps v1).
+ * Writer remains blocked; this is schema foundation only.
+ */
+export const partnerCommercialTerms = pgTable('partner_commercial_terms', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  peaId: uuid('pea_id')
+    .notNull()
+    .references(() => partnerEmpreendimentoAssociations.id, { onDelete: 'restrict' }),
+  rateKind: text('rate_kind').notNull(),
+  rateBps: integer('rate_bps').notNull(),
+  fixedAmountCents: bigint('fixed_amount_cents', { mode: 'number' }),
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+  basis: text('basis').notNull(),
+  status: text('status').notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  effectiveFrom: timestamp('effective_from', { withTimezone: true }),
+  effectiveTo: timestamp('effective_to', { withTimezone: true }),
+  supersededBy: uuid('superseded_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  createdByUserId: integer('created_by_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+});
+
+export type PartnerCommercialTerm = typeof partnerCommercialTerms.$inferSelect;
+export type NovoPartnerCommercialTerm = typeof partnerCommercialTerms.$inferInsert;
+

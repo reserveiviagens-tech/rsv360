@@ -428,6 +428,13 @@
       "when": 1788569000000,
       "tag": "0060_partner_empreendimento_associations",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1788570000000,
+      "tag": "0061_partner_earnings_booking_payment_and_terms",
+      "breakpoints": true
     }
   ]
 }
