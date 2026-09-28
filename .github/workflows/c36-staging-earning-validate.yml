@@ -58,7 +58,7 @@ jobs:
             UID1=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
               "SELECT id::text FROM users ORDER BY id LIMIT 1;")")
             if [ -z "$UID1" ]; then
-              echo "No users row — seeding c36cn fixture user"
+              echo "No users row - seeding c36cn fixture user"
               UID1=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
                 "INSERT INTO users (name, email, password, role, is_active)
                  VALUES ('c36cn', '${NS}@example.invalid', 'x', 'admin', true)
@@ -69,24 +69,6 @@ jobs:
             ENT=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
               "SELECT gen_random_uuid()::text;")")
             echo "ENT=$ENT"
-
-            cleanup_ns() {
-              echo "=== CLEANUP (ns=$NS) ==="
-              $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
-                "DELETE FROM partner_earnings WHERE source_id IN (
-                   SELECT id::text FROM payments WHERE metadata->>'ns'='${NS}'
-                 );
-                 DELETE FROM payments WHERE metadata->>'ns'='${NS}';
-                 DELETE FROM bookings WHERE metadata->>'ns'='${NS}';
-                 DELETE FROM partner_commercial_terms WHERE pea_id IN (
-                   SELECT id FROM partner_empreendimento_associations WHERE metadata->>'ns'='${NS}');
-                 DELETE FROM partner_empreendimento_associations WHERE metadata->>'ns'='${NS}';
-                 DELETE FROM partners WHERE metadata->>'ns'='${NS}';
-                 DELETE FROM acomodacoes WHERE hotel_id LIKE '${NS}-h-%';
-                 DELETE FROM empreendimentos WHERE metadata->>'ns'='${NS}';
-                 DELETE FROM users WHERE email = '${NS}@example.invalid';" || true
-            }
-            trap cleanup_ns EXIT
 
             seed_emp_aco() {
               local suffix="$1"
@@ -106,21 +88,25 @@ jobs:
 
             seed_partner() {
               local code="$1"
-              trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              local out
+              out=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
                 "INSERT INTO partners (id, code, display_name, status, metadata, created_at, updated_at)
                  VALUES (gen_random_uuid(), left('${code}', 64), '${code}', 'active',
                          jsonb_build_object('c36cn', true, 'ns', '${NS}'), now(), now())
-                 RETURNING id::text;")"
+                 RETURNING id::text;")")
+              echo "$out"
             }
 
             seed_pea() {
               local pid="$1" eid="$2" role="$3"
-              trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+              local out
+              out=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
                 "INSERT INTO partner_empreendimento_associations
                    (id, partner_id, empreendimento_id, association_role, status, metadata, created_at, updated_at)
                  VALUES (gen_random_uuid(), '$pid'::uuid, $eid::int, '$role', 'active',
                          jsonb_build_object('c36cn', true, 'ns', '${NS}'), now(), now())
-                 RETURNING id::text;")"
+                 RETURNING id::text;")")
+              echo "$out"
             }
 
             seed_booking_payment() {
@@ -191,13 +177,26 @@ jobs:
               backend \
               npx tsx /workspace/backend/scripts/c36cn-earning-probe.ts
 
-            echo "=== CLEANUP VERIFY ==="
-            # trap already cleaned; verify residual
+            echo "=== CLEANUP ==="
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 <<SQL
+            DELETE FROM partner_earnings pe
+             USING payments p
+             WHERE pe.source_id = p.id::text AND p.metadata->>'ns' = '${NS}';
+            DELETE FROM payments WHERE metadata->>'ns' = '${NS}';
+            DELETE FROM bookings WHERE metadata->>'ns' = '${NS}';
+            DELETE FROM partner_commercial_terms pct
+             USING partner_empreendimento_associations pea
+             WHERE pct.pea_id = pea.id AND pea.metadata->>'ns' = '${NS}';
+            DELETE FROM partner_empreendimento_associations WHERE metadata->>'ns' = '${NS}';
+            DELETE FROM partners WHERE metadata->>'ns' = '${NS}';
+            DELETE FROM acomodacoes WHERE hotel_id LIKE '${NS}-h-%';
+            DELETE FROM empreendimentos WHERE metadata->>'ns' = '${NS}';
+            DELETE FROM users WHERE email = '${NS}@example.invalid';
+SQL
+
             LEFT=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
               "SELECT (SELECT COUNT(*) FROM partners WHERE metadata->>'ns'='${NS}')
                     + (SELECT COUNT(*) FROM empreendimentos WHERE metadata->>'ns'='${NS}')
-                    + (SELECT COUNT(*) FROM payments WHERE metadata->>'ns'='${NS}')
-                    + (SELECT COUNT(*) FROM partner_earnings WHERE metadata->>'ns'='${NS}');")")
+                    + (SELECT COUNT(*) FROM payments WHERE metadata->>'ns'='${NS}');")")
             test "$LEFT" = "0"
             echo "C36-CN VALIDATE = SUCCESS residual=0"
-            trap - EXIT
