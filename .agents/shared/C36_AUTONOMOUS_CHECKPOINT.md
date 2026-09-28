@@ -1,29 +1,31 @@
 # C36 Autonomous Execution — Checkpoint + Watchdog
 
 **Protocol:** C36-CF → C36-CZ continuous execution  
-**Started recovery:** 2026-09-28 (America/Sao_Paulo)
+**Updated:** 2026-09-28T07:45Z (America/Sao_Paulo ~04:45)
 
 ## WATCHDOG_HEARTBEAT
 
-| timestamp | gate | subgate | branch | sha | pr | ci | next |
-|-----------|------|---------|--------|-----|----|----|------|
-| 2026-09-28T01:30-03 | RECOVERY | reconcile | feat/c36ce-0061-commercial-terms | 01410d73 | #401 OPEN | ALL GREEN CLEAN | close CF → CG merge |
+| timestamp | gate | subgate | sha/pr | ci | next |
+|-----------|------|---------|--------|-----|------|
+| 2026-09-28T04:45-03 | C36-CL | writer+tests | feat/c36cl-earning-writer | PRE_PUSH | push+PR+CI |
 
 ## Gate ledger
 
 | Gate | Status | Evidence |
 |------|--------|----------|
-| C36-CC | PASS | POLICY_ADR_ACCEPTED |
-| C36-CD | PASS | TERMS_AND_CHECK_DESIGNED |
-| C36-CE | PASS | 0061_COMMERCIAL_TERMS_IMPLEMENTED @ 89e19336+01410d73 |
-| C36-CF | PASS | C36CF_0061_PR_CI_RESULT.md · PR #401 · CLEAN |
-| C36-CG | IN_PROGRESS | merge authorized by protocol §10 |
-| C36-CH…CZ | PENDING | |
+| C36-CF | PASS | PR #401 CI CLEAN |
+| C36-CG | PASS | merge 092de2ee + post-CI GREEN |
+| C36-CH | PASS | journal 0058→0061 reconciled |
+| C36-CI | PASS | staging APPLY run 36382807020 |
+| C36-CJ | PASS | util + staging terms validate |
+| C36-CK | PASS | PR #406 → 90992b58 |
+| C36-CL | IN_PROGRESS | writer implemented; awaiting PR CI |
+| C36-CM…CZ | PENDING | |
 
 ## Barriers (active)
 
 ```text
 PRODUCTION / PAYOUT / GATEWAY_REAL / SECRETS / 0059 / FORCE_PUSH / CI_BYPASS = BLOCKED
-0061_APPLY = deferred until C36-CI
-EARNING_WRITER = deferred until C36-CL
+PAYMENT_HOOK = deferred until C36-CM
+LEDGER = deferred until C36-CP
 ```
