@@ -63,6 +63,13 @@ jobs:
               "SELECT id::text FROM partners WHERE metadata->>'ns'='${NS}' LIMIT 1;")
             EID=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
               "SELECT id::text FROM empreendimentos ORDER BY id LIMIT 1;")
+            if [ -z "$EID" ]; then
+              EID=$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc \
+                "INSERT INTO empreendimentos (slug, hotel_id, nome_oficial, nome_normalizado, metadata)
+                 VALUES ('${NS}-emp', '${NS}-hotel', '${NS} Emp', '${NS} emp',
+                         jsonb_build_object('c36cj', true, 'ns', '${NS}'))
+                 RETURNING id::text;")
+            fi
             echo "PID=$PID EID=$EID"
             test -n "$PID"
             test -n "$EID"
