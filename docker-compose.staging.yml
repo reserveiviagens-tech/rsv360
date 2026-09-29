@@ -27,7 +27,7 @@ networks:
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-postgres
     restart: always
     networks: [rsv360_staging]
