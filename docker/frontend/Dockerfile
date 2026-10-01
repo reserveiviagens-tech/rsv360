@@ -4,7 +4,7 @@
 # @author Douglas P. Figueiredo
 # @license UNLICENSED
 
-FROM node:24-alpine AS deps
+FROM node:26-alpine AS deps
 ARG APP_DIR
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_URL
@@ -29,7 +29,7 @@ RUN npm ci --ignore-scripts \
   && ( test -d node_modules/next || test -d apps/site-publico/node_modules/next ) \
   && test -d node_modules/react
 
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 ARG APP_DIR
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_URL
@@ -79,7 +79,7 @@ RUN mkdir -p "/workspace/.deploy/${APP_DIR}" "/workspace/.deploy/packages/shared
   && mkdir -p "/workspace/.deploy/${APP_DIR}/public" \
   && if [ -d "${APP_DIR}/public" ]; then cp -R "${APP_DIR}/public/." "/workspace/.deploy/${APP_DIR}/public/"; fi
 
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 ARG APP_DIR
 ARG APP_PORT=3000
 ARG NEXT_PUBLIC_API_URL
