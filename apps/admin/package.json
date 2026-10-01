@@ -20,20 +20,20 @@
     "@rsv360/shared": "1.0.0",
     "@tanstack/react-query": "^5.90.5",
     "date-fns": "^4.1.0",
-    "lucide-react": "^0.542.0",
-    "next": "16.2.11",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
-    "react-dropzone": "^15.0.0",
+    "lucide-react": "^0.577.0",
+    "next": "16.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-dropzone": "^20.1.2",
     "react-is": "^19.0.0",
     "recharts": "^3.1.2",
-    "sharp": "0.35.3"
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.10.0",
-    "eslint": "^9.39.0",
-    "eslint-config-next": "16.2.11",
+    "eslint": "^10.11.0",
+    "eslint-config-next": "16.3.6",
     "postcss": "^8.5.18",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3"
