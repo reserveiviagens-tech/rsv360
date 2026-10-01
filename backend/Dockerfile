@@ -4,7 +4,7 @@
 # @author Douglas P. Figueiredo
 # @license UNLICENSED
 
-FROM node:24-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /workspace
 
 COPY package.json package-lock.json ./
@@ -13,7 +13,7 @@ COPY packages/shared/package.json packages/shared/package.json
 COPY .github/scripts .github/scripts
 RUN npm ci --workspace=backend --workspace=@rsv360/shared --include-workspace-root=false --no-audit --no-fund --ignore-scripts
 
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /workspace
 
 RUN apk add --no-cache wget
