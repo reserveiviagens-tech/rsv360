@@ -24,11 +24,15 @@ describe('C36-DD request/execution separation (static)', () => {
     expect(src).not.toMatch(/getPaymentProvider/);
   });
 
-  it('refund-request routes expose only POST / and GET /:id (no approve/execute)', () => {
+  it('refund-request routes expose only request + decision endpoints (no execute)', () => {
     const src = readFileSync(ROUTES, 'utf8');
     expect(src).toMatch(/router\.post\('\/'/);
     expect(src).toMatch(/router\.get\('\/:id'/);
-    expect(src).not.toMatch(/\/approve|\/reject|\/execute/);
+    // C36-DE-05 authorises approve / reject: decisions only, no money movement.
+    expect(src).toMatch(/router\.post\('\/:id\/approve'/);
+    expect(src).toMatch(/router\.post\('\/:id\/reject'/);
+    // Provider execution belongs to a later gate and must never appear here.
+    expect(src).not.toMatch(/\/execute/);
     expect(src).not.toMatch(/RefundService/);
     expect(src).not.toMatch(/from ['"].*refund\.service/);
   });

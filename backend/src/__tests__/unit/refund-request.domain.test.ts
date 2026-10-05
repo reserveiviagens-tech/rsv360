@@ -18,17 +18,23 @@ function createMemoryPorts(seed?: {
     amount: string;
     currency: string;
     status: string;
+    /** C36-DE-14: read-only tenant of the payment. */
+    enterpriseId?: string | null;
   } | null;
 }): RefundRequestPorts & { store: RefundRequestRow[]; createRefundCalls: number } {
   const payment =
     seed && 'payment' in seed
       ? seed.payment
+        ? { ...seed.payment, enterpriseId: seed.payment.enterpriseId ?? null }
+        : null
       : {
           id: PAYMENT_ID,
           bookingId: 42,
           amount: '1000.00',
           currency: 'BRL',
           status: 'approved',
+          // C36-DE-14: read-only tenant of the payment (not stored on the request).
+          enterpriseId: 'ent_tenant_test',
         };
   const store: RefundRequestRow[] = [];
   const ports: RefundRequestPorts & {
@@ -68,6 +74,9 @@ function createMemoryPorts(seed?: {
         metadata: params.metadata,
         createdAt: new Date(),
         updatedAt: new Date(),
+        decidedBy: null,
+        decidedAt: null,
+        decisionReason: null,
       };
       store.push(row);
       return row;
