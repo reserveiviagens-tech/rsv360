@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, text, numeric, integer, boolean, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
 import { bookings } from '../../../src/db/schema/bookings';
+import { users } from '../../../src/db/schema/existing';
 
 // Enums
 export const paymentStatusEnum = pgEnum('payment_status', [
@@ -153,17 +154,40 @@ export const refundRequests = pgTable('refund_requests', {
   paymentId: uuid('payment_id')
     .references(() => payments.id, { onDelete: 'restrict' })
     .notNull(),
-  bookingId: integer('booking_id'),
+  bookingId: integer('booking_id').references(() => bookings.id, { onDelete: 'restrict' }),
   amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
   reason: text('reason'),
-  requestedBy: integer('requested_by'),
+  requestedBy: integer('requested_by').references(() => users.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('pending'),
   requestVersion: integer('request_version').notNull().default(1),
   idempotencyKey: varchar('idempotency_key', { length: 128 }),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  // C36-DE — decision metadata. NULL = not decided yet. CHECK constraints live in 0063 SQL.
+  decidedBy: integer('decided_by').references(() => users.id, { onDelete: 'restrict' }),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  decisionReason: text('decision_reason'),
+});
+
+/**
+ * C36-DE — immutable refund decision history (mirrors 0063_refund_request_decisions.sql).
+ * Append-only. Written in the same transaction as the status change. SQL owns the CHECKs.
+ */
+export const refundRequestDecisions = pgTable('refund_request_decisions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  refundRequestId: uuid('refund_request_id')
+    .references(() => refundRequests.id, { onDelete: 'restrict' })
+    .notNull(),
+  fromStatus: text('from_status').notNull(),
+  toStatus: text('to_status').notNull(),
+  decidedBy: integer('decided_by')
+    .references(() => users.id, { onDelete: 'restrict' })
+    .notNull(),
+  requestVersion: integer('request_version').notNull(),
+  decisionReason: text('decision_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Tabela 7: disputes (chargebacks)

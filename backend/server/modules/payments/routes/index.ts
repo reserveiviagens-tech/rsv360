@@ -9,6 +9,7 @@ import pixRoutes from './pix.routes';
 import subscriptionRoutes from './subscription.routes';
 import refundRoutes from './refund.routes';
 import refundRequestRoutes from './refund-request.routes';
+import refundExecutionRoutes from './refund-request-execution.routes';
 import disputeRoutes from './dispute.routes';
 import webhookPublicRoutes from './webhook-public.routes';
 import webhookStaffRoutes from './webhook-staff.routes';
@@ -35,6 +36,8 @@ router.use('/customers', customerRoutes);
 router.use('/pix', pixRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/refund-requests', refundRequestRoutes);
+// C36-DE-06 — execution slice mounted on the same base path, separate router.
+router.use('/refund-requests', refundExecutionRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/disputes', disputeRoutes);
 router.use('/webhooks', webhookStaffRoutes);
