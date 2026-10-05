@@ -3,6 +3,19 @@ import type { NextFunction, Request, Response } from 'express';
 const { extractBearerToken, verifyAccessToken } = require('../../backend/src/api/v1/auth/jwt-verify');
 const { getJwtSecret } = require('@rsv360/shared');
 const { enforceDpopIfEnabled } = require('../../backend/src/api/v1/auth/dpop.service');
+const { normalizeEnterpriseClaim } = require('../modules/multi-property/context/enterprise-claim');
+
+/**
+ * WS-04 / S6 (R8): `req.user.enterpriseId` = CLAIM DECLARADO, nao autoridade.
+ * Normaliza via `normalizeEnterpriseClaim` (string bem-formada => como esta;
+ * numero legado > 0 => `ent_<n>`; resto => `undefined`, nunca fallback).
+ * Autoridade final: `req.authorizedEnterpriseContext` (resolver S4, R9).
+ * JWT = identidade + intencao declarada (R7); JWT != prova de membership (I-04).
+ */
+function declaredEnterpriseId(payload: { enterpriseId?: unknown }): string | undefined {
+  const declared = normalizeEnterpriseClaim(payload?.enterpriseId);
+  return declared ? declared.key : undefined;
+}
 
 /** Valida Bearer JWT (API v1) e popula req.user. PR-10c-a1: DPoP when flag ON + cnf.jkt. */
 export async function authenticateJwt(req: Request, res: Response, next: NextFunction) {
@@ -31,7 +44,7 @@ export async function authenticateJwt(req: Request, res: Response, next: NextFun
     email: payload.email,
     name: payload.name,
     role: payload.role,
-    enterpriseId: payload.enterpriseId,
+    enterpriseId: declaredEnterpriseId(payload),
   };
   return next();
 }
@@ -55,7 +68,7 @@ export async function optionalJwt(req: Request, res: Response, next: NextFunctio
         email: payload.email,
         name: payload.name,
         role: payload.role,
-        enterpriseId: payload.enterpriseId,
+        enterpriseId: declaredEnterpriseId(payload),
       };
     }
   }

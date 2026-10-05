@@ -10,12 +10,16 @@ export {
 const propertyType = z.enum(PROPERTY_TYPES);
 const propertyRole = z.enum(PROPERTY_ROLES);
 
+/**
+ * C36-ID-07 (D3) — the actor is NEVER part of the switch payload.
+ * The caller is `req.user.id`; there is no legitimate impersonation flow.
+ * Because this schema is `.strict()`, a client that still sends `userId` /
+ * `user_id` now receives an explicit 400 instead of silent acceptance.
+ */
 export const PropertySwitchSchema = z
   .object({
     propertyId: z.coerce.number().int().positive().optional(),
     property_id: z.coerce.number().int().positive().optional(),
-    userId: z.coerce.number().int().positive().optional(),
-    user_id: z.coerce.number().int().positive().optional(),
   })
   .strict()
   .refine((v) => v.propertyId != null || v.property_id != null, {

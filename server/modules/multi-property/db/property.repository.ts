@@ -239,6 +239,22 @@ export class PropertyRepository {
     return true;
   }
 
+  /**
+   * C36-ID-06 (D1) — a property is returned ONLY when an ACTIVE `property_users`
+   * link ties it to this user.
+   *
+   * The previous fallback returned the first active property in the whole
+   * repository with a fabricated `role: 'owner'` whenever the user had no link.
+   * That manufactured an association the user never had, and it silently
+   * defeated the C36-ID-05 nullable contract downstream:
+   *
+   *   no link → first global property → getDefaultPropertyForUser() !== null
+   *
+   * K1: never select a global "first" property as a fallback.
+   * K2: only genuine active links qualify.
+   * K3: `role` always comes from the link record, never fabricated.
+   * K4: absence of association yields `[]` (and therefore `null` downstream).
+   */
   async listPropertiesByUser(userId: number): Promise<Array<Property & { role: string }>> {
     const result: Array<Property & { role: string }> = [];
     for (const link of this.propertyUsers.values()) {
@@ -246,10 +262,6 @@ export class PropertyRepository {
         const property = this.properties.get(link.property_id);
         if (property && property.is_active) result.push({ ...clone(property), role: link.role } as Property & { role: string });
       }
-    }
-    if (!result.length && this.properties.size) {
-      const first = Array.from(this.properties.values()).find((property) => property.is_active);
-      if (first) result.push({ ...clone(first), role: 'owner' } as Property & { role: string });
     }
     return result;
   }
@@ -311,9 +323,14 @@ export class PropertyRepository {
     return this.listPropertiesByUser(userId);
   }
 
-  async getDefaultPropertyForUser(userId: number): Promise<number> {
+  /**
+   * C36-ID-05 (D3) — nullable contract. A user with no property has NO default
+   * property. Returning a fabricated `1` would silently grant tenant scope, which
+   * is the exact fail-open class removed in C36-ID-04.
+   */
+  async getDefaultPropertyForUser(userId: number): Promise<number | null> {
     const properties = await this.listPropertiesByUser(userId);
-    return properties[0]?.id || 1;
+    return properties[0]?.id ?? null;
   }
 
   async validateUserAccess(propertyId: number, userId: number): Promise<boolean> {

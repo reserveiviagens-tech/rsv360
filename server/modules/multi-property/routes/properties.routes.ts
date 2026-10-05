@@ -18,22 +18,49 @@ function badRequest(res: import('express').Response, error: unknown) {
   return badRequestShared(res, error, { successEnvelope: true });
 }
 
+/**
+ * C36-ID-07 (D1/D2) — `req.user.id` is the SOLE identity source.
+ *
+ * Previously these routes read `req.query.userId` / `body.userId` and finally
+ * fell back to the literal user id 1. That allowed impersonation of any user
+ * and, on POST /, granted real `owner` membership to user 1.
+ *
+ * D1: no client-supplied identity is honoured.
+ * D2: an absent or invalid principal is 401 UNAUTHENTICATED — never a default.
+ */
+function requireActorId(req: import('express').Request, res: import('express').Response) {
+  const raw = (req as { user?: { id?: unknown } }).user?.id;
+  const actorId = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isInteger(actorId) || actorId <= 0) {
+    res.status(401).json({
+      success: false,
+      error: 'Identidade ausente',
+      code: 'UNAUTHENTICATED',
+    });
+    return null;
+  }
+  return actorId;
+}
+
 router.get('/', async (req, res) => {
-  const userId = Number((req as any).user?.id || req.query.userId || 1);
+  const userId = requireActorId(req, res);
+  if (userId === null) return;
   res.json({ success: true, data: await propertyService.listMyProperties(userId) });
 });
 
 router.get('/consolidated', async (req, res) => {
-  const userId = Number((req as any).user?.id || req.query.userId || 1);
+  const userId = requireActorId(req, res);
+  if (userId === null) return;
   res.json({ success: true, data: await propertyService.getConsolidated(userId) });
 });
 
 router.post('/switch', async (req, res) => {
   try {
     const body = PropertySwitchSchema.parse(req.body);
-    const userId = Number(
-      (req as any).user?.id || body.userId || body.user_id || 1,
-    );
+    // D1: the actor comes from the session only. `userId`/`user_id` are no
+    // longer part of the schema, so sending them is a 400 (strict mode).
+    const userId = requireActorId(req, res);
+    if (userId === null) return;
     const propertyId = Number(body.propertyId ?? body.property_id);
     res.json({ success: true, data: { userId, propertyId } });
   } catch (error) {
@@ -43,7 +70,11 @@ router.post('/switch', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const ownerId = Number((req as any).user?.id || 1);
+    // D1/D2: owner_id is derived exclusively from the authenticated actor.
+    // It feeds `addUserToProperty(id, ownerId, 'owner')`, so a default here
+    // would grant real ownership to an unrelated user.
+    const ownerId = requireActorId(req, res);
+    if (ownerId === null) return;
     const body = PropertyCreateSchema.parse(req.body);
     const property = await propertyService.create(ownerId, body);
     res.status(201).json({ success: true, data: property });

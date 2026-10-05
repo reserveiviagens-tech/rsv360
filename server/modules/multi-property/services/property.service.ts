@@ -54,7 +54,8 @@ export class PropertyService {
     return this.repo.getConsolidatedStats(userId);
   }
 
-  async getDefaultPropertyForUser(userId: number) {
+  /** C36-ID-05 (D3) — nullable: no property for this user means `null`. */
+  async getDefaultPropertyForUser(userId: number): Promise<number | null> {
     return this.repo.getDefaultPropertyForUser(userId);
   }
 
