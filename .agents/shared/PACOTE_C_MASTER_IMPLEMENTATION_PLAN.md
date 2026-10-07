@@ -3,8 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Status | **PLAN_PASS / PLAN_READY** |
-| CODE C1 | **GO RECEIVED — VALIDATED** (waiting COMMIT GO) |
-| CODE C2/C3 | **NOT AUTHORIZED** |
+| CODE C1 | **REMOTE CLOSED** (`7ae07c76`) |
+| CODE C2 | **GO RECEIVED — VALIDATED** (waiting COMMIT GO) |
+| CODE C3 | **NOT AUTHORIZED** |
 | MIGRATION / COMMIT / PUSH | **NOT AUTHORIZED** |
 | Ballot | OD-C-01…06 = **A/A/A/A/A/C** DECIDED |
 | Remote HEAD | `be14b977` |
@@ -36,8 +37,8 @@ Clear ≠ CODE GO.
 ## 2. Ordem normativa
 
 ```text
-C1  RoleAssignment surface     ← CODE GO DONE — WAITING COMMIT GO — PACOTE C — C1
-C2  Domain guards (não-G-C.9)  ← WAITING CODE GO — PACOTE C — C2
+C1  RoleAssignment surface     ← REMOTE CLOSED (7ae07c76)
+C2  Domain guards (não-G-C.9)  ← CODE GO DONE — WAITING COMMIT GO — PACOTE C — C2
 C3  Consumer route wiring      ← WAITING CODE GO — PACOTE C — C3
 ```
 
@@ -96,11 +97,11 @@ apps/**
 
 ---
 
-## 5. Allowlist C2 / C3 (futuro — não autorizar agora)
+## 5. Allowlist C2 / C3
 
-### C2 (após CODE GO — C2)
+### C2 (CODE GO validado — ver `PACOTE_C_C2_IMPLEMENTATION_RESULT.md`)
 
-Guards: crm, guest-portal-admin, multi-property, revenue, payments (**somente** `server/modules/membership/payments.guard.ts`), fornecedores-hub, cms, configuracoes, notifications, campanhas, passageiros, logistica, relatorios, orcamentos + testes `*-guard.test.ts` correspondentes.
+Guards: crm, guest-portal-admin, multi-property, revenue, payments (**somente** `server/modules/membership/payments.guard.ts`), fornecedores-hub, cms, configuracoes, notifications, campanhas, passageiros, logistica, relatorios, orcamentos + testes `*-guard.test.ts` correspondentes. **167 PASS.**
 
 ### C3 (após CODE GO — C3)
 
@@ -150,15 +151,16 @@ Fail-closed preservado. Sem segunda autoridade. Body/query/header ≠ authority.
 
 ```text
 PLAN_PASS / PLAN_READY
-CODE GO C1   = EXECUTED (validate; 14+93 PASS)
-C1           = READY FOR COMMIT GO
-C2/C3        = NOT AUTHORIZED
+C1           = REMOTE CLOSED
+CODE GO C2   = EXECUTED (167 PASS)
+C2           = READY FOR COMMIT GO
+C3           = NOT AUTHORIZED
 MIGRATION GO = NOT AUTHORIZED
 COMMIT/PUSH  = NOT AUTHORIZED
 STOP         = ACTIVE
 
 NEXT TOKEN POSSÍVEL (Owner):
-  COMMIT GO — PACOTE C — C1
+  COMMIT GO — PACOTE C — C2
 ```
 
 ---
