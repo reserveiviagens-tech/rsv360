@@ -42,11 +42,23 @@ describe('Instrutor — triagem T0', () => {
 });
 
 describe('Instrutor — papel e bloqueio de valores', () => {
-  it('deriva anfitriao/corretor vs staff', () => {
+  it('deriva anfitriao/corretor vs staff; body hint validado (OD-GD-07)', () => {
     expect(papelFromRole('anfitriao')).toBe('anfitriao');
     expect(papelFromRole('corretor')).toBe('anfitriao');
     expect(papelFromRole('admin')).toBe('staff');
-    expect(resolvePapel('user', 'anfitriao')).toBe('anfitriao');
+    // G-D.8: body não prevalece — divergência = DENY
+    expect(resolvePapel('user', 'anfitriao')).toEqual({
+      ok: false,
+      status: 403,
+      reason: 'papel_mismatch',
+    });
+    expect(resolvePapel('anfitriao', 'anfitriao')).toEqual({
+      ok: true,
+      papel: 'anfitriao',
+    });
+    expect(resolvePapel('admin', 'staff')).toEqual({ ok: true, papel: 'staff' });
+    expect(resolvePapel('admin', undefined)).toEqual({ ok: true, papel: 'staff' });
+    expect(resolvePapel('user', 'ambos')).toEqual({ ok: true, papel: 'staff' });
   });
 
   it('detecta pedido de valor concreto', () => {

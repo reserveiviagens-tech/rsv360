@@ -21,7 +21,11 @@ router.get('/health', (_req, res) => {
   res.json({ module: 'agentes', status: 'ok' });
 });
 
-router.get('/config', async (_req, res) => {
+/**
+ * G-D.8 / OD-GD-08 — JWT obrigatório em GET /config.
+ * Ordem: flag OFF (requireAgentesAtivo) → 404 fail-closed; flag ON → JWT.
+ */
+router.get('/config', authenticateJwt, async (_req, res) => {
   try {
     const data = await AgentesConfigService.obterConfig();
     res.json({
@@ -75,10 +79,17 @@ router.post(
       }
 
       const user = (req as AuthedRequest).user;
-      const papel = resolvePapel(user?.role, parsed.data.papel);
+      const resolved = resolvePapel(user?.role, parsed.data.papel);
+      if (!resolved.ok) {
+        return res.status(resolved.status).json({
+          success: false,
+          error: 'Acesso negado',
+        });
+      }
+
       const result = await InstrutorService.perguntar({
         pergunta,
-        papel,
+        papel: resolved.papel,
         canal: 'api',
         userId: user?.id,
       });

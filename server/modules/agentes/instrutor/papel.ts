@@ -7,10 +7,29 @@ export function papelFromRole(role?: string | null): Exclude<InstrutorPapel, 'am
   return 'staff';
 }
 
+/**
+ * G-D.8 / OD-GD-07 — body nunca é autoridade.
+ *
+ * authenticated claim/context → papel canônico via `papelFromRole`
+ * body.papel (staff|anfitriao) → hint opcional
+ *   match  → continue
+ *   diverge → DENY
+ * body ausente ou `ambos` → sem hint específico; usa claim
+ */
+export type ResolvePapelResult =
+  | { ok: true; papel: Exclude<InstrutorPapel, 'ambos'> }
+  | { ok: false; status: 403; reason: 'papel_mismatch' };
+
 export function resolvePapel(
   role: string | null | undefined,
   bodyPapel?: InstrutorPapel,
-): Exclude<InstrutorPapel, 'ambos'> {
-  if (bodyPapel === 'staff' || bodyPapel === 'anfitriao') return bodyPapel;
-  return papelFromRole(role);
+): ResolvePapelResult {
+  const fromClaim = papelFromRole(role);
+  if (bodyPapel === 'staff' || bodyPapel === 'anfitriao') {
+    if (bodyPapel !== fromClaim) {
+      return { ok: false, status: 403, reason: 'papel_mismatch' };
+    }
+    return { ok: true, papel: fromClaim };
+  }
+  return { ok: true, papel: fromClaim };
 }

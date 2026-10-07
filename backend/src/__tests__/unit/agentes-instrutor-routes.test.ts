@@ -111,4 +111,16 @@ describe('Instrutor — endpoint + dupla flag', () => {
       .send({ pergunta: '' });
     expect(res.status).toBe(400);
   });
+
+  it('G-D.8: body.papel diverge do claim → 403 (não chama instrutor)', async () => {
+    mockIsAtivo.mockResolvedValue(true);
+    mockIsInstrutor.mockResolvedValue(true);
+    const res = await request(app)
+      .post('/api/v1/agentes/instrutor/perguntar')
+      .send({ pergunta: 'Como criar orçamento?', papel: 'anfitriao' });
+    // mock JWT user.role = admin → claim staff; body anfitriao = mismatch
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/negado/i);
+    expect(mockPerguntar).not.toHaveBeenCalled();
+  });
 });

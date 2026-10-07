@@ -189,6 +189,7 @@ router.get('/proposta/:token/validade', publicLimiter, async (req, res) => {
   }
 });
 
+/** G-D.9 C1 — único accept público (guest); capability = :token. */
 router.post('/proposta/:token/aceitar', publicLimiter, requireTurnstile, async (req, res) => {
   try {
     const data = await cotacaoPublicaService.aceitarPropostaByToken(
@@ -221,9 +222,11 @@ router.post('/proposta/:token/aceitar', publicLimiter, requireTurnstile, async (
 });
 
 /**
- * Tracking MGM público — capability = tokenPublico.
+ * G-D.9 C6 — Tracking MGM público — capability = tokenPublico.
  * Não usa getPropostaByToken (evita registrarVisualizacao).
- * Rota admin POST /propostas/:id/indicacao permanece inalterada.
+ * Staff autenticado: POST /propostas/:id/indicacao (G-D.10 JWT binding).
+ * Este path público valida indicador existente/ativo; ≠ authority JWT.
+ * Hardening anti-body-ref = gate/OD futuro (fora de G-D.9).
  */
 router.post('/proposta/:token/indicacao', publicLimiter, async (req, res) => {
   try {

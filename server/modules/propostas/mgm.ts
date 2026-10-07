@@ -10,6 +10,42 @@ export type RegistrarIndicacaoInput = {
   indicadoTelefone?: string;
 };
 
+/**
+ * G-D.10 / OD-GD-10 — `body.indicadorId` NÃO é autoridade.
+ *
+ * authenticated user id → indicador autorizado (server-side binding)
+ * body.indicadorId opcional → hint; match continua; diverge → DENY
+ * sem identidade autenticada válida → DENY
+ */
+export type ResolveIndicadorIdResult =
+  | { ok: true; indicadorId: number }
+  | {
+      ok: false;
+      status: 401 | 403;
+      reason: 'unauthenticated' | 'indicador_mismatch';
+    };
+
+export function resolveIndicadorIdFromAuth(opts: {
+  authenticatedUserId?: number | null;
+  bodyIndicadorId?: unknown;
+}): ResolveIndicadorIdResult {
+  const raw = opts.authenticatedUserId;
+  const authId = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(authId) || authId <= 0) {
+    return { ok: false, status: 401, reason: 'unauthenticated' };
+  }
+
+  const bodyRaw = opts.bodyIndicadorId;
+  if (bodyRaw !== undefined && bodyRaw !== null && bodyRaw !== '') {
+    const bodyId = Number(bodyRaw);
+    if (!Number.isFinite(bodyId) || bodyId !== authId) {
+      return { ok: false, status: 403, reason: 'indicador_mismatch' };
+    }
+  }
+
+  return { ok: true, indicadorId: authId };
+}
+
 export function montarUrlIndicacao(
   siteUrl: string,
   tokenProposta: string,

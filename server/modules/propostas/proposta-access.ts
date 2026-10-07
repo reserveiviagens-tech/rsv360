@@ -2,6 +2,20 @@
  * PR-03b — Authorization for proposta lookup by numeric :id (BOLA/IDOR).
  * Capability pública continua em rotas `rt-*` / cotação-pública (fora deste módulo).
  * GET anônimo por :id → payload deny-by-default (nunca tokenPublico / PII / chat).
+ *
+ * ---------------------------------------------------------------------------
+ * G-D.3 / OD-GD-02 — STAFF de *resource access* ≠ allowlist HTTP `staffAuth`
+ * ---------------------------------------------------------------------------
+ * `staffAuth` (middleware global) admite JWT roles {admin, manager, user}.
+ * Este módulo usa um Set **mais estreito** para privilegio de leitura/sensitive:
+ *
+ *   PROPOSTA_ACCESS_STAFF_ROLES = {admin, manager}
+ *
+ * Regras canônicas:
+ * - `user` NÃO recebe privilégio de staff em proposta-access (sem presumir).
+ * - `supervisor` NÃO é staff de access (aprovação = admin only em G-D.1 / OD-GD-04).
+ * - Não alargar este Set sem Owner Decision.
+ * - Não alterar o export global `staffAuth` para “alinhar” (blast radius).
  */
 
 export type PropostaAccessUser = {
@@ -24,10 +38,18 @@ export type PropostaAccessRow = {
   moeda?: string | null;
 };
 
-const STAFF_ROLES = new Set(['admin', 'manager']);
+/** Canonical access-staff roles (G-D.3). Frozen — do not widen without OD. */
+export const PROPOSTA_ACCESS_STAFF_ROLES = Object.freeze(['admin', 'manager'] as const);
+
+const STAFF_ROLES: ReadonlySet<string> = new Set(PROPOSTA_ACCESS_STAFF_ROLES);
+
+/** True iff role is in the access-staff Set (not the HTTP staffAuth allowlist). */
+export function isPropostaAccessStaffRole(role?: string | null): boolean {
+  return Boolean(role && STAFF_ROLES.has(role));
+}
 
 export function isPropostaStaff(user: PropostaAccessUser | null | undefined): boolean {
-  return Boolean(user?.role && STAFF_ROLES.has(user.role));
+  return isPropostaAccessStaffRole(user?.role);
 }
 
 export function ownsProposta(

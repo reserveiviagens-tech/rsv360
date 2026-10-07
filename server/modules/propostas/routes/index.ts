@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import { ZodError } from 'zod';
-import { authenticateJwt, optionalJwt, requireRole, staffAuth } from '../../../middleware/auth.middleware';
+import { optionalJwt, staffAuth } from '../../../middleware/auth.middleware';
 import { publicLimiter } from '../../../middleware/public-limiter';
 import { requireTurnstile } from '../../../middleware/turnstile.middleware';
 import { propostasService } from '../services/propostas.service';
@@ -27,8 +27,13 @@ import {
 } from '../services/proposta-cinematic-events.service';
 import { gerarTokenPublicoProposta } from '../../../lib/proposta-token';
 import { solicitarAlteracao, aprovar, negar } from '../aprovacao';
-import { hasMinRole } from '../rbac';
-import { registrarIndicacao } from '../mgm';
+import { isPropostasAprovador } from '../rbac';
+import {
+  canMutatePropostaEconomicFields,
+  normalizeValorTotalCap,
+  payloadTouchesValorTotal,
+} from '../economic-authority';
+import { registrarIndicacao, resolveIndicadorIdFromAuth } from '../mgm';
 import { sugerirPacoteFromProposta, criarTemplateFromProposta } from '../ia-copiloto';
 import { asRequiredString } from '../../../lib/parse';
 import {
@@ -41,7 +46,18 @@ import {
 } from '../schemas/proposta-write.schema';
 
 const router = Router();
-const agentAuth = [authenticateJwt, requireRole('admin', 'manager', 'user')];
+
+/**
+ * G-D.1 / OD-GD-03 — `agentAuth` é **alias documentado** de `staffAuth`.
+ * Mesma cadeia; não inventar set distinto de autoridade.
+ * ≠ Partner role `agente` · ≠ módulo AI `/agentes`.
+ * Remoção futura do alias = gate próprio.
+ *
+ * Matriz HTTP (esqueleto OD-GD-02): create/edit/view-staff → staffAuth;
+ * approve/reject → staffAuth + isPropostasAprovador (admin only, OD-GD-04);
+ * HITL takeover/release + DELETE → agentAuth (= staffAuth).
+ */
+const agentAuth = staffAuth;
 
 function zodOrBad(res: import('express').Response, error: unknown) {
   if (error instanceof ZodError) {
@@ -131,6 +147,10 @@ router.delete('/templates/:templateId', ...staffAuth, async (req, res) => {
 
 router.post('/from-orcamento/:orcamentoId', ...staffAuth, async (req, res) => {
   try {
+    // G-D.6 / PA-DEC-006 — createFromOrcamento materializa valorTotal (efeito econômico)
+    if (!canMutatePropostaEconomicFields(req.user?.role)) {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
     const created = await propostasService.createFromOrcamento(
       Number(req.params.orcamentoId),
       req.user?.id,
@@ -278,7 +298,8 @@ router.post('/:id/aprovacao/solicitar', ...staffAuth, async (req, res) => {
 
 router.post('/:id/aprovacao/aprovar', ...staffAuth, async (req, res) => {
   try {
-    if (!hasMinRole(req.user?.role, 'supervisor')) {
+    // G-D.1 / OD-GD-04 + G-D.6 / PA-DEC-006 — admin + economic effect (voucher definitivo)
+    if (!isPropostasAprovador(req.user?.role) || !canMutatePropostaEconomicFields(req.user?.role)) {
       return res.status(403).json({ success: false, error: 'Acesso negado' });
     }
     const actor = requireAuthActor(req);
@@ -295,7 +316,8 @@ router.post('/:id/aprovacao/aprovar', ...staffAuth, async (req, res) => {
 
 router.post('/:id/aprovacao/negar', ...staffAuth, async (req, res) => {
   try {
-    if (!hasMinRole(req.user?.role, 'supervisor')) {
+    // G-D.1 / OD-GD-04 — negação = mesma allowlist admin only
+    if (!isPropostasAprovador(req.user?.role)) {
       return res.status(403).json({ success: false, error: 'Acesso negado' });
     }
     const actor = requireAuthActor(req);
@@ -323,8 +345,16 @@ router.post('/:id/indicacao', optionalJwt, async (req, res) => {
     if (!isPropostaStaff(req.user) && !ownsProposta(req.user, item)) {
       return res.status(404).json({ success: false, error: 'Nenhuma proposta encontrada' });
     }
+    // G-D.10 / OD-GD-10 — indicadorId do body ≠ autoridade; bind ao JWT user
+    const resolved = resolveIndicadorIdFromAuth({
+      authenticatedUserId: req.user?.id,
+      bodyIndicadorId: req.body?.indicadorId,
+    });
+    if (!resolved.ok) {
+      return res.status(resolved.status).json({ success: false, error: 'Acesso negado' });
+    }
     const data = await registrarIndicacao({
-      indicadorId: Number(req.body.indicadorId),
+      indicadorId: resolved.indicadorId,
       tokenProposta: item.tokenPublico,
       canal: req.body.canal,
       indicadoEmail: req.body.indicadoEmail,
@@ -391,10 +421,22 @@ router.get('/:id', publicLimiter, optionalJwt, async (req, res) => {
 router.post('/', ...staffAuth, async (req, res) => {
   try {
     const body = PropostaWriteSchema.parse(req.body);
+    let valorTotal: string | undefined;
+    if (payloadTouchesValorTotal(body)) {
+      // G-D.6 / PA-DEC-006 — body.valorTotal ≠ authority; actor + caps
+      if (!canMutatePropostaEconomicFields(req.user?.role)) {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      const capped = normalizeValorTotalCap(body.valorTotal);
+      if (!capped.ok) {
+        return res.status(capped.status).json({ success: false, error: 'valorTotal inválido' });
+      }
+      valorTotal = capped.valorTotal;
+    }
     const created = await propostasService.create(
       {
         ...body,
-        ...(body.valorTotal !== undefined ? { valorTotal: String(body.valorTotal) } : {}),
+        ...(valorTotal !== undefined ? { valorTotal } : {}),
         ...(body.isPublica ? { tokenPublico: gerarTokenPublicoProposta() } : {}),
       },
       req.user?.id,
@@ -410,11 +452,23 @@ router.put('/:id', ...staffAuth, async (req, res) => {
   try {
     const { id } = PropostaIdParamSchema.parse(req.params);
     const body = PropostaUpdateSchema.parse(req.body);
+    let valorTotal: string | undefined;
+    if (payloadTouchesValorTotal(body)) {
+      // G-D.6 / PA-DEC-006 — body.valorTotal ≠ authority; actor + caps
+      if (!canMutatePropostaEconomicFields(req.user?.role)) {
+        return res.status(403).json({ success: false, error: 'Acesso negado' });
+      }
+      const capped = normalizeValorTotalCap(body.valorTotal);
+      if (!capped.ok) {
+        return res.status(capped.status).json({ success: false, error: 'valorTotal inválido' });
+      }
+      valorTotal = capped.valorTotal;
+    }
     const updated = await propostasService.update(
       id,
       {
         ...body,
-        ...(body.valorTotal !== undefined ? { valorTotal: String(body.valorTotal) } : {}),
+        ...(valorTotal !== undefined ? { valorTotal } : {}),
       },
       req.user?.id,
     );
@@ -610,7 +664,8 @@ router.post('/:id/responder', publicLimiter, requireTurnstile, optionalJwt, asyn
     if (!item) {
       return res.status(404).json({ success: false, error: 'Nenhuma proposta encontrada' });
     }
-    // Accept on :id closed for guests — use /cotacao-publica/.../aceitar (token).
+    // G-D.9 C1 — Accept on :id closed for guests; public accept =
+    // POST /cotacao-publica/proposta/:token/aceitar (capability token).
     // Reject may use capability token; staff/owner always ok.
     if (action === 'accept') {
       if (!isPropostaStaff(req.user) && !ownsProposta(req.user, item)) {
