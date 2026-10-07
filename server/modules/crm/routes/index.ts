@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireCrmManager } from '../../membership/crm.guard';
 import guestsRoutes from './guest-profiles.routes';
 import loyaltyRoutes from './loyalty.routes';
 import campaignsRoutes from './campaigns.routes';
@@ -30,6 +31,9 @@ router.get('/health', (_req, res) => {
 /** Fail-closed: staff JWT required for all CRM data routes. */
 router.use(authenticateJwt);
 router.use(requireRole('admin', 'manager'));
+// WS-15 G-B.1: camada canonica COMPLEMENTAR atras da flag WS15_MEMBERSHIP_AUTHORITY.
+// Flag OFF => no-op (legacy governa); flag ON => exige membership verificada + role >= manager.
+router.use(requireCrmManager);
 
 router.use((req, _res, next) => {
   const propertyId = (req as any).propertyId;

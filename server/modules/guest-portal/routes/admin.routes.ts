@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requirePortalAdminManager } from '../../membership/guest-portal-admin.guard';
 import { tokenService } from '../services/token.service';
 import { requestsService } from '../services/requests.service';
 import { feedbackService } from '../services/feedback.service';
@@ -9,6 +10,9 @@ const router = Router();
 /** Fail-closed: real JWT + staff role (replaces cloud stub Bearer-any → admin). */
 router.use(authenticateJwt);
 router.use(requireRole('admin', 'manager'));
+// WS-15 G-B.2: camada canonica COMPLEMENTAR atras da flag WS15_MEMBERSHIP_AUTHORITY.
+// Flag OFF => no-op (legacy governa); flag ON => exige membership verificada + role >= manager.
+router.use(requirePortalAdminManager);
 
 router.post('/tokens', async (req, res) => {
   try {

@@ -4,8 +4,8 @@
 |---|---|
 | Status | **PLAN_PASS / PLAN_READY** |
 | CODE C1 | **REMOTE CLOSED** (`7ae07c76`) |
-| CODE C2 | **GO RECEIVED — VALIDATED** (waiting COMMIT GO) |
-| CODE C3 | **NOT AUTHORIZED** |
+| CODE C2 | **REMOTE CLOSED** (`745040a7`) |
+| CODE C3 | **GO RECEIVED — VALIDATED** (waiting COMMIT GO) |
 | MIGRATION / COMMIT / PUSH | **NOT AUTHORIZED** |
 | Ballot | OD-C-01…06 = **A/A/A/A/A/C** DECIDED |
 | Remote HEAD | `be14b977` |
@@ -38,8 +38,8 @@ Clear ≠ CODE GO.
 
 ```text
 C1  RoleAssignment surface     ← REMOTE CLOSED (7ae07c76)
-C2  Domain guards (não-G-C.9)  ← CODE GO DONE — WAITING COMMIT GO — PACOTE C — C2
-C3  Consumer route wiring      ← WAITING CODE GO — PACOTE C — C3
+C2  Domain guards (não-G-C.9)  ← REMOTE CLOSED (745040a7)
+C3  Consumer route wiring      ← CODE GO DONE — WAITING COMMIT GO — PACOTE C — C3
 ```
 
 Cada fatia exige token literal próprio. Sem monólito.
@@ -103,9 +103,9 @@ apps/**
 
 Guards: crm, guest-portal-admin, multi-property, revenue, payments (**somente** `server/modules/membership/payments.guard.ts`), fornecedores-hub, cms, configuracoes, notifications, campanhas, passageiros, logistica, relatorios, orcamentos + testes `*-guard.test.ts` correspondentes. **167 PASS.**
 
-### C3 (após CODE GO — C3)
+### C3 (CODE GO validado — ver `PACOTE_C_C3_IMPLEMENTATION_RESULT.md`)
 
-Route wiring dos domínios C2 **exceto** partners (OUT) e **exceto** `backend/server/modules/payments/**`.
+13 rotas com wiring C2. **Exceto:** partners, `backend/server/modules/payments/**`, `notifications/{routes,management-routes}.js` (C36-ID-05 property-scope — gate separado).
 
 ---
 
@@ -152,15 +152,15 @@ Fail-closed preservado. Sem segunda autoridade. Body/query/header ≠ authority.
 ```text
 PLAN_PASS / PLAN_READY
 C1           = REMOTE CLOSED
-CODE GO C2   = EXECUTED (167 PASS)
-C2           = READY FOR COMMIT GO
-C3           = NOT AUTHORIZED
+C2           = REMOTE CLOSED
+CODE GO C3   = EXECUTED (13 routes validated)
+C3           = READY FOR COMMIT GO
 MIGRATION GO = NOT AUTHORIZED
 COMMIT/PUSH  = NOT AUTHORIZED
 STOP         = ACTIVE
 
 NEXT TOKEN POSSÍVEL (Owner):
-  COMMIT GO — PACOTE C — C2
+  COMMIT GO — PACOTE C — C3
 ```
 
 ---

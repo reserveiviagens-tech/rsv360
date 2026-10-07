@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { staffAuth } from '../../../middleware/auth.middleware';
+import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireLogisticaViewer } from '../../membership/logistica.guard';
 import { badRequest as badRequestShared } from '../../../lib/bad-request';
 import { logisticaService } from '../services/logistica.service';
 import {
@@ -16,6 +17,15 @@ import {
 } from '../schemas/logistica-write.schema';
 
 const router = Router();
+
+// WS-15 G-C.7: composição LOCAL EQUIVALENTE ao array compartilhado staffAuth
+// (auth.middleware:88), SEM alterá-lo: mesmos 2 primeiros elementos + guard canônico
+// como 3º elemento. Mínimo real = viewer (mapeamento user -> viewer).
+// Flag OFF => no-op; flag ON => membership verificada + role >= viewer.
+// /health não usa staffAuth — intacta.
+// NOTA DE DIVERGÊNCIA: se o array compartilhado mudar de roles, este literal deve ser
+// reconciliado em gate próprio (never diverge silently).
+const staffAuth = [authenticateJwt, requireRole('admin', 'manager', 'user'), requireLogisticaViewer];
 
 function badRequest(res: import('express').Response, error: unknown) {
   return badRequestShared(res, error, { successEnvelope: true });

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../middleware/auth.middleware';
+import { requireCmsManager } from '../membership/cms.guard';
 import { AMENIDADE_LABELS, AMENIDADE_CODES } from './amenidades';
 import { cmsService } from './service';
 import {
@@ -10,7 +11,10 @@ import {
 } from './upload';
 
 const router = Router();
-const staffAuth = [authenticateJwt, requireRole('admin', 'manager')];
+// WS-15 G-C.2: guard canônico COMPLEMENTAR como 3º elemento do array (roda após o
+// requireRole legado em cada rota `...staffAuth`). Mínimo real = manager (literal
+// admin/manager em todas as rotas). Flag OFF => no-op; flag ON => membership + >= manager.
+const staffAuth = [authenticateJwt, requireRole('admin', 'manager'), requireCmsManager];
 
 router.get('/amenidades', ...staffAuth, (_req, res) => {
   res.json({

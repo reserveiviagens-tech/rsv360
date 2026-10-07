@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireRevenueManager } from '../../membership/revenue.guard';
 import pricingRulesRoutes from './pricing-rules.routes';
 import rateCalendarRoutes from './rate-calendar.routes';
 import forecastRoutes from './forecast.routes';
@@ -29,6 +30,10 @@ router.get('/health', (_req, res) => {
 /** Fail-closed: staff JWT required for pricing / calendar mutations. */
 router.use(authenticateJwt);
 router.use(requireRole('admin', 'manager'));
+// WS-15 G-B.4: camada canonica COMPLEMENTAR atras da flag WS15_MEMBERSHIP_AUTHORITY.
+// Flag OFF => no-op (legacy governa); flag ON => exige membership verificada + role >= manager.
+// SOMENTE autorização — nenhuma lógica de pricing/calendar/forecast alterada.
+router.use(requireRevenueManager);
 
 router.use((req, _res, next) => {
   const propertyId = (req as any).propertyId;

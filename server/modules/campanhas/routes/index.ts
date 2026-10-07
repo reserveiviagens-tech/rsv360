@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { optionalJwt, staffAuth } from '../../../middleware/auth.middleware';
+import { optionalJwt, authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireCampanhasViewer } from '../../membership/campanhas.guard';
 import { badRequest as badRequestShared } from '../../../lib/bad-request';
 import { campanhasViagemService } from '../services/campanhas.service';
 import {
@@ -13,6 +14,15 @@ import {
 } from '../schemas/campanhas-write.schema';
 
 const router = Router();
+
+// WS-15 G-C.5: composição LOCAL EQUIVALENTE ao array compartilhado staffAuth
+// (auth.middleware:88), SEM alterá-lo: mesmos 2 primeiros elementos + guard canônico
+// como 3º elemento. Mínimo real = viewer (mapeamento user -> viewer).
+// Flag OFF => no-op; flag ON => membership verificada + role >= viewer.
+// /health e POST /cupons/validar (optionalJwt) não usam staffAuth — intactos.
+// NOTA DE DIVERGÊNCIA: se o array compartilhado mudar de roles, este literal deve ser
+// reconciliado em gate próprio (never diverge silently).
+const staffAuth = [authenticateJwt, requireRole('admin', 'manager', 'user'), requireCampanhasViewer];
 
 function badRequest(res: import('express').Response, error: unknown) {
   return badRequestShared(res, error, { successEnvelope: true });

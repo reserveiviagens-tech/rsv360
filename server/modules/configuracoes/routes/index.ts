@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireConfigAdmin } from '../../membership/configuracoes.guard';
 import { ConfigService } from '../config.service';
 import { configPropostaSchema } from '../../fornecedores-hub/schema';
 
 const router = Router();
-const adminAuth = [authenticateJwt, requireRole('admin')];
+// WS-15 G-C.3: guard canônico COMPLEMENTAR como 3º elemento do array (roda após o
+// requireRole legado em cada rota `...adminAuth`). Mínimo real = admin (literal admin).
+// /health permanece público (sem array). Flag OFF => no-op; flag ON => fail-closed.
+const adminAuth = [authenticateJwt, requireRole('admin'), requireConfigAdmin];
 
 router.get('/health', (_req, res) => {
   res.json({ module: 'configuracoes', status: 'ok' });

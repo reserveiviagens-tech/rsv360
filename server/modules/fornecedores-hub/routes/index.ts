@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireFornecedoresAdmin } from '../../membership/fornecedores-hub.guard';
 import { invalidarCache, resolverOfertas } from '../resolver';
 import { ConflictError } from '../lock';
 import { reservarVaga } from '../services/reservar-vaga';
@@ -7,7 +8,10 @@ import { fornecedoresApiService } from '../services/fornecedores-api.service';
 import { asRequiredString } from '../../../lib/parse';
 
 const router = Router();
-const adminAuth = [authenticateJwt, requireRole('admin')];
+// WS-15 G-C.1: guard canônico COMPLEMENTAR como 3º elemento do array (roda após o
+// requireRole legado em cada rota `...adminAuth`). Flag OFF => no-op (legacy governa);
+// flag ON => membership verificada + role >= admin. /health permanece público (sem array).
+const adminAuth = [authenticateJwt, requireRole('admin'), requireFornecedoresAdmin];
 
 router.get('/health', (_req, res) => {
   res.json({ module: 'fornecedores-hub', status: 'ok' });

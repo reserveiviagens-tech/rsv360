@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ZodError } from 'zod';
-import { staffAuth } from '../../../middleware/auth.middleware';
+import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireRelatoriosViewer } from '../../membership/relatorios.guard';
 import { relatoriosService } from '../services/relatorios.service';
 import {
   RelatorioSnapshotCreateSchema,
@@ -8,6 +9,15 @@ import {
 } from '../schemas/relatorio-write.schema';
 
 const router = Router();
+
+// WS-15 G-C.7: composição LOCAL EQUIVALENTE ao array compartilhado staffAuth
+// (auth.middleware:88), SEM alterá-lo: mesmos 2 primeiros elementos + guard canônico
+// como 3º elemento. Mínimo real = viewer (mapeamento user -> viewer).
+// Flag OFF => no-op; flag ON => membership verificada + role >= viewer.
+// /health não usa staffAuth — intacta.
+// NOTA DE DIVERGÊNCIA: se o array compartilhado mudar de roles, este literal deve ser
+// reconciliado em gate próprio (never diverge silently).
+const staffAuth = [authenticateJwt, requireRole('admin', 'manager', 'user'), requireRelatoriosViewer];
 
 router.get('/health', (_req, res) => {
   res.json({ module: 'relatorios', status: 'ok' });

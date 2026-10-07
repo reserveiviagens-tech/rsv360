@@ -4,10 +4,15 @@
  */
 const express = require('express');
 const { authenticateJwt, requireRole } = require('../../middleware/auth.middleware');
+const { requireNotificationsSettingsManager } = require('../membership/notifications.guard');
 const repo = require('./notification.repository');
 
 const router = express.Router();
-const adminAuth = [authenticateJwt, requireRole('admin', 'manager')];
+// WS-15 G-C.4: guard canônico COMPLEMENTAR como 3º elemento do array (roda após o
+// requireRole legado em cada rota `...adminAuth`). Mínimo real = manager (literal
+// admin/manager em todas as rotas). TS consumido pelo .js exatamente como
+// auth.middleware.ts já é. Flag OFF => no-op; flag ON => membership + >= manager.
+const adminAuth = [authenticateJwt, requireRole('admin', 'manager'), requireNotificationsSettingsManager];
 
 const STATIC_DEFAULTS = {
   empresa: {
@@ -36,9 +41,28 @@ async function notificacoesSettings(propertyId) {
   };
 }
 
+/**
+ * C36-ID-05 (D1) — fail-closed property scope. No default property exists;
+ * an absent or invalid scope is refused instead of acting on property 1.
+ * R2: the guard never resolves a property from body/query.
+ */
+function requirePropertyScope(req, res) {
+  const id = req.propertyId;
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(403).json({
+      success: false,
+      error: 'Nenhuma propriedade no contexto',
+      code: 'PROPERTY_CONTEXT_REQUIRED',
+    });
+    return null;
+  }
+  return id;
+}
+
 router.get('/', ...adminAuth, async (req, res) => {
   try {
-    const propertyId = req.propertyId || 1;
+    const propertyId = requirePropertyScope(req, res);
+    if (propertyId === null) return;
     const notif = await notificacoesSettings(propertyId);
     const flat = {
       ...STATIC_DEFAULTS.empresa,
@@ -66,7 +90,9 @@ router.patch('/category/:category/:settingId', ...adminAuth, async (req, res) =>
       };
       const field = map[settingId];
       if (field) {
-        await repo.upsertTenantConfig(req.propertyId || 1, { [field]: value }, req.user?.id);
+        const propertyId = requirePropertyScope(req, res);
+        if (propertyId === null) return;
+        await repo.upsertTenantConfig(propertyId, { [field]: value }, req.user?.id);
         return res.json({ success: true, setting: { id: settingId, value, category } });
       }
     }
