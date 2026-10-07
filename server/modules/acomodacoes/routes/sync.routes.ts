@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireAcomodacoesSyncViewer } from '../../membership/acomodacoes-sync.guard';
 import { resolveSafeCsvPath, UnsafeCsvPathError } from '../sync/safe-csv-path';
 import { syncEmpreendimentosCaldas } from '../sync/sync-empreendimentos';
 
 const router = Router();
-const staffAuth = [authenticateJwt, requireRole('admin', 'manager', 'user')];
+// WS-15 G-C.9a: guard canônico COMPLEMENTAR como 3º elemento (roda após o requireRole
+// legado). Mínimo real = viewer. Flag OFF => no-op; flag ON => fail-closed.
+const staffAuth = [authenticateJwt, requireRole('admin', 'manager', 'user'), requireAcomodacoesSyncViewer];
 
 router.post('/empreendimentos-caldas', ...staffAuth, async (req, res) => {
   try {

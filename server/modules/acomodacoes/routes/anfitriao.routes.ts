@@ -1,5 +1,8 @@
 import { Router, type Request } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireAnfitriaoReadPartner } from '../../membership/anfitriao-read.guard';
+import { requireAnfitriaoWritePartner } from '../../membership/anfitriao-write.guard';
+import { requireAnfitriaoStaffManager } from '../../membership/anfitriao-staff.guard';
 import { normalizarListaDatas } from '../services/anfitriao-bulk.util';
 import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
 import { rateCalendarService } from '../services/rate-calendar.service';
@@ -24,7 +27,13 @@ const parceiroAuth = [
 ];
 const masterAuth = [authenticateJwt, requireRole('anfitriao', 'admin', 'manager')];
 const staffAprovacao = [authenticateJwt, requireRole('admin', 'manager')];
-
+/** G-C.9c.2 — READ GETs only. Does not mutate shared parceiroAuth/masterAuth. */
+const anfitriaoReadAuth = [...parceiroAuth, requireAnfitriaoReadPartner];
+const anfitriaoMasterReadAuth = [...masterAuth, requireAnfitriaoReadPartner];
+/** G-C.9c.3 — WRITE mutations. Partner/master Model D; staffAprovacao Modelo A (OD-9c-A). */
+const anfitriaoWriteAuth = [...parceiroAuth, requireAnfitriaoWritePartner];
+const anfitriaoMasterWriteAuth = [...masterAuth, requireAnfitriaoWritePartner];
+const staffAprovacaoAuth = [...staffAprovacao, requireAnfitriaoStaffManager];
 function authFromReq(req: Request): AuthContext {
   const userId = req.user?.id;
   if (typeof userId !== 'number') {
@@ -37,7 +46,7 @@ function authFromReq(req: Request): AuthContext {
   };
 }
 
-router.get('/dashboard', ...parceiroAuth, async (req, res) => {
+router.get('/dashboard', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const data = await anfitriaoService.dashboardKpis(authFromReq(req));
     res.json({ success: true, data });
@@ -46,7 +55,7 @@ router.get('/dashboard', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/desempenho', ...parceiroAuth, async (req, res) => {
+router.get('/desempenho', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
     const data = await desempenhoService.obterMetricas(authFromReq(req), mes);
@@ -56,7 +65,7 @@ router.get('/desempenho', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
+router.get('/desempenho/relatorio.csv', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
     const csv = await desempenhoService.relatorioCsv(authFromReq(req), mes);
@@ -72,7 +81,7 @@ router.get('/desempenho/relatorio.csv', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/comunicacao/sms-status', ...parceiroAuth, async (_req, res) => {
+router.get('/comunicacao/sms-status', ...anfitriaoReadAuth, async (_req, res) => {
   try {
     res.json({ success: true, data: getTwilioSmsConfigStatus() });
   } catch (error) {
@@ -80,7 +89,7 @@ router.get('/comunicacao/sms-status', ...parceiroAuth, async (_req, res) => {
   }
 });
 
-router.get('/impostos/export.csv', ...parceiroAuth, async (req, res) => {
+router.get('/impostos/export.csv', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const ativo = parseAtivoFilter(req.query.ativo);
     if (ativo == null) {
@@ -98,7 +107,7 @@ router.get('/impostos/export.csv', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/impostos/relatorio-mensal.csv', ...parceiroAuth, async (req, res) => {
+router.get('/impostos/relatorio-mensal.csv', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
     if (mes != null && !/^\d{4}-\d{2}$/.test(mes)) {
@@ -118,7 +127,7 @@ router.get('/impostos/relatorio-mensal.csv', ...parceiroAuth, async (req, res) =
 });
 
 /** NFSe draft only — no municipal authorization / certificate call. */
-router.post('/unidades/:id/nfse/preparar', ...masterAuth, async (req, res) => {
+router.post('/unidades/:id/nfse/preparar', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const mes =
       typeof req.body?.mes === 'string'
@@ -157,7 +166,7 @@ router.post('/unidades/:id/nfse/preparar', ...masterAuth, async (req, res) => {
   }
 });
 
-router.get('/unidades/:id/nfse/rascunhos', ...masterAuth, async (req, res) => {
+router.get('/unidades/:id/nfse/rascunhos', ...anfitriaoMasterReadAuth, async (req, res) => {
   try {
     const result = await anfitriaoNfseService.listNfseDrafts(
       authFromReq(req),
@@ -175,7 +184,7 @@ router.get('/unidades/:id/nfse/rascunhos', ...masterAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/desarquivar-bulk', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/desarquivar-bulk', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const parsed = parseBulkIds(req.body?.ids);
     if ('error' in parsed) {
@@ -201,7 +210,7 @@ router.post('/unidades/desarquivar-bulk', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/:id/preview-link', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/preview-link', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.criarPreviewLink(
       authFromReq(req),
@@ -225,7 +234,7 @@ router.post('/unidades/:id/preview-link', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/:id/ical-token', ...masterAuth, async (req, res) => {
+router.post('/unidades/:id/ical-token', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const regenerate = Boolean(req.body?.regenerate);
     const result = await rateCalendarService.garantirIcalToken(
@@ -242,7 +251,7 @@ router.post('/unidades/:id/ical-token', ...masterAuth, async (req, res) => {
   }
 });
 
-router.put('/unidades/:id/ical-import', ...masterAuth, async (req, res) => {
+router.put('/unidades/:id/ical-import', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const url =
       req.body?.url === null || req.body?.url === ''
@@ -267,7 +276,7 @@ router.put('/unidades/:id/ical-import', ...masterAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/:id/ical-import/sync', ...masterAuth, async (req, res) => {
+router.post('/unidades/:id/ical-import/sync', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const result = await rateCalendarService.sincronizarIcalImport(
       authFromReq(req),
@@ -321,7 +330,7 @@ router.get('/unidades/:id/ical.ics', async (req, res) => {
   }
 });
 
-router.get('/minhas', ...parceiroAuth, async (req, res) => {
+router.get('/minhas', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 20);
@@ -338,7 +347,7 @@ router.get('/minhas', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/unidades/:id', ...parceiroAuth, async (req, res) => {
+router.get('/unidades/:id', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.obterUnidade(authFromReq(req), Number(req.params.id));
     if ('error' in result) {
@@ -353,7 +362,7 @@ router.get('/unidades/:id', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
+router.patch('/unidades/:id', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.atualizarUnidade(
       authFromReq(req),
@@ -498,7 +507,7 @@ router.patch('/unidades/:id', ...parceiroAuth, async (req, res) => {
 /** Upload + convert (WebP 256) image for listings rail thumbnail. */
 router.post(
   '/unidades/:id/trilho-thumb',
-  ...parceiroAuth,
+  ...anfitriaoWriteAuth,
   (req, res, next) => {
     trilhoThumbUpload(req, res, (err: unknown) => {
       if (err) return trilhoThumbUploadErrorHandler(err, req, res, next);
@@ -542,7 +551,7 @@ router.post(
  */
 router.post(
   '/unidades/:id/acessibilidade-foto',
-  ...parceiroAuth,
+  ...anfitriaoWriteAuth,
   (req, res, next) => {
     trilhoThumbUpload(req, res, (err: unknown) => {
       if (err) return trilhoThumbUploadErrorHandler(err, req, res, next);
@@ -579,7 +588,7 @@ router.post(
 /** Upload photo into listing gallery (does not overwrite trilho thumb). */
 router.post(
   '/unidades/:id/galeria-foto',
-  ...parceiroAuth,
+  ...anfitriaoWriteAuth,
   (req, res, next) => {
     trilhoThumbUpload(req, res, (err: unknown) => {
       if (err) return trilhoThumbUploadErrorHandler(err, req, res, next);
@@ -614,7 +623,7 @@ router.post(
 );
 
 /** Reorder / remove / set cover / category / caption on gallery midia. */
-router.patch('/unidades/:id/galeria', ...parceiroAuth, async (req, res) => {
+router.patch('/unidades/:id/galeria', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const removeUrl = typeof req.body?.removeUrl === 'string' ? req.body.removeUrl.trim() : undefined;
     const moveUrl = typeof req.body?.moveUrl === 'string' ? req.body.moveUrl.trim() : undefined;
@@ -669,7 +678,7 @@ router.patch('/unidades/:id/galeria', ...parceiroAuth, async (req, res) => {
 });
 
 /** Pick an existing gallery URL as rail cover (no re-encode). */
-router.patch('/unidades/:id/trilho-capa', ...parceiroAuth, async (req, res) => {
+router.patch('/unidades/:id/trilho-capa', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const url = typeof req.body?.url === 'string' ? req.body.url.trim() : '';
     if (!url || url.length > 2048) {
@@ -695,7 +704,7 @@ router.patch('/unidades/:id/trilho-capa', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/:id/enviar-aprovacao', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/enviar-aprovacao', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.enviarAprovacao(authFromReq(req), Number(req.params.id));
     if (result.error === 'forbidden') {
@@ -713,7 +722,7 @@ router.post('/unidades/:id/enviar-aprovacao', ...parceiroAuth, async (req, res) 
   }
 });
 
-router.post('/unidades/:id/arquivar', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/arquivar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const rawMotivo = req.body?.motivo;
     if (rawMotivo !== undefined && rawMotivo !== null && typeof rawMotivo !== 'string') {
@@ -750,7 +759,7 @@ router.post('/unidades/:id/arquivar', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/:id/desarquivar', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/desarquivar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const rawMotivo = req.body?.motivo;
     if (rawMotivo !== undefined && rawMotivo !== null && typeof rawMotivo !== 'string') {
@@ -787,7 +796,7 @@ router.post('/unidades/:id/desarquivar', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.post('/coanfitrioes/aceitar-token', ...parceiroAuth, async (req, res) => {
+router.post('/coanfitrioes/aceitar-token', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
     if (!token) {
@@ -815,7 +824,7 @@ router.post('/coanfitrioes/aceitar-token', ...parceiroAuth, async (req, res) => 
   }
 });
 
-router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/coanfitrioes', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const nome = typeof req.body?.nome === 'string' ? req.body.nome : '';
     const email = typeof req.body?.email === 'string' ? req.body.email : '';
@@ -865,7 +874,7 @@ router.post('/unidades/:id/coanfitrioes', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.post('/unidades/:id/coanfitrioes/:coId/reenviar', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/coanfitrioes/:coId/reenviar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.reenviarConviteCoanfitriao(
       authFromReq(req),
@@ -898,7 +907,7 @@ router.post('/unidades/:id/coanfitrioes/:coId/reenviar', ...parceiroAuth, async 
   }
 });
 
-router.post('/unidades/:id/coanfitrioes/:coId/revogar', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/coanfitrioes/:coId/revogar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.revogarCoanfitriao(
       authFromReq(req),
@@ -920,7 +929,7 @@ router.post('/unidades/:id/coanfitrioes/:coId/revogar', ...parceiroAuth, async (
   }
 });
 
-router.post('/unidades/:id/coanfitrioes/:coId/aceitar', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/coanfitrioes/:coId/aceitar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.aceitarConviteCoanfitriao(
       authFromReq(req),
@@ -948,7 +957,7 @@ router.post('/unidades/:id/coanfitrioes/:coId/aceitar', ...parceiroAuth, async (
   }
 });
 
-router.delete('/unidades/:id/coanfitrioes/:coId', ...parceiroAuth, async (req, res) => {
+router.delete('/unidades/:id/coanfitrioes/:coId', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.removerCoanfitriao(
       authFromReq(req),
@@ -976,7 +985,7 @@ router.delete('/unidades/:id/coanfitrioes/:coId', ...parceiroAuth, async (req, r
   }
 });
 
-router.post('/admin/unidades/:id/aprovar', ...staffAprovacao, async (req, res) => {
+router.post('/admin/unidades/:id/aprovar', ...staffAprovacaoAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.aprovarUnidade(req.user!.role ?? '', Number(req.params.id));
     if ('error' in result) {
@@ -989,7 +998,7 @@ router.post('/admin/unidades/:id/aprovar', ...staffAprovacao, async (req, res) =
   }
 });
 
-router.post('/admin/unidades/:id/rejeitar', ...staffAprovacao, async (req, res) => {
+router.post('/admin/unidades/:id/rejeitar', ...staffAprovacaoAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.rejeitarUnidade(
       req.user!.role ?? '',
@@ -1006,7 +1015,7 @@ router.post('/admin/unidades/:id/rejeitar', ...staffAprovacao, async (req, res) 
   }
 });
 
-router.get('/admin/verificacoes-local', ...staffAprovacao, async (req, res) => {
+router.get('/admin/verificacoes-local', ...staffAprovacaoAuth, async (req, res) => {
   try {
     const raw = String(req.query.status ?? 'enviado');
     const status =
@@ -1023,7 +1032,7 @@ router.get('/admin/verificacoes-local', ...staffAprovacao, async (req, res) => {
   }
 });
 
-router.post('/admin/unidades/:id/verificacao-local/aprovar', ...staffAprovacao, async (req, res) => {
+router.post('/admin/unidades/:id/verificacao-local/aprovar', ...staffAprovacaoAuth, async (req, res) => {
   try {
     const result = await anfitriaoService.decidirVerificacaoLocal(
       req.user!.role ?? '',
@@ -1045,7 +1054,7 @@ router.post('/admin/unidades/:id/verificacao-local/aprovar', ...staffAprovacao, 
   }
 });
 
-router.post('/admin/unidades/:id/verificacao-local/rejeitar', ...staffAprovacao, async (req, res) => {
+router.post('/admin/unidades/:id/verificacao-local/rejeitar', ...staffAprovacaoAuth, async (req, res) => {
   try {
     const motivo = typeof req.body?.motivo === 'string' ? req.body.motivo : undefined;
     const result = await anfitriaoService.decidirVerificacaoLocal(
@@ -1069,7 +1078,7 @@ router.post('/admin/unidades/:id/verificacao-local/rejeitar', ...staffAprovacao,
   }
 });
 
-router.get('/calendario', ...parceiroAuth, async (req, res) => {
+router.get('/calendario', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1083,7 +1092,7 @@ router.get('/calendario', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/reservas', ...parceiroAuth, async (req, res) => {
+router.get('/reservas', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1108,7 +1117,7 @@ router.get('/reservas', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/hoje', ...parceiroAuth, async (req, res) => {
+router.get('/hoje', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const hoje = typeof req.query.hoje === 'string' ? req.query.hoje : undefined;
     const result = await anfitriaoService.obterAgendaHoje(authFromReq(req), hoje);
@@ -1121,7 +1130,7 @@ router.get('/hoje', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/mensagens', ...parceiroAuth, async (req, res) => {
+router.get('/mensagens', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1139,7 +1148,7 @@ router.get('/mensagens', ...parceiroAuth, async (req, res) => {
 });
 
 /** Near-realtime unread badge (polling) — no WebSocket in this slice. */
-router.get('/mensagens/unread-count', ...parceiroAuth, async (req, res) => {
+router.get('/mensagens/unread-count', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1156,7 +1165,7 @@ router.get('/mensagens/unread-count', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res) => {
+router.get('/reservas/:propostaId/mensagens', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const propostaId = Number(req.params.propostaId);
     if (!Number.isFinite(propostaId)) {
@@ -1175,7 +1184,7 @@ router.get('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res) 
   }
 });
 
-router.post('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res) => {
+router.post('/reservas/:propostaId/mensagens', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const propostaId = Number(req.params.propostaId);
     if (!Number.isFinite(propostaId)) {
@@ -1205,7 +1214,7 @@ router.post('/reservas/:propostaId/mensagens', ...parceiroAuth, async (req, res)
   }
 });
 
-router.post('/reservas/:propostaId/aprovar', ...parceiroAuth, async (req, res) => {
+router.post('/reservas/:propostaId/aprovar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const propostaId = Number(req.params.propostaId);
     if (!Number.isFinite(propostaId)) {
@@ -1235,7 +1244,7 @@ router.post('/reservas/:propostaId/aprovar', ...parceiroAuth, async (req, res) =
   }
 });
 
-router.post('/reservas/:propostaId/rejeitar', ...parceiroAuth, async (req, res) => {
+router.post('/reservas/:propostaId/rejeitar', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const propostaId = Number(req.params.propostaId);
     if (!Number.isFinite(propostaId)) {
@@ -1261,7 +1270,7 @@ router.post('/reservas/:propostaId/rejeitar', ...parceiroAuth, async (req, res) 
   }
 });
 
-router.get('/unidades/:id/calendario', ...parceiroAuth, async (req, res) => {
+router.get('/unidades/:id/calendario', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1286,7 +1295,7 @@ router.get('/unidades/:id/calendario', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/unidades/:id/disponibilidade', ...parceiroAuth, async (req, res) => {
+router.get('/unidades/:id/disponibilidade', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1311,7 +1320,7 @@ router.get('/unidades/:id/disponibilidade', ...parceiroAuth, async (req, res) =>
   }
 });
 
-router.put('/unidades/:id/disponibilidade', ...parceiroAuth, async (req, res) => {
+router.put('/unidades/:id/disponibilidade', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const dias = Array.isArray(req.body?.dias) ? req.body.dias : [];
     const result = await anfitriaoService.salvarDisponibilidade(
@@ -1340,7 +1349,7 @@ router.put('/unidades/:id/disponibilidade', ...parceiroAuth, async (req, res) =>
   }
 });
 
-router.post('/unidades/:id/disponibilidade/bloquear', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/disponibilidade/bloquear', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const parsed = normalizarListaDatas(req.body?.datas);
     if ('error' in parsed) {
@@ -1373,7 +1382,7 @@ router.post('/unidades/:id/disponibilidade/bloquear', ...parceiroAuth, async (re
   }
 });
 
-router.post('/unidades/:id/disponibilidade/desbloquear', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/disponibilidade/desbloquear', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const parsed = normalizarListaDatas(req.body?.datas);
     if ('error' in parsed) {
@@ -1405,7 +1414,7 @@ router.post('/unidades/:id/disponibilidade/desbloquear', ...parceiroAuth, async 
   }
 });
 
-router.post('/unidades/:id/disponibilidade/preco', ...masterAuth, async (req, res) => {
+router.post('/unidades/:id/disponibilidade/preco', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const parsed = normalizarListaDatas(req.body?.datas);
     if ('error' in parsed) {
@@ -1449,7 +1458,7 @@ router.post('/unidades/:id/disponibilidade/preco', ...masterAuth, async (req, re
   }
 });
 
-router.get('/unidades/:id/rate-calendar', ...parceiroAuth, async (req, res) => {
+router.get('/unidades/:id/rate-calendar', ...anfitriaoReadAuth, async (req, res) => {
   try {
     const de = String(req.query.de ?? '');
     const ate = String(req.query.ate ?? '');
@@ -1474,7 +1483,7 @@ router.get('/unidades/:id/rate-calendar', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.put('/unidades/:id/rate-calendar/day', ...masterAuth, async (req, res) => {
+router.put('/unidades/:id/rate-calendar/day', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const data = String(req.body?.data ?? '');
     if (!data) {
@@ -1503,7 +1512,7 @@ router.put('/unidades/:id/rate-calendar/day', ...masterAuth, async (req, res) =>
   }
 });
 
-router.put('/unidades/:id/pricing-defaults', ...masterAuth, async (req, res) => {
+router.put('/unidades/:id/pricing-defaults', ...anfitriaoMasterWriteAuth, async (req, res) => {
   try {
     const result = await rateCalendarService.atualizarPricingDefaults(
       authFromReq(req),
@@ -1531,7 +1540,7 @@ router.put('/unidades/:id/pricing-defaults', ...masterAuth, async (req, res) => 
 
 router.post(
   '/unidades/:id/conjuntos-regras/:conjuntoId/aplicar',
-  ...masterAuth,
+  ...anfitriaoMasterWriteAuth,
   async (req, res) => {
     try {
       const de = String(req.body?.de ?? '');
@@ -1577,7 +1586,7 @@ router.post(
   },
 );
 
-router.post('/unidades/:id/aplicar-desconto', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/aplicar-desconto', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const result = await rateCalendarService.aplicarDesconto(
       authFromReq(req),
@@ -1614,7 +1623,7 @@ router.post('/unidades/:id/aplicar-desconto', ...parceiroAuth, async (req, res) 
   }
 });
 
-router.post('/unidades/:id/validar-desconto', ...parceiroAuth, async (req, res) => {
+router.post('/unidades/:id/validar-desconto', ...anfitriaoWriteAuth, async (req, res) => {
   try {
     const percentual = Number(req.body?.percentual);
     const result = await rateCalendarService.validarDescontoProposto(
@@ -1639,7 +1648,7 @@ router.post('/unidades/:id/validar-desconto', ...parceiroAuth, async (req, res) 
   }
 });
 
-router.post('/admin/carteira', ...staffAprovacao, async (req, res) => {
+router.post('/admin/carteira', ...staffAprovacaoAuth, async (req, res) => {
   try {
     const { corretorId, proprietarioId } = req.body ?? {};
     if (!corretorId || !proprietarioId) {

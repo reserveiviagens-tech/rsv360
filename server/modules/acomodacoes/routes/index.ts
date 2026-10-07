@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { getPinnedCodigosExternos, isEtapaAHotel, montarCardsPasso2 } from '@rsv360/shared';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import { publicLimiter } from '../../../middleware/public-limiter';
+import { requireAcomodacoesIndexAdmin } from '../../membership/acomodacoes-index.guard';
 import {
   acomodacoesService,
   mergeDisponiveisParaCards,
@@ -14,6 +15,8 @@ import { AddonPatchSchema } from '../schemas/write-allowlist.schema';
 const router = Router();
 const staffAuth = [authenticateJwt, requireRole('admin', 'manager', 'user')];
 const adminAuth = [authenticateJwt, requireRole('admin')];
+/** G-C.9c.1 — /admin/* only. Modelo A complementary; does not touch public routes. */
+const acomodacoesAdminAuth = [...adminAuth, requireAcomodacoesIndexAdmin];
 
 router.get('/health', (_req, res) => {
   res.json({ module: 'acomodacoes', status: 'ok' });
@@ -125,7 +128,7 @@ router.get('/addons', publicLimiter, async (_req, res) => {
   }
 });
 
-router.get('/admin/tipos', ...adminAuth, async (_req, res) => {
+router.get('/admin/tipos', ...acomodacoesAdminAuth, async (_req, res) => {
   try {
     const data = await acomodacoesService.listarTipos();
     res.json({ success: true, data });
@@ -134,7 +137,7 @@ router.get('/admin/tipos', ...adminAuth, async (_req, res) => {
   }
 });
 
-router.post('/admin/tipos', ...adminAuth, async (req, res) => {
+router.post('/admin/tipos', ...acomodacoesAdminAuth, async (req, res) => {
   try {
     const { slug, nome, icone, ordem } = req.body ?? {};
     if (!slug || !nome) return res.status(400).json({ success: false, error: 'slug e nome obrigatórios' });
@@ -145,7 +148,7 @@ router.post('/admin/tipos', ...adminAuth, async (req, res) => {
   }
 });
 
-router.patch('/admin/tipos/:id', ...adminAuth, async (req, res) => {
+router.patch('/admin/tipos/:id', ...acomodacoesAdminAuth, async (req, res) => {
   try {
     const data = await acomodacoesService.atualizarTipo(Number(req.params.id), req.body ?? {});
     if (!data) return res.status(404).json({ success: false, error: 'Tipo não encontrado' });
@@ -155,7 +158,7 @@ router.patch('/admin/tipos/:id', ...adminAuth, async (req, res) => {
   }
 });
 
-router.get('/admin/addons', ...adminAuth, async (_req, res) => {
+router.get('/admin/addons', ...acomodacoesAdminAuth, async (_req, res) => {
   try {
     const data = await acomodacoesService.listarAddons('hotel');
     res.json({ success: true, data });
@@ -164,7 +167,7 @@ router.get('/admin/addons', ...adminAuth, async (_req, res) => {
   }
 });
 
-router.post('/admin/addons', ...adminAuth, async (req, res) => {
+router.post('/admin/addons', ...acomodacoesAdminAuth, async (req, res) => {
   try {
     const { nome, descricao, precoTipo, valor, escopo, requerConfigBanheiro, ordem } = req.body ?? {};
     if (!nome || !precoTipo || valor == null) {
@@ -185,7 +188,7 @@ router.post('/admin/addons', ...adminAuth, async (req, res) => {
   }
 });
 
-router.patch('/admin/addons/:id', ...adminAuth, async (req, res) => {
+router.patch('/admin/addons/:id', ...acomodacoesAdminAuth, async (req, res) => {
   try {
     const parsed = AddonPatchSchema.parse(req.body);
     const patch: {
@@ -213,7 +216,7 @@ router.patch('/admin/addons/:id', ...adminAuth, async (req, res) => {
   }
 });
 
-router.delete('/admin/addons/:id', ...adminAuth, async (req, res) => {
+router.delete('/admin/addons/:id', ...acomodacoesAdminAuth, async (req, res) => {
   try {
     const data = await acomodacoesService.excluirAddon(Number(req.params.id));
     if (!data) return res.status(404).json({ success: false, error: 'Addon não encontrado' });

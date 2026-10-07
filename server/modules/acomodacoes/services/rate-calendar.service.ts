@@ -1016,6 +1016,22 @@ export const rateCalendarService = {
     return rows;
   },
 
+  /**
+   * Ownership lookup for G-C.9b.5 write path (anfitriao).
+   * Returns proprietarioId only — does NOT grant cohost visibility.
+   */
+  async getUnitOwner(
+    acomodacaoId: number,
+  ): Promise<{ not_found: true } | { proprietarioId: number | null }> {
+    const [row] = await db
+      .select({ proprietarioId: acomodacoes.proprietarioId })
+      .from(acomodacoes)
+      .where(eq(acomodacoes.id, acomodacaoId))
+      .limit(1);
+    if (!row) return { not_found: true as const };
+    return { proprietarioId: row.proprietarioId ?? null };
+  },
+
   async upsertPoliticaDesconto(
     auth: AuthContext,
     body: {
@@ -1026,6 +1042,7 @@ export const rateCalendarService = {
       rolesPermitidos?: string[];
       ativo?: boolean;
     },
+    options?: { atomic?: boolean },
   ) {
     if (!MASTER_ROLES.has(auth.role)) {
       return { error: 'forbidden' as const };
@@ -1035,56 +1052,67 @@ export const rateCalendarService = {
       return { error: 'validation' as const, message: 'maxDescontoPercentual inválido' };
     }
 
-    const existing = await db
-      .select()
-      .from(politicaDescontoParceiro)
-      .where(
-        and(
-          eq(politicaDescontoParceiro.scope, body.scope),
-          body.scopeId
-            ? eq(politicaDescontoParceiro.scopeId, body.scopeId)
-            : sql`${politicaDescontoParceiro.scopeId} IS NULL`,
-        ),
-      )
-      .limit(1);
+    type PoliticaExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
-    const payload = {
-      maxDescontoPercentual: String(pct),
-      maxDescontoAbsoluto:
-        body.maxDescontoAbsoluto != null ? String(body.maxDescontoAbsoluto) : null,
-      rolesPermitidos: body.rolesPermitidos ?? ['corretor', 'agente', 'promotor'],
-      ativo: body.ativo !== false,
-      updatedBy: auth.userId,
-      updatedAt: new Date(),
+    const run = async (executor: PoliticaExecutor) => {
+      const existing = await executor
+        .select()
+        .from(politicaDescontoParceiro)
+        .where(
+          and(
+            eq(politicaDescontoParceiro.scope, body.scope),
+            body.scopeId
+              ? eq(politicaDescontoParceiro.scopeId, body.scopeId)
+              : sql`${politicaDescontoParceiro.scopeId} IS NULL`,
+          ),
+        )
+        .limit(1);
+
+      const payload = {
+        maxDescontoPercentual: String(pct),
+        maxDescontoAbsoluto:
+          body.maxDescontoAbsoluto != null ? String(body.maxDescontoAbsoluto) : null,
+        rolesPermitidos: body.rolesPermitidos ?? ['corretor', 'agente', 'promotor'],
+        ativo: body.ativo !== false,
+        updatedBy: auth.userId,
+        updatedAt: new Date(),
+      };
+
+      let row;
+      if (existing[0]) {
+        [row] = await executor
+          .update(politicaDescontoParceiro)
+          .set(payload)
+          .where(eq(politicaDescontoParceiro.id, existing[0].id))
+          .returning();
+      } else {
+        [row] = await executor
+          .insert(politicaDescontoParceiro)
+          .values({
+            scope: body.scope,
+            scopeId: body.scopeId ?? null,
+            ...payload,
+          })
+          .returning();
+      }
+
+      await executor.insert(politicaDescontoAudit).values({
+        actorUserId: auth.userId,
+        actorRole: auth.role,
+        action: 'politica_upsert',
+        percentual: String(pct),
+        meta: { scope: body.scope, scopeId: body.scopeId ?? null },
+      });
+
+      return { data: row };
     };
 
-    let row;
-    if (existing[0]) {
-      [row] = await db
-        .update(politicaDescontoParceiro)
-        .set(payload)
-        .where(eq(politicaDescontoParceiro.id, existing[0].id))
-        .returning();
-    } else {
-      [row] = await db
-        .insert(politicaDescontoParceiro)
-        .values({
-          scope: body.scope,
-          scopeId: body.scopeId ?? null,
-          ...payload,
-        })
-        .returning();
+    // G-C.9b.5: atomic ONLY when explicitly requested (flag ON path).
+    // Default / flag OFF keeps the pre-existing non-transactional semantics bit-a-bit.
+    if (options?.atomic === true) {
+      return db.transaction(async (tx) => run(tx));
     }
-
-    await db.insert(politicaDescontoAudit).values({
-      actorUserId: auth.userId,
-      actorRole: auth.role,
-      action: 'politica_upsert',
-      percentual: String(pct),
-      meta: { scope: body.scope, scopeId: body.scopeId ?? null },
-    });
-
-    return { data: row };
+    return run(db);
   },
 
   async aplicarDesconto(

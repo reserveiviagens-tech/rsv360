@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireAcomodacoesImportManager } from '../../membership/acomodacoes-import.guard';
 import { gerarModeloXlsxBuffer } from '../import/modelo';
 import { ImportVazioError, pipelineImportacao } from '../import/pipeline';
 import { enfileirarImportacao } from '../../../queues/importacoes.queue';
@@ -33,7 +34,7 @@ const upload = multer({
   fileFilter,
 });
 
-const importAuth = [authenticateJwt, requireRole('admin', 'manager')];
+const importAuth = [authenticateJwt, requireRole('admin', 'manager'), requireAcomodacoesImportManager];
 
 function parseProprietarioId(raw: unknown): number | null {
   if (raw == null || raw === '') return null;

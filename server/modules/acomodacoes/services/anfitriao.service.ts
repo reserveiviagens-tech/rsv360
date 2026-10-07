@@ -270,6 +270,28 @@ export async function podeGerenciarUnidade(
   return false;
 }
 
+/**
+ * G-C.9b.4 — Partner binding for scope=empreendimento (hotelId).
+ * Staff bypass. Partner: ≥1 unidade gerenciável naquele hotel.
+ */
+export async function podeAcessarEmpreendimento(
+  auth: AuthContext,
+  hotelId: string,
+): Promise<boolean> {
+  const id = String(hotelId ?? '').trim();
+  if (!id) return false;
+  if (STAFF_ROLES.has(auth.role)) return true;
+  const rows = await db
+    .select()
+    .from(acomodacoes)
+    .where(eq(acomodacoes.hotelId, id))
+    .limit(100);
+  for (const row of rows) {
+    if (await podeGerenciarUnidade(auth, row)) return true;
+  }
+  return false;
+}
+
 export async function podeVerUnidade(auth: AuthContext, row: typeof acomodacoes.$inferSelect) {
   if (await podeGerenciarUnidade(auth, row)) return true;
   if (auth.email) {

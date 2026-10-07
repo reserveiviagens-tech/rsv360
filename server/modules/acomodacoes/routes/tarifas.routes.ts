@@ -1,8 +1,15 @@
 import { Router, type Request } from 'express';
 import { ZodError } from 'zod';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
+import { requireTarifasStaffManager } from '../../membership/tarifas-staff.guard';
+import { requireTarifasSimularPartner } from '../../membership/tarifas-simular.guard';
+import { requireTarifasPoliticaReadPartner } from '../../membership/tarifas-politica-read.guard';
+import { authorizePoliticaDescontoRead } from '../../membership/tarifas-politica-read.scope';
+import { requireTarifasPoliticaWritePartner } from '../../membership/tarifas-politica-write.guard';
+import { authorizePoliticaDescontoWrite } from '../../membership/tarifas-politica-write.scope';
+import { isMembershipAuthorityEnabled } from '../../membership/membership.plug';
+import { anfitriaoService, type AuthContext, podeAcessarEmpreendimento } from '../services/anfitriao.service';
 import { tarifaService } from '../services/tarifa.service';
-import { anfitriaoService, type AuthContext } from '../services/anfitriao.service';
 import { rateCalendarService } from '../services/rate-calendar.service';
 import {
   TarifaCategoriaCreateSchema,
@@ -15,7 +22,19 @@ const parceiroAuth = [
   requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
 ];
 const masterAuth = [authenticateJwt, requireRole('anfitriao', 'admin', 'manager')];
-const staffAuth = [authenticateJwt, requireRole('admin', 'manager')];
+const staffAuth = [authenticateJwt, requireRole('admin', 'manager'), requireTarifasStaffManager];
+const simularAuth = [
+  authenticateJwt,
+  requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
+  requireTarifasSimularPartner,
+];
+const politicaReadAuth = [
+  authenticateJwt,
+  requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
+  requireTarifasPoliticaReadPartner,
+];
+/** G-C.9b.5 — PUT only. Composes master roles + write Enterprise guard (does not mutate shared masterAuth). */
+const politicaWriteAuth = [...masterAuth, requireTarifasPoliticaWritePartner];
 
 function authFromReq(req: Request): AuthContext {
   const userId = req.user?.id;
@@ -169,7 +188,7 @@ router.delete('/regras/:id', ...staffAuth, async (req, res) => {
   }
 });
 
-router.get('/simular', ...parceiroAuth, async (req, res) => {
+router.get('/simular', ...simularAuth, async (req, res) => {
   try {
     const acomodacaoId = Number(req.query.acomodacaoId);
     const data = String(req.query.data ?? '');
@@ -210,10 +229,23 @@ router.get('/simular', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.get('/politica-desconto', ...parceiroAuth, async (req, res) => {
+router.get('/politica-desconto', ...politicaReadAuth, async (req, res) => {
   try {
     const scope = req.query.scope ? String(req.query.scope) : undefined;
     const scopeId = req.query.scopeId != null ? String(req.query.scopeId) : undefined;
+
+    if (isMembershipAuthorityEnabled(process.env as Record<string, unknown>)) {
+      const auth = authFromReq(req);
+      const decision = await authorizePoliticaDescontoRead(auth, scope, scopeId, {
+        obterUnidade: (a, id) => anfitriaoService.obterUnidade(a, id),
+        hasEmpreendimentoAccess: (a, hotelId) => podeAcessarEmpreendimento(a, hotelId),
+      });
+      if (!decision.ok) {
+        const message = decision.status === 404 ? 'Unidade não encontrada' : 'Acesso negado';
+        return res.status(decision.status).json({ success: false, error: message });
+      }
+    }
+
     const data = await rateCalendarService.getPoliticaDesconto(scope, scopeId);
     res.json({ success: true, data });
   } catch (error) {
@@ -221,27 +253,50 @@ router.get('/politica-desconto', ...parceiroAuth, async (req, res) => {
   }
 });
 
-router.put('/politica-desconto', ...masterAuth, async (req, res) => {
+router.put('/politica-desconto', ...politicaWriteAuth, async (req, res) => {
   try {
-    const result = await rateCalendarService.upsertPoliticaDesconto(authFromReq(req), {
-      scope: req.body?.scope || 'global',
-      scopeId: req.body?.scopeId ?? null,
-      maxDescontoPercentual: Number(req.body?.maxDescontoPercentual),
-      maxDescontoAbsoluto:
-        req.body?.maxDescontoAbsoluto != null ? Number(req.body.maxDescontoAbsoluto) : null,
-      rolesPermitidos: Array.isArray(req.body?.rolesPermitidos)
-        ? req.body.rolesPermitidos.map(String)
-        : undefined,
-      ativo: req.body?.ativo,
-    });
+    const auth = authFromReq(req);
+    const scope = (req.body?.scope || 'global') as 'global' | 'empreendimento' | 'acomodacao';
+    const scopeId = req.body?.scopeId ?? null;
+    const flagOn = isMembershipAuthorityEnabled(process.env as Record<string, unknown>);
+
+    if (flagOn) {
+      const decision = await authorizePoliticaDescontoWrite(auth, scope, scopeId, {
+        obterUnidade: (a, id) => anfitriaoService.obterUnidade(a, id),
+        getUnitOwner: (id) => rateCalendarService.getUnitOwner(id),
+        hasEmpreendimentoAccess: (a, hotelId) => podeAcessarEmpreendimento(a, hotelId),
+      });
+      if (!decision.ok) {
+        const message = decision.status === 404 ? 'Unidade não encontrada' : 'Acesso negado';
+        return res.status(decision.status).json({ success: false, error: message });
+      }
+    }
+
+    const result = await rateCalendarService.upsertPoliticaDesconto(
+      auth,
+      {
+        scope,
+        scopeId,
+        maxDescontoPercentual: Number(req.body?.maxDescontoPercentual),
+        maxDescontoAbsoluto:
+          req.body?.maxDescontoAbsoluto != null ? Number(req.body.maxDescontoAbsoluto) : null,
+        rolesPermitidos: Array.isArray(req.body?.rolesPermitidos)
+          ? req.body.rolesPermitidos.map(String)
+          : undefined,
+        ativo: req.body?.ativo,
+      },
+      // FLAG ON: upsert + audit in same transaction. FLAG OFF: legacy non-transactional.
+      flagOn ? { atomic: true } : undefined,
+    );
     if ('error' in result) {
       if (result.error === 'forbidden') {
         return res.status(403).json({ success: false, error: 'Acesso negado' });
       }
-      return res.status(400).json({
-        success: false,
-        error: 'message' in result ? result.message : result.error,
-      });
+      const message =
+        result.error === 'validation' && 'message' in result
+          ? result.message
+          : 'Validação inválida';
+      return res.status(400).json({ success: false, error: message });
     }
     res.json({ success: true, data: result.data });
   } catch (error) {
