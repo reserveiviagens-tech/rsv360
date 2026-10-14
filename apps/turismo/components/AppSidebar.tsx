@@ -168,6 +168,7 @@ export default function AppSidebar() {
       color: 'bg-cyan-600',
       items: [
         { id: 'gestao-turistica-main', name: 'Gestão Turística', href: '/turismo' },
+        { id: 'home-sections', name: 'Home Sections', href: '/dashboard/home-sections' },
         { id: 'leiloes', name: 'Leilões', href: '/dashboard/leiloes' },
         { id: 'excursoes', name: 'Excursões', href: '/dashboard/excursoes' },
         { id: 'viagens-grupo', name: 'Viagens em Grupo', href: '/dashboard/viagens-grupo' },
