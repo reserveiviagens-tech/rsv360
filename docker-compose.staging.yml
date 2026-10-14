@@ -77,9 +77,13 @@ services:
     ports:
       # CD health check: http://STAGING_HOST:8080/health
       - '8080:3002'
+    volumes:
+      # Persist CMS + home-sections uploads (cwd of API = /workspace/backend)
+      - rsv360_staging_uploads:/workspace/backend/public/uploads
     environment:
       PORT: 3002
       NODE_ENV: production
+      HOME_SECTIONS_UPLOAD_DIR: /workspace/backend/public/uploads/home-sections
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       FORNECEDORES_ENCRYPTION_KEY: ${FORNECEDORES_ENCRYPTION_KEY:-}
@@ -151,3 +155,4 @@ services:
 volumes:
   rsv360_staging_pgdata:
   rsv360_staging_redis:
+  rsv360_staging_uploads:
