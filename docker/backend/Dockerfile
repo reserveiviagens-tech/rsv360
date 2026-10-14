@@ -30,6 +30,11 @@ RUN cd packages/shared && npx tsc
 
 WORKDIR /workspace/backend
 
+# Named volumes inherit ownership from the image path they mount over.
+# Create uploads tree as rsv360 before USER so fresh volumes are writable (no EACCES).
+RUN mkdir -p /workspace/backend/public/uploads/home-sections \
+    && chown -R rsv360:rsv360 /workspace/backend/public/uploads
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1
 
