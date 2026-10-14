@@ -153,15 +153,15 @@ describe('disponibilidade-reserva.hook', () => {
   });
 
   it('listDiariasEstadia retorna noites entre check-in e check-out', () => {
-    expect(listDiariasEstadia('2026-10-01', '2026-10-04')).toEqual([
-      '2026-10-01',
-      '2026-10-02',
-      '2026-10-03',
+    expect(listDiariasEstadia('2027-03-01', '2027-03-04')).toEqual([
+      '2027-03-01',
+      '2027-03-02',
+      '2027-03-03',
     ]);
   });
 
   it('tabela vazia: verificarDisponibilidadeReserva passa', async () => {
-    await expect(assertDisponibilidadeReserva(10, '2026-10-01', '2026-10-03')).resolves.toBeUndefined();
+    await expect(assertDisponibilidadeReserva(10, '2027-03-01', '2027-03-03')).resolves.toBeUndefined();
   });
 
   it('data bloqueada retorna 409 com datasIndisponiveis', async () => {
@@ -185,28 +185,28 @@ describe('disponibilidade-reserva.hook', () => {
       return { from: mockSelectFrom };
     });
 
-    const result = await verificarDisponibilidadeReserva(10, '2026-10-01', '2026-10-03');
-    expect(result).toEqual({ ok: false, datasIndisponiveis: ['2026-10-02'] });
+    const result = await verificarDisponibilidadeReserva(10, '2027-03-01', '2027-03-03');
+    expect(result).toEqual({ ok: false, datasIndisponiveis: ['2027-03-02'] });
 
     dayCall = 0;
-    await expect(assertDisponibilidadeReserva(10, '2026-10-01', '2026-10-03')).rejects.toMatchObject({
+    await expect(assertDisponibilidadeReserva(10, '2027-03-01', '2027-03-03')).rejects.toMatchObject({
       acomodacaoId: 10,
-      datasIndisponiveis: ['2026-10-02'],
+      datasIndisponiveis: ['2027-03-02'],
       statusCode: 409,
     });
   });
 
   it('isDataBloqueada é false quando não há linha', async () => {
-    await expect(isDataBloqueada(5, '2026-10-01')).resolves.toBe(false);
+    await expect(isDataBloqueada(5, '2027-03-01')).resolves.toBe(false);
   });
 
   it('marcarDiariasReservadas grava disponivel=false (insert quando vazio)', async () => {
-    await marcarDiariasReservadas(7, '2026-10-01', '2026-10-03');
+    await marcarDiariasReservadas(7, '2027-03-01', '2027-03-03');
 
     expect(mockInsert).toHaveBeenCalledTimes(2);
     expect(mockInsertValues).toHaveBeenNthCalledWith(1, {
       acomodacaoId: 7,
-      data: '2026-10-01',
+      data: '2027-03-01',
       disponivel: false,
       observacao: 'reservado',
     });
@@ -223,16 +223,16 @@ describe('disponibilidade-reserva.hook', () => {
       });
       return { from: mockSelectFrom };
     });
-    const result = await verificarDisponibilidadeReserva(7, '2026-10-02', '2026-10-05');
-    expect(result).toEqual({ ok: false, datasIndisponiveis: ['2026-10-02'] });
+    const result = await verificarDisponibilidadeReserva(7, '2027-03-02', '2027-03-05');
+    expect(result).toEqual({ ok: false, datasIndisponiveis: ['2027-03-02'] });
   });
 
   it('datas disjuntas: segunda verificação passa', async () => {
     await expect(
-      assertDisponibilidadeReserva(9, '2026-10-01', '2026-10-03'),
+      assertDisponibilidadeReserva(9, '2027-03-01', '2027-03-03'),
     ).resolves.toBeUndefined();
     await expect(
-      assertDisponibilidadeReserva(9, '2026-10-10', '2026-10-12'),
+      assertDisponibilidadeReserva(9, '2027-03-10', '2027-03-12'),
     ).resolves.toBeUndefined();
   });
 
@@ -244,7 +244,7 @@ describe('disponibilidade-reserva.hook', () => {
             {
               ...DEFAULT_UNIT,
               minNoites: 1,
-              // 2026-10-02 is Friday → require 3
+              // 2027-03-05 is Friday → require 3
               minNoitesPorCheckin: { '0': 1, '1': 1, '2': 1, '3': 1, '4': 1, '5': 3, '6': 2 },
             },
           ];
@@ -254,7 +254,7 @@ describe('disponibilidade-reserva.hook', () => {
       return { from: mockSelectFrom };
     });
 
-    await expect(assertDisponibilidadeReserva(10, '2026-10-02', '2026-10-03')).rejects.toMatchObject({
+    await expect(assertDisponibilidadeReserva(10, '2027-03-05', '2027-03-06')).rejects.toMatchObject({
       statusCode: 400,
       code: 'min_noites',
     });
@@ -265,8 +265,8 @@ describe('disponibilidade-reserva.hook', () => {
     const accept = (propostaId: number) =>
       comHoldReservaAtomico(
         15,
-        '2026-10-01',
-        '2026-10-02',
+        '2027-03-01',
+        '2027-03-02',
         async () => propostaId,
         fake.runInTransaction as never,
       );
@@ -278,7 +278,7 @@ describe('disponibilidade-reserva.hook', () => {
       status: 'rejected',
       reason: expect.objectContaining({
         statusCode: 409,
-        datasIndisponiveis: ['2026-10-01'],
+        datasIndisponiveis: ['2027-03-01'],
       }),
     });
   });
@@ -288,15 +288,15 @@ describe('disponibilidade-reserva.hook', () => {
     const [a, b] = await Promise.all([
       comHoldReservaAtomico(
         21,
-        '2026-10-01',
-        '2026-10-02',
+        '2027-03-01',
+        '2027-03-02',
         async () => 'a',
         fake.runInTransaction as never,
       ),
       comHoldReservaAtomico(
         22,
-        '2026-10-01',
-        '2026-10-02',
+        '2027-03-01',
+        '2027-03-02',
         async () => 'b',
         fake.runInTransaction as never,
       ),
@@ -305,17 +305,17 @@ describe('disponibilidade-reserva.hook', () => {
   });
 
   it('PR-11d: conflito em uma noite faz rollback das noites já claimed', async () => {
-    const fake = createFakeHoldDb(['30:2026-10-02']);
+    const fake = createFakeHoldDb(['30:2027-03-02']);
     await expect(
       comHoldReservaAtomico(
         30,
-        '2026-10-01',
-        '2026-10-03',
+        '2027-03-01',
+        '2027-03-03',
         async () => 'never',
         fake.runInTransaction as never,
       ),
     ).rejects.toBeInstanceOf(DisponibilidadeReservaConflictError);
-    expect(fake.blocked.has('30:2026-10-01')).toBe(false);
+    expect(fake.blocked.has('30:2027-03-01')).toBe(false);
   });
 
   it('PR-11d: falha no CAS da proposta também desfaz o hard-hold', async () => {
@@ -323,14 +323,14 @@ describe('disponibilidade-reserva.hook', () => {
     await expect(
       comHoldReservaAtomico(
         31,
-        '2026-10-01',
-        '2026-10-02',
+        '2027-03-01',
+        '2027-03-02',
         async () => {
           throw new Error('Proposta já foi respondida');
         },
         fake.runInTransaction as never,
       ),
     ).rejects.toThrow('Proposta já foi respondida');
-    expect(fake.blocked.has('31:2026-10-01')).toBe(false);
+    expect(fake.blocked.has('31:2027-03-01')).toBe(false);
   });
 });
