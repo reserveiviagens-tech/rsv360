@@ -167,8 +167,9 @@ export async function processHomeMedia(
 
   if (mediaType === 'image') {
     assertImageMagic(input.buffer);
-    const targetWidth = section === 'tempo' ? 1600 : 1200;
-    const targetHeight = section === 'tempo' ? 900 : 675;
+    const wide = section === 'tempo' || section === 'hero';
+    const targetWidth = wide ? 1600 : 1200;
+    const targetHeight = wide ? 900 : 675;
     const sharpFn = await loadSharp();
     if (sharpFn) {
       const optimized = await sharpFn(input.buffer)

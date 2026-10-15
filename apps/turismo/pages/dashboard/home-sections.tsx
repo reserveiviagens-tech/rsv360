@@ -33,7 +33,7 @@ import {
 } from '../../src/components/ui/dialog';
 
 export default function HomeSectionsPage() {
-  const [activeSection, setActiveSection] = useState<HomeSectionId>('escolhas');
+  const [activeSection, setActiveSection] = useState<HomeSectionId>('hero');
   const [items, setItems] = useState<HomeSectionPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingOrder, setSavingOrder] = useState(false);

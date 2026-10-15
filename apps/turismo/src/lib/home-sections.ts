@@ -1,4 +1,5 @@
 export const HOME_SECTIONS = [
+  { id: 'hero', label: 'Hero / Topo', defaultPath: '/ingressos' },
   { id: 'escolhas', label: 'Escolhas Personalizadas', defaultPath: '/experiencias' },
   { id: 'destinos', label: 'Destinos em Destaque', defaultPath: '/parques' },
   { id: 'ofertas', label: 'Ofertas Estratégicas', defaultPath: '/ofertas' },
@@ -35,7 +36,7 @@ export type HomeSectionPlacement = {
 export const ENTITY_ID_SUGGESTIONS: Record<HomeEntityType, string[]> = {
   park: ['hot-park', 'diroma', 'lagoa-termas', 'kawana'],
   combo: ['familia', 'destaque', 'para-voce', 'romantico'],
-  promotion: ['destaque', 'semana', 'flash'],
+  promotion: ['topo', 'destaque', 'semana', 'flash'],
   enterprise: [],
   attraction: [],
 };
@@ -46,6 +47,8 @@ export function isVideoUrl(url?: string | null): boolean {
 
 export function defaultCtaFor(section: HomeSectionId, entityType: HomeEntityType, entityId: string): string {
   switch (section) {
+    case 'hero':
+      return '/ingressos';
     case 'escolhas':
       return `/experiencias?perfil=${encodeURIComponent(entityId)}`;
     case 'destinos':
