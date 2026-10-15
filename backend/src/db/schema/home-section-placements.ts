@@ -10,7 +10,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 /** Seções da home S1 (www.reserveiviagens.com.br). */
-export const HOME_SECTIONS = ['escolhas', 'destinos', 'ofertas', 'tempo'] as const;
+export const HOME_SECTIONS = ['hero', 'escolhas', 'destinos', 'ofertas', 'tempo'] as const;
 export type HomeSection = (typeof HOME_SECTIONS)[number];
 
 export const HOME_ENTITY_TYPES = [

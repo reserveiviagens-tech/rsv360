@@ -108,6 +108,13 @@ describe('home sections API', () => {
     expect(mockListPublic).not.toHaveBeenCalled();
   });
 
+  it('GET público aceita section hero', async () => {
+    mockListPublic.mockResolvedValue([]);
+    const res = await request(buildApp()).get('/api/v1/home/sections/hero');
+    expect(res.status).toBe(200);
+    expect(mockListPublic).toHaveBeenCalledWith('hero');
+  });
+
   it('GET público lista ativos da section', async () => {
     mockListPublic.mockResolvedValue([
       {
@@ -350,6 +357,11 @@ describe('home sections API', () => {
   it('seoSlugBase gera nome semântico sem PII', () => {
     const name = seoSlugBase('destinos', 'Hot Park / Rio Quente!');
     expect(name).toMatch(/^destinos-hot-park-rio-quente-caldas-novas-[a-f0-9]{6}$/);
+  });
+
+  it('seoSlugBase hero usa slug topo', () => {
+    const name = seoSlugBase('hero', 'topo');
+    expect(name).toMatch(/^hero-topo-caldas-novas-[a-f0-9]{6}$/);
   });
 
   it('assertHomeUploadLimits rejeita PDF e arquivo acima do teto', () => {
