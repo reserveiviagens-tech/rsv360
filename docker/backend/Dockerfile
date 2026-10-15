@@ -11,7 +11,11 @@ COPY package.json package-lock.json ./
 COPY backend/package.json backend/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY .github/scripts .github/scripts
-RUN npm ci --workspace=backend --workspace=@rsv360/shared --include-workspace-root=false --no-audit --no-fund --ignore-scripts
+# Workspace-only install (no root). sharp must live in backend/package.json.
+# Force linuxmusl binary for Alpine runner (@img/sharp-linuxmusl-x64).
+RUN npm ci --workspace=backend --workspace=@rsv360/shared --include-workspace-root=false --no-audit --no-fund --ignore-scripts \
+  && npm install --os=linux --cpu=x64 --libc=musl --workspace=backend sharp@0.35.3 --no-audit --no-fund --ignore-scripts \
+  && node -e "const s=require('sharp'); console.log('SHARP_OK', s.versions)"
 
 FROM node:24-alpine AS production
 WORKDIR /workspace
@@ -26,7 +30,8 @@ COPY --from=deps /workspace/node_modules ./node_modules
 COPY backend ./backend
 COPY server ./server
 COPY packages/shared ./packages/shared
-RUN cd packages/shared && npx tsc
+RUN cd packages/shared && npx tsc \
+  && node -e "const s=require('sharp'); console.log('SHARP_OK', s.versions)"
 
 WORKDIR /workspace/backend
 
