@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - diagnose
+          - repair
           - deploy
           - rollback
         default: diagnose
@@ -61,18 +62,41 @@ jobs:
               exit 0
             fi
 
+            if [ "$MODE" = "repair" ]; then
+              set -e
+              cd "$CRM_DIR"
+              echo "=== docker compose down/up (fix host publish) ==="
+              docker compose down
+              docker compose up -d
+              sleep 8
+              for i in $(seq 1 24); do
+                if curl -fsS --max-time 5 "http://127.0.0.1:5000/" >/dev/null 2>&1; then
+                  echo "OK host:5000 after repair"
+                  curl -sS -o /dev/null -w 'http_code=%{http_code}\n' "http://127.0.0.1:5000/"
+                  exit 0
+                fi
+                echo "repair wait $i"
+                sleep 5
+              done
+              docker logs --tail 80 crm-rsv-360-s1 || true
+              ss -tlnp | grep 5000 || true
+              docker port crm-rsv-360-s1 || true
+              exit 1
+            fi
+
             if [ "$MODE" = "rollback" ]; then
               set -e
               PREV=$(docker images 'crm-rsv-360-s1' --format '{{.ID}} {{.CreatedAt}}' | awk 'NR==2{print $1}')
               if [ -z "$PREV" ]; then
-                echo "ERROR: no previous image"
-                docker images 'crm-rsv-360-s1'
-                exit 1
+                echo "ERROR: no previous image — trying compose recreate"
+                cd "$CRM_DIR"
+                docker compose up -d --force-recreate s1
+              else
+                echo "Rolling back to image $PREV"
+                cd "$CRM_DIR"
+                docker tag "$PREV" crm-rsv-360-s1:staging
+                docker compose up -d --force-recreate s1
               fi
-              echo "Rolling back to image $PREV"
-              cd "$CRM_DIR"
-              docker tag "$PREV" crm-rsv-360-s1:staging
-              docker compose up -d --force-recreate s1
               sleep 10
               curl -fsS --max-time 20 "http://127.0.0.1:5000/" >/dev/null
               echo "OK rollback healthy"
