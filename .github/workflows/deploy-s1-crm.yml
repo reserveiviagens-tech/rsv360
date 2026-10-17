@@ -1,15 +1,14 @@
 name: Deploy S1 CRM (Vite :5000)
 
-# Atualiza o site oficial www (Crm-RSV-360 em :5000) na VPS.
-# Usa STAGING_* (SSH real). PRODUCTION_* ainda está com placeholder.
+# www.reserveiviagens.com.br → container Docker crm-rsv-360-s1 (:5000)
 on:
   workflow_dispatch:
     inputs:
       discover_only:
-        description: 'Só inspecionar caminhos/processos (não deploy)'
+        description: 'Só inspecionar (não deploy)'
         required: true
         type: boolean
-        default: true
+        default: false
       git_ref:
         description: 'Branch/tag do Crm-RSV-360'
         required: true
@@ -20,41 +19,27 @@ jobs:
   deploy-s1:
     name: Deploy S1 CRM
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: staging
     steps:
-      - name: Discover / Deploy CRM on :5000
+      - name: Discover / Deploy CRM Docker :5000
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_PORT || 22 }}
-          command_timeout: 25m
+          command_timeout: 40m
           script: |
             set -uo pipefail
-            echo "=== Listeners :5000 / :8081 / :3000 ==="
-            (ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || true) | grep -E ':(5000|8081|3000)\b' || true
-
-            echo "=== Candidate CRM dirs ==="
-            for d in \
-              "$HOME/crm-rsv-360" \
-              "$HOME/Crm-RSV-360" \
-              "$HOME/apps/Crm-RSV-360" \
-              "/opt/Crm-RSV-360" \
-              "/var/www/Crm-RSV-360" \
-              "/home/rsvadmin/crm-rsv-360" \
-              "/home/rsvadmin/Crm-RSV-360"; do
-              if [ -d "$d" ] && [ -f "$d/package.json" ]; then
-                echo "FOUND $d"
-                (cd "$d" && git rev-parse --abbrev-ref HEAD 2>/dev/null; git log -1 --oneline 2>/dev/null) || true
-              fi
-            done
-
-            echo "=== pm2 / systemd / docker ==="
-            (command -v pm2 >/dev/null && pm2 list) || echo "pm2 not installed"
-            systemctl list-units --type=service --all 2>/dev/null | grep -iE 'crm|rsv|s1|express' || true
-            docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -E '5000|crm|s1' || true
+            echo "=== docker crm / :5000 ==="
+            docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | head -30
+            echo "--- inspect crm-rsv-360-s1 ---"
+            docker inspect crm-rsv-360-s1 --format 'Image={{.Config.Image}} WorkDir={{.Config.WorkingDir}}' 2>/dev/null || true
+            docker inspect crm-rsv-360-s1 --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{println}}{{end}}' 2>/dev/null | head -40 || true
+            echo "=== home crm dir ==="
+            ls -la "$HOME/crm-rsv-360" 2>/dev/null | head -50 || true
+            find "$HOME" -maxdepth 3 -type f \( -name 'docker-compose*.yml' -o -name 'Dockerfile' \) 2>/dev/null | head -40 || true
 
             if [ "${{ inputs.discover_only }}" = "true" ]; then
               echo "Discover-only — done"
@@ -62,70 +47,72 @@ jobs:
             fi
 
             set -e
-            CRM_DIR=""
-            for d in \
-              "${CRM_PATH:-}" \
-              "$HOME/crm-rsv-360" \
-              "$HOME/Crm-RSV-360" \
-              "/opt/Crm-RSV-360" \
-              "/var/www/Crm-RSV-360" \
-              "/home/rsvadmin/crm-rsv-360" \
-              "/home/rsvadmin/Crm-RSV-360"; do
-              if [ -n "${d:-}" ] && [ -f "$d/package.json" ]; then
-                CRM_DIR="$d"
-                break
-              fi
-            done
+            WORK="$HOME/crm-rsv-360"
+            REF="${{ inputs.git_ref }}"
+            TS=$(date +%Y%m%d%H%M%S)
 
-            if [ -z "$CRM_DIR" ]; then
-              echo "ERROR: Crm-RSV-360 directory not found"
-              exit 1
+            # Snapshot env from running container
+            ENV_FILE="/tmp/crm-s1-env.$TS"
+            docker inspect crm-rsv-360-s1 --format '{{range .Config.Env}}{{println .}}{{end}}' > "$ENV_FILE"
+            NET=$(docker inspect crm-rsv-360-s1 --format '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' 2>/dev/null | head -1)
+            echo "Network=$NET"
+
+            # Fresh clone alongside (keep bak of previous tree)
+            if [ -d "$WORK" ] && [ ! -d "$WORK/.git" ]; then
+              mv "$WORK" "${WORK}.bak.$TS"
             fi
-
-            echo "=== Deploy $CRM_DIR @ ${{ inputs.git_ref }} ==="
-            cd "$CRM_DIR"
-
-            if [ -d .git ]; then
+            if [ -d "$WORK/.git" ]; then
+              cd "$WORK"
               git fetch --all --prune
-              git checkout "${{ inputs.git_ref }}"
-              git pull --ff-only origin "${{ inputs.git_ref }}" || git reset --hard "origin/${{ inputs.git_ref }}"
+              git checkout "$REF"
+              git reset --hard "origin/$REF"
             else
-              echo "WARN: sem .git — pulando git pull"
+              git clone --depth 1 --branch "$REF" \
+                https://github.com/reserveiviagens-tech/Crm-RSV-360.git "$WORK"
+              cd "$WORK"
+            fi
+            echo "HEAD=$(git log -1 --oneline)"
+
+            # Build image
+            if [ -f Dockerfile ]; then
+              docker build -t crm-rsv-360-s1:latest .
+            else
+              cat > /tmp/Dockerfile.crm-s1 <<'DOCKER'
+            FROM node:20-bookworm-slim
+            WORKDIR /app
+            COPY package.json package-lock.json* ./
+            RUN npm ci --ignore-scripts || npm install --ignore-scripts
+            COPY . .
+            RUN npm run build
+            ENV NODE_ENV=production
+            ENV PORT=5000
+            EXPOSE 5000
+            CMD ["npm", "run", "start"]
+            DOCKER
+              # Fix: heredoc above got indented by YAML — write without indent via printf
+              python3 - <<'PY'
+            from pathlib import Path
+            Path("/tmp/Dockerfile.crm-s1").write_text("""FROM node:20-bookworm-slim
+            WORKDIR /app
+            COPY package.json package-lock.json* ./
+            RUN npm ci --ignore-scripts || npm install --ignore-scripts
+            COPY . .
+            RUN npm run build
+            ENV NODE_ENV=production
+            ENV PORT=5000
+            EXPOSE 5000
+            CMD [\"npm\", \"run\", \"start\"]
+            """.replace("            ", ""))
+            PY
+              docker build -f /tmp/Dockerfile.crm-s1 -t crm-rsv-360-s1:latest .
             fi
 
-            if [ -f package-lock.json ]; then
-              npm ci --ignore-scripts || npm install --ignore-scripts
-            else
-              npm install --ignore-scripts
-            fi
-            npm run build
+            docker stop crm-rsv-360-s1 || true
+            docker rm crm-rsv-360-s1 || true
+            RUN_ARGS=(-d --name crm-rsv-360-s1 --restart unless-stopped -p 5000:5000 --env-file "$ENV_FILE")
+            if [ -n "${NET:-}" ]; then RUN_ARGS+=(--network "$NET"); fi
+            docker run "${RUN_ARGS[@]}" crm-rsv-360-s1:latest
 
-            if command -v pm2 >/dev/null 2>&1 && pm2 describe crm-rsv-360 >/dev/null 2>&1; then
-              pm2 restart crm-rsv-360 --update-env
-            elif command -v pm2 >/dev/null 2>&1 && pm2 describe s1 >/dev/null 2>&1; then
-              pm2 restart s1 --update-env
-            elif systemctl is-active --quiet crm-rsv-360 2>/dev/null; then
-              sudo systemctl restart crm-rsv-360
-            elif docker ps --format '{{.Names}}' | grep -qiE 'crm|s1|rsv360-crm'; then
-              CTR=$(docker ps --format '{{.Names}}' | grep -iE 'crm|s1|rsv360-crm' | head -1)
-              docker restart "$CTR"
-            else
-              # Porta 5000 pode ser docker-proxy — tentar restart do container que publica 5000
-              CTR=$(docker ps --format '{{.Names}} {{.Ports}}' | awk '/:5000->|:5000\b/ {print $1; exit}')
-              if [ -n "${CTR:-}" ]; then
-                echo "Restarting docker container $CTR (publishes :5000)"
-                docker restart "$CTR"
-              else
-                PID=$(ss -tlnp 2>/dev/null | awk '/:5000/ {print}' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -1 || true)
-                if [ -n "${PID:-}" ]; then
-                  kill "$PID" || true
-                  sleep 2
-                fi
-                nohup npm run start > /tmp/crm-rsv-360.log 2>&1 &
-                echo "Started via nohup pid $!"
-              fi
-            fi
-
-            sleep 10
-            curl -fsS --max-time 25 "http://127.0.0.1:5000/" >/dev/null
-            echo "OK S1 CRM healthy on :5000"
+            sleep 15
+            curl -fsS --max-time 30 "http://127.0.0.1:5000/" >/dev/null
+            echo "OK S1 CRM healthy on :5000 (ref=$REF)"
