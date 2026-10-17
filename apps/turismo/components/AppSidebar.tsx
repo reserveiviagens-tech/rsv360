@@ -13,7 +13,8 @@ import {
   Calculator,
   LayoutDashboard,
   Home,
-  KeyRound
+  KeyRound,
+  Gauge,
 } from 'lucide-react'
 
 interface SidebarItem {
@@ -142,7 +143,8 @@ export default function AppSidebar() {
       icon: Home,
       color: 'bg-blue-500',
       items: [
-        { id: 'dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
+        { id: 'dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { id: 'smart-hub', name: 'Smart Hub', href: '/dashboard/smart-hub', icon: Gauge },
       ]
     },
     {
@@ -169,6 +171,7 @@ export default function AppSidebar() {
       items: [
         { id: 'gestao-turistica-main', name: 'Gestão Turística', href: '/turismo' },
         { id: 'home-sections', name: 'Home Sections', href: '/dashboard/home-sections' },
+        { id: 'smart-hub', name: 'Smart Hub V16', href: '/dashboard/smart-hub' },
         { id: 'leiloes', name: 'Leilões', href: '/dashboard/leiloes' },
         { id: 'excursoes', name: 'Excursões', href: '/dashboard/excursoes' },
         { id: 'viagens-grupo', name: 'Viagens em Grupo', href: '/dashboard/viagens-grupo' },
