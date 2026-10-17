@@ -8,6 +8,7 @@ import { AuthProvider } from '@/components/auth-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { PwaRegister } from '@/components/pwa-register';
 import { WebVitalsReporter } from '@/components/performance/WebVitalsReporter';
+import { ScrollToTop } from '@/components/scroll-to-top';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,6 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ToastWrapper>
         <AuthProvider>
           <ThemeProvider>
+            <ScrollToTop />
             {children}
             <WebVitalsReporter />
             <PwaRegister />
