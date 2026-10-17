@@ -73,7 +73,7 @@
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
-    "handlebars": "^4.7.9",
+    "handlebars": "^4.7.10",
     "ioredis": "5.10.1",
     "nodemailer": "^9.0.1",
     "react": "19.2.5",
