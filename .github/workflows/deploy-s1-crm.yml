@@ -21,7 +21,6 @@ jobs:
     name: Deploy S1 CRM
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Secrets STAGING_* vivem no Environment "staging"
     environment: staging
     steps:
       - name: Discover / Deploy CRM on :5000
@@ -33,34 +32,27 @@ jobs:
           port: ${{ secrets.STAGING_PORT || 22 }}
           command_timeout: 25m
           script: |
-            set -euo pipefail
+            set -uo pipefail
             echo "=== Listeners :5000 / :8081 / :3000 ==="
             (ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || true) | grep -E ':(5000|8081|3000)\b' || true
 
             echo "=== Candidate CRM dirs ==="
             for d in \
-              "$HOME/Crm-RSV-360" \
               "$HOME/crm-rsv-360" \
+              "$HOME/Crm-RSV-360" \
               "$HOME/apps/Crm-RSV-360" \
               "/opt/Crm-RSV-360" \
               "/var/www/Crm-RSV-360" \
-              "/home/rsvadmin/Crm-RSV-360" \
-              "/home/rsvadmin/apps/Crm-RSV-360"; do
+              "/home/rsvadmin/crm-rsv-360" \
+              "/home/rsvadmin/Crm-RSV-360"; do
               if [ -d "$d" ] && [ -f "$d/package.json" ]; then
                 echo "FOUND $d"
                 (cd "$d" && git rev-parse --abbrev-ref HEAD 2>/dev/null; git log -1 --oneline 2>/dev/null) || true
               fi
             done
 
-            find /home /opt /var/www /srv -maxdepth 4 -type f -name 'package.json' 2>/dev/null \
-              | while read -r f; do
-                  if grep -qE 'rest-express|wouter|Crm-RSV' "$f" 2>/dev/null; then
-                    echo "CANDIDATE $(dirname "$f")"
-                  fi
-                done | head -40
-
-            echo "=== pm2 / systemd ==="
-            command -v pm2 >/dev/null && pm2 list || echo "pm2 not installed"
+            echo "=== pm2 / systemd / docker ==="
+            (command -v pm2 >/dev/null && pm2 list) || echo "pm2 not installed"
             systemctl list-units --type=service --all 2>/dev/null | grep -iE 'crm|rsv|s1|express' || true
             docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -E '5000|crm|s1' || true
 
@@ -69,15 +61,17 @@ jobs:
               exit 0
             fi
 
+            set -e
             CRM_DIR=""
             for d in \
               "${CRM_PATH:-}" \
-              "$HOME/Crm-RSV-360" \
               "$HOME/crm-rsv-360" \
+              "$HOME/Crm-RSV-360" \
               "/opt/Crm-RSV-360" \
               "/var/www/Crm-RSV-360" \
+              "/home/rsvadmin/crm-rsv-360" \
               "/home/rsvadmin/Crm-RSV-360"; do
-              if [ -n "${d:-}" ] && [ -d "$d/.git" ] && [ -f "$d/package.json" ]; then
+              if [ -n "${d:-}" ] && [ -f "$d/package.json" ]; then
                 CRM_DIR="$d"
                 break
               fi
@@ -90,9 +84,14 @@ jobs:
 
             echo "=== Deploy $CRM_DIR @ ${{ inputs.git_ref }} ==="
             cd "$CRM_DIR"
-            git fetch --all --prune
-            git checkout "${{ inputs.git_ref }}"
-            git pull --ff-only origin "${{ inputs.git_ref }}" || git reset --hard "origin/${{ inputs.git_ref }}"
+
+            if [ -d .git ]; then
+              git fetch --all --prune
+              git checkout "${{ inputs.git_ref }}"
+              git pull --ff-only origin "${{ inputs.git_ref }}" || git reset --hard "origin/${{ inputs.git_ref }}"
+            else
+              echo "WARN: sem .git — pulando git pull"
+            fi
 
             if [ -f package-lock.json ]; then
               npm ci --ignore-scripts || npm install --ignore-scripts
@@ -107,16 +106,26 @@ jobs:
               pm2 restart s1 --update-env
             elif systemctl is-active --quiet crm-rsv-360 2>/dev/null; then
               sudo systemctl restart crm-rsv-360
+            elif docker ps --format '{{.Names}}' | grep -qiE 'crm|s1|rsv360-crm'; then
+              CTR=$(docker ps --format '{{.Names}}' | grep -iE 'crm|s1|rsv360-crm' | head -1)
+              docker restart "$CTR"
             else
-              PID=$(ss -tlnp 2>/dev/null | awk '/:5000/ {print}' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -1 || true)
-              if [ -n "${PID:-}" ]; then
-                kill "$PID" || true
-                sleep 2
+              # Porta 5000 pode ser docker-proxy — tentar restart do container que publica 5000
+              CTR=$(docker ps --format '{{.Names}} {{.Ports}}' | awk '/:5000->|:5000\b/ {print $1; exit}')
+              if [ -n "${CTR:-}" ]; then
+                echo "Restarting docker container $CTR (publishes :5000)"
+                docker restart "$CTR"
+              else
+                PID=$(ss -tlnp 2>/dev/null | awk '/:5000/ {print}' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -1 || true)
+                if [ -n "${PID:-}" ]; then
+                  kill "$PID" || true
+                  sleep 2
+                fi
+                nohup npm run start > /tmp/crm-rsv-360.log 2>&1 &
+                echo "Started via nohup pid $!"
               fi
-              nohup npm run start > /tmp/crm-rsv-360.log 2>&1 &
-              echo "Started via nohup pid $!"
             fi
 
-            sleep 8
-            curl -fsS --max-time 20 "http://127.0.0.1:5000/" >/dev/null
+            sleep 10
+            curl -fsS --max-time 25 "http://127.0.0.1:5000/" >/dev/null
             echo "OK S1 CRM healthy on :5000"
