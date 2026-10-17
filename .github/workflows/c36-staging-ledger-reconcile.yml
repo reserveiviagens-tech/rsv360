@@ -31,10 +31,10 @@ jobs:
         run: echo "C36-DA staging ledger reconciliation"
 
       - name: Checkout probe script
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Upload probe to staging host
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
