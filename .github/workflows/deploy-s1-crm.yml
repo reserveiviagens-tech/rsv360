@@ -80,7 +80,20 @@ jobs:
             docker compose build --pull s1
             docker compose up -d --force-recreate s1
 
-            sleep 15
+            echo "=== waiting for :5000 ==="
+            OK=0
+            for i in $(seq 1 36); do
+              if curl -fsS --max-time 5 "http://127.0.0.1:5000/" >/dev/null 2>&1; then
+                OK=1
+                break
+              fi
+              echo "attempt $i/36 — not ready"
+              sleep 5
+            done
             docker ps --filter name=crm-rsv-360-s1 --format '{{.Names}} {{.Image}} {{.Status}}'
-            curl -fsS --max-time 30 "http://127.0.0.1:5000/" >/dev/null
+            if [ "$OK" != "1" ]; then
+              echo "=== docker logs (tail) ==="
+              docker logs --tail 80 crm-rsv-360-s1 || true
+              exit 1
+            fi
             echo "OK www/:5000 healthy after deploy ref=$REF"
