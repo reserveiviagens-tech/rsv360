@@ -59,22 +59,20 @@ jobs:
             echo "Cloned $(cd "$SRC" && git log -1 --oneline)"
 
             # Sync code (keep runtime/config files on server)
+            # Preserva Dockerfile/compose/.env do servidor (repo CRM não tem Dockerfile)
             rsync -a --delete \
               --exclude '.env' \
               --exclude '.env.*' \
               --exclude 'docker-compose.yml' \
               --exclude 'docker-compose.yaml' \
+              --exclude 'Dockerfile' \
+              --exclude 'Dockerfile.*' \
               --exclude 'node_modules' \
               --exclude '.git' \
               --exclude 'dist' \
               --exclude 'uploads' \
               --exclude 'data' \
               "$SRC"/ "$CRM_DIR"/
-
-            # If repo has Dockerfile, prefer it; else keep server Dockerfile
-            if [ -f "$SRC/Dockerfile" ]; then
-              cp "$SRC/Dockerfile" "$CRM_DIR/Dockerfile"
-            fi
 
             rm -rf "$SRC"
 
