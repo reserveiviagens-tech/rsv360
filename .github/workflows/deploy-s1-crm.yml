@@ -1,6 +1,7 @@
 name: Deploy S1 CRM (Vite :5000)
 
-# www.reserveiviagens.com.br → container Docker crm-rsv-360-s1 (:5000)
+# www.reserveiviagens.com.br → Docker service s1 (crm-rsv-360-s1) na VPS :5000
+# Fonte: ~/crm-rsv-360/docker-compose.yml (compose project crm-rsv-360)
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +23,7 @@ jobs:
     timeout-minutes: 45
     environment: staging
     steps:
-      - name: Discover / Deploy CRM Docker :5000
+      - name: Deploy CRM Docker compose s1
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
@@ -32,87 +33,56 @@ jobs:
           command_timeout: 40m
           script: |
             set -uo pipefail
-            echo "=== docker crm / :5000 ==="
-            docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | head -30
-            echo "--- inspect crm-rsv-360-s1 ---"
-            docker inspect crm-rsv-360-s1 --format 'Image={{.Config.Image}} WorkDir={{.Config.WorkingDir}}' 2>/dev/null || true
-            docker inspect crm-rsv-360-s1 --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{println}}{{end}}' 2>/dev/null | head -40 || true
-            echo "=== home crm dir ==="
-            ls -la "$HOME/crm-rsv-360" 2>/dev/null | head -50 || true
-            find "$HOME" -maxdepth 3 -type f \( -name 'docker-compose*.yml' -o -name 'Dockerfile' \) 2>/dev/null | head -40 || true
+            CRM_DIR="$HOME/crm-rsv-360"
+            REF="${{ inputs.git_ref }}"
+            echo "=== before ==="
+            docker ps --filter name=crm-rsv-360-s1 --format '{{.Names}} {{.Image}} {{.Status}}'
+            ls -la "$CRM_DIR" | head -20
 
             if [ "${{ inputs.discover_only }}" = "true" ]; then
+              docker inspect crm-rsv-360-s1 --format 'Image={{.Config.Image}}' || true
+              cat "$CRM_DIR/docker-compose.yml" || true
               echo "Discover-only — done"
               exit 0
             fi
 
             set -e
-            WORK="$HOME/crm-rsv-360"
-            REF="${{ inputs.git_ref }}"
+            test -f "$CRM_DIR/docker-compose.yml"
+            cd "$CRM_DIR"
+
+            # Preserve local compose + env; refresh app source from GitHub
             TS=$(date +%Y%m%d%H%M%S)
+            SRC="/tmp/Crm-RSV-360-$TS"
+            rm -rf "$SRC"
+            git clone --depth 1 --branch "$REF" \
+              https://github.com/reserveiviagens-tech/Crm-RSV-360.git "$SRC"
+            echo "Cloned $(cd "$SRC" && git log -1 --oneline)"
 
-            # Snapshot env from running container
-            ENV_FILE="/tmp/crm-s1-env.$TS"
-            docker inspect crm-rsv-360-s1 --format '{{range .Config.Env}}{{println .}}{{end}}' > "$ENV_FILE"
-            NET=$(docker inspect crm-rsv-360-s1 --format '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}' 2>/dev/null | head -1)
-            echo "Network=$NET"
+            # Sync code (keep runtime/config files on server)
+            rsync -a --delete \
+              --exclude '.env' \
+              --exclude '.env.*' \
+              --exclude 'docker-compose.yml' \
+              --exclude 'docker-compose.yaml' \
+              --exclude 'node_modules' \
+              --exclude '.git' \
+              --exclude 'dist' \
+              --exclude 'uploads' \
+              --exclude 'data' \
+              "$SRC"/ "$CRM_DIR"/
 
-            # Fresh clone alongside (keep bak of previous tree)
-            if [ -d "$WORK" ] && [ ! -d "$WORK/.git" ]; then
-              mv "$WORK" "${WORK}.bak.$TS"
-            fi
-            if [ -d "$WORK/.git" ]; then
-              cd "$WORK"
-              git fetch --all --prune
-              git checkout "$REF"
-              git reset --hard "origin/$REF"
-            else
-              git clone --depth 1 --branch "$REF" \
-                https://github.com/reserveiviagens-tech/Crm-RSV-360.git "$WORK"
-              cd "$WORK"
-            fi
-            echo "HEAD=$(git log -1 --oneline)"
-
-            # Build image
-            if [ -f Dockerfile ]; then
-              docker build -t crm-rsv-360-s1:latest .
-            else
-              cat > /tmp/Dockerfile.crm-s1 <<'DOCKER'
-            FROM node:20-bookworm-slim
-            WORKDIR /app
-            COPY package.json package-lock.json* ./
-            RUN npm ci --ignore-scripts || npm install --ignore-scripts
-            COPY . .
-            RUN npm run build
-            ENV NODE_ENV=production
-            ENV PORT=5000
-            EXPOSE 5000
-            CMD ["npm", "run", "start"]
-            DOCKER
-              # Fix: heredoc above got indented by YAML — write without indent via printf
-              python3 - <<'PY'
-            from pathlib import Path
-            Path("/tmp/Dockerfile.crm-s1").write_text("""FROM node:20-bookworm-slim
-            WORKDIR /app
-            COPY package.json package-lock.json* ./
-            RUN npm ci --ignore-scripts || npm install --ignore-scripts
-            COPY . .
-            RUN npm run build
-            ENV NODE_ENV=production
-            ENV PORT=5000
-            EXPOSE 5000
-            CMD [\"npm\", \"run\", \"start\"]
-            """.replace("            ", ""))
-            PY
-              docker build -f /tmp/Dockerfile.crm-s1 -t crm-rsv-360-s1:latest .
+            # If repo has Dockerfile, prefer it; else keep server Dockerfile
+            if [ -f "$SRC/Dockerfile" ]; then
+              cp "$SRC/Dockerfile" "$CRM_DIR/Dockerfile"
             fi
 
-            docker stop crm-rsv-360-s1 || true
-            docker rm crm-rsv-360-s1 || true
-            RUN_ARGS=(-d --name crm-rsv-360-s1 --restart unless-stopped -p 5000:5000 --env-file "$ENV_FILE")
-            if [ -n "${NET:-}" ]; then RUN_ARGS+=(--network "$NET"); fi
-            docker run "${RUN_ARGS[@]}" crm-rsv-360-s1:latest
+            rm -rf "$SRC"
+
+            echo "=== docker compose build/up s1 ==="
+            docker compose build --pull s1
+            docker compose up -d --force-recreate s1
 
             sleep 15
+            docker ps --filter name=crm-rsv-360-s1 --format '{{.Names}} {{.Image}} {{.Status}}'
             curl -fsS --max-time 30 "http://127.0.0.1:5000/" >/dev/null
-            echo "OK S1 CRM healthy on :5000 (ref=$REF)"
+            echo "OK www/:5000 healthy after deploy ref=$REF"
