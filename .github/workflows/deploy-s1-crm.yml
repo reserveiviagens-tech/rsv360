@@ -60,6 +60,21 @@ jobs:
               docker images 'crm-rsv-360-s1' --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
               echo "=== bak dirs ==="
               ls -d "$HOME"/crm-rsv-360.bak.* 2>/dev/null | tail -5 || true
+              echo "=== listening ports 3000/5000/3002 ==="
+              ss -tlnp 2>/dev/null | grep -E ':(3000|5000|3002)\s' || netstat -tlnp 2>/dev/null | grep -E ':(3000|5000|3002)\s' || true
+              echo "=== docker ps site-publico / rsv360 ==="
+              docker ps -a --format '{{.Names}} {{.Status}} {{.Ports}}' | grep -Ei 'site-publico|rsv360|crm-rsv|3000|3002' || true
+              echo "=== curl site-publico :3000 /cotacao ==="
+              curl -sS -o /tmp/cotacao3000.html -w 'http_code=%{http_code} len=%{size_download}\n' --max-time 8 "http://127.0.0.1:3000/cotacao?hotel=lacqua-diroma&adults=2" || echo "curl3000_fail"
+              head -c 240 /tmp/cotacao3000.html 2>/dev/null; echo
+              echo "=== curl CRM :5000 /cotacao ==="
+              curl -sS -o /tmp/cotacao5000.html -w 'http_code=%{http_code} len=%{size_download} redir=%{redirect_url}\n' --max-time 8 "http://127.0.0.1:5000/cotacao?hotel=lacqua-diroma&adults=2" || echo "curl5000_fail"
+              head -c 240 /tmp/cotacao5000.html 2>/dev/null; echo
+              echo "=== CRM env MARKETING_LAB ==="
+              docker exec crm-rsv-360-s1 printenv | grep -Ei 'MARKETING|LAB|SITE_PUBLIC|PRIMARY' || true
+              echo "=== caddy/nginx snippets ==="
+              ls /etc/caddy /etc/nginx/sites-enabled "$HOME"/caddy* 2>/dev/null || true
+              grep -RniE 'cotacao|5000|3000|reserveiviagens' /etc/caddy /etc/nginx/sites-enabled 2>/dev/null | head -40 || true
               exit 0
             fi
 
