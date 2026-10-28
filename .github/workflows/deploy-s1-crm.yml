@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - diagnose
+          - fix-prod
           - repair
           - deploy
           - rollback
@@ -59,6 +60,80 @@ jobs:
               docker images 'crm-rsv-360-s1' --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
               echo "=== bak dirs ==="
               ls -d "$HOME"/crm-rsv-360.bak.* 2>/dev/null | tail -5 || true
+              exit 0
+            fi
+
+            if [ "$MODE" = "fix-prod" ]; then
+              set -e
+              cd "$CRM_DIR"
+              TS=$(date +%Y%m%d%H%M%S)
+              cp -a Dockerfile "Dockerfile.bak.$TS"
+              cp -a docker-compose.yml "docker-compose.yml.bak.$TS"
+              echo "=== writing production Dockerfile ==="
+              cat > Dockerfile <<'EOF'
+FROM node:20-bookworm-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . ./
+RUN npm run build
+
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=5000
+ENV HOST=0.0.0.0
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+EXPOSE 5000
+CMD ["npm", "start"]
+EOF
+              echo "=== ensure compose NODE_ENV=production (no command override) ==="
+              # Remove accidental command: that forces npm run dev
+              if grep -qE '^\s*command:' docker-compose.yml; then
+                echo "WARN: command: found in compose — commenting out"
+                sed -i.bak-cmd 's/^\(\s*command:.*\)$/# \1  # disabled by fix-prod/' docker-compose.yml || true
+              fi
+              grep -q 'NODE_ENV: production' docker-compose.yml || \
+                echo "WARN: NODE_ENV production not found in compose — check manually"
+              echo "=== Dockerfile ==="
+              cat Dockerfile
+              echo "=== rebuild --no-cache ==="
+              docker compose build --no-cache --pull s1
+              docker compose up -d --force-recreate s1
+              OK=0
+              for i in $(seq 1 36); do
+                if curl -fsS --max-time 5 "http://127.0.0.1:5000/" >/dev/null 2>&1; then
+                  OK=1
+                  break
+                fi
+                echo "wait $i/36"
+                sleep 5
+              done
+              if [ "$OK" != "1" ]; then
+                docker logs --tail 120 crm-rsv-360-s1 || true
+                exit 1
+              fi
+              HTML=$(curl -fsS --max-time 10 "http://127.0.0.1:5000/" || true)
+              echo "=== GATE: NODE_ENV ==="
+              docker exec crm-rsv-360-s1 printenv NODE_ENV || true
+              echo "=== GATE: no vite client ==="
+              if echo "$HTML" | grep -qE '/@vite/client|/src/main\.tsx'; then
+                echo "FAIL_DEV_HTML"
+                echo "$HTML" | head -30
+                exit 1
+              fi
+              echo "PASS_NO_VITE"
+              echo "=== GATE: production assets ==="
+              if echo "$HTML" | grep -qE '/assets/'; then
+                echo "PASS_ASSETS"
+              else
+                echo "FAIL_NO_ASSETS"
+                echo "$HTML" | head -30
+                exit 1
+              fi
+              echo "OK fix-prod gates passed"
               exit 0
             fi
 
