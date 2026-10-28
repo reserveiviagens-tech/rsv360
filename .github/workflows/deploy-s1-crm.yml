@@ -69,7 +69,29 @@ jobs:
               TS=$(date +%Y%m%d%H%M%S)
               cp -a Dockerfile "Dockerfile.bak.$TS"
               cp -a docker-compose.yml "docker-compose.yml.bak.$TS"
-              echo "=== writing production Dockerfile (base64; evita quebrar YAML) ==="
+
+              echo "=== sync CRM source from GitHub ($REF) before prod build ==="
+              SRC="/tmp/Crm-RSV-360-fixprod-$TS"
+              rm -rf "$SRC"
+              git clone --depth 1 --branch "$REF" \
+                https://github.com/reserveiviagens-tech/Crm-RSV-360.git "$SRC"
+              echo "Cloned $(cd "$SRC" && git log -1 --oneline)"
+              rsync -a --delete \
+                --exclude '.env' \
+                --exclude '.env.*' \
+                --exclude 'docker-compose.yml' \
+                --exclude 'docker-compose.yaml' \
+                --exclude 'Dockerfile' \
+                --exclude 'Dockerfile.*' \
+                --exclude 'node_modules' \
+                --exclude '.git' \
+                --exclude 'dist' \
+                --exclude 'uploads' \
+                --exclude 'data' \
+                "$SRC"/ "$CRM_DIR"/
+              rm -rf "$SRC"
+
+              echo "=== writing production Dockerfile (printf; evita quebrar YAML) ==="
               printf '%s\n' \
                 'FROM node:20-bookworm-slim AS build' \
                 'WORKDIR /app' \
