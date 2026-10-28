@@ -129,6 +129,9 @@ services:
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
         INTERNAL_API_URL: http://backend:3002
         NODE_ENV: staging
+        RSV360_APP_MODE: marketing-lab
+        NEXT_PUBLIC_APP_MODE: marketing-lab
+        NEXT_PUBLIC_PRIMARY_SITE_URL: ${NEXT_PUBLIC_PRIMARY_SITE_URL:-https://www.reserveiviagens.com.br}
     container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-frontend
     restart: always
     networks: [rsv360_staging]
@@ -149,6 +152,9 @@ services:
       REDIS_URL: redis://redis:6379
       BACKEND_INTERNAL_URL: http://backend:3002
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_PUBLIC_PRIMARY_SITE_URL: ${NEXT_PUBLIC_PRIMARY_SITE_URL:-https://www.reserveiviagens.com.br}
+      RSV360_APP_MODE: marketing-lab
+      NEXT_PUBLIC_APP_MODE: marketing-lab
       OAUTH_BFF_SECRET: ${OAUTH_BFF_SECRET}
       OAUTH_DEV_MOCK: ${OAUTH_DEV_MOCK:-true}
 

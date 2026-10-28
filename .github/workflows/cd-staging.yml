@@ -1,6 +1,7 @@
 name: CD - Staging Deployment
 
 on:
+  workflow_dispatch:
   push:
     branches: [ develop ]
   workflow_run:
@@ -110,6 +111,9 @@ jobs:
           build-args: |
             APP_DIR=apps/site-publico
             NODE_ENV=staging
+            RSV360_APP_MODE=marketing-lab
+            NEXT_PUBLIC_APP_MODE=marketing-lab
+            NEXT_PUBLIC_PRIMARY_SITE_URL=https://www.reserveiviagens.com.br
 
       - name: Deploy to staging server
         uses: appleboy/ssh-action@v1.2.5
