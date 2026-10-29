@@ -61,7 +61,13 @@ export function isStaticAssetPath(pathname: string): boolean {
   return (
     pathname.startsWith('/_next') ||
     pathname === '/favicon.ico' ||
-    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?|ttf)$/i.test(pathname)
+    pathname === '/manifest.json' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?|ttf|webmanifest)$/i.test(
+      pathname,
+    )
   );
 }
 
