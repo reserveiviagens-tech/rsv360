@@ -375,6 +375,8 @@ export function WizardProvider({ children, bootstrap }: WizardProviderProps) {
           checkIn: formatWizardDateString(range.from!),
           checkOut: '',
         }));
+        // Feedback imediato no 1º clique (só 1 data) — o alerta inline no calendário reforça.
+        toast.message(wizardMinNightsLabel(), { duration: 4500 });
         return;
       }
 

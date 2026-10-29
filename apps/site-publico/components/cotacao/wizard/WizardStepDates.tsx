@@ -7,13 +7,7 @@ import { Label } from '@/components/ui/label';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Calendar, Loader2, Users } from 'lucide-react';
 import { useWizard } from './WizardContext';
-import {
-  isValidWizardRange,
-  wizardMinNightsLabel,
-  wizardSelectCheckoutHint,
-  wizardStateToDateRange,
-} from './wizard-date-utils';
-import { countNights } from './wizard-types';
+import { isValidWizardRange, wizardStateToDateRange } from './wizard-date-utils';
 
 interface WizardStepDatesProps {
   onNextClick?: () => void;
@@ -23,15 +17,7 @@ export function WizardStepDates({ onNextClick }: WizardStepDatesProps = {}) {
   const { state, updateState, nextStep, availabilityLoading, updateTravelDates } = useWizard();
   const handleNext = onNextClick ?? nextStep;
   const dateRange = wizardStateToDateRange(state.checkIn, state.checkOut);
-  const nights = countNights(state.checkIn, state.checkOut);
   const rangeValid = isValidWizardRange(state.checkIn, state.checkOut);
-  const awaitingCheckout = Boolean(state.checkIn && !state.checkOut);
-  const belowMinNights = Boolean(state.checkIn && state.checkOut && !rangeValid && nights >= 1);
-  const dateHint = awaitingCheckout
-    ? wizardSelectCheckoutHint()
-    : belowMinNights
-      ? wizardMinNightsLabel()
-      : null;
 
   return (
     <Card>
@@ -49,17 +35,8 @@ export function WizardStepDates({ onNextClick }: WizardStepDatesProps = {}) {
           <Label htmlFor="date">Quando pretende viajar? *</Label>
           <DateRangePicker value={dateRange} onChange={updateTravelDates} />
           <p className="text-xs text-muted-foreground">
-            Toque no calendário: 1º clique = check-in, 2º = check-out. {wizardMinNightsLabel()}
+            Toque no calendário: 1º clique = check-in, 2º = check-out. Mínimo de 2 diárias.
           </p>
-          {dateHint ? (
-            <p
-              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900"
-              role="alert"
-              data-testid="wizard-min-nights-hint"
-            >
-              {dateHint}
-            </p>
-          ) : null}
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Users className="w-4 h-4" />

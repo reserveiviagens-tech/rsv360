@@ -15,6 +15,7 @@ import {
   isPastDate,
   isValidDateRange,
   normalizeDateRange,
+  wizardMinNightsLabel,
 } from '@/components/cotacao/wizard/wizard-date-utils';
 
 function useIsMobile(breakpoint = 640) {
@@ -93,6 +94,9 @@ export function DateRangePicker({
   };
 
   const displayRange = open ? draft : value;
+  // Aviso no ato do 1º clique (só check-in) ou com menos de 2 diárias — visível com o calendário aberto.
+  const showMinNightsAttention =
+    Boolean(displayRange?.from) && !isValidDateRange(displayRange);
 
   return (
     <div className={cn('grid gap-2', className)}>
@@ -128,8 +132,26 @@ export function DateRangePicker({
             locale={ptBR}
             disabled={isPastDate}
           />
+          {showMinNightsAttention ? (
+            <p
+              className="mx-3 mb-3 max-w-[min(100%,20rem)] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 sm:max-w-none"
+              role="alert"
+              data-testid="wizard-min-nights-hint-popover"
+            >
+              {wizardMinNightsLabel()}
+            </p>
+          ) : null}
         </PopoverContent>
       </Popover>
+      {showMinNightsAttention && !open ? (
+        <p
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900"
+          role="alert"
+          data-testid="wizard-min-nights-hint"
+        >
+          {wizardMinNightsLabel()}
+        </p>
+      ) : null}
     </div>
   );
 }
