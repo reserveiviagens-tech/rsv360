@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { startOfDay } from 'date-fns';
 import {
   isPastDate,
   isValidDateRange,
@@ -60,8 +61,24 @@ export function DateRangePicker({
   }, [value]);
 
   const handleSelect = (next: DateRange | undefined) => {
-    const normalized = normalizeDateRange(next) ?? (next?.from ? { from: next.from } : undefined);
-    setDraft(normalized);
+    if (!next?.from) {
+      setDraft(undefined);
+      onChange(undefined);
+      return;
+    }
+
+    // DayPicker com min=0 seta from===to no 1º clique — tratar como só check-in.
+    const sameOrMissingTo =
+      !next.to || startOfDay(next.to).getTime() <= startOfDay(next.from).getTime();
+    if (sameOrMissingTo) {
+      const incomplete = { from: next.from };
+      setDraft(incomplete);
+      onChange(incomplete);
+      return;
+    }
+
+    const normalized = normalizeDateRange(next);
+    setDraft(normalized ?? { from: next.from, to: next.to });
 
     if (isValidDateRange(normalized)) {
       onChange(normalized);
@@ -69,8 +86,9 @@ export function DateRangePicker({
       return;
     }
 
-    if (next?.from && !next.to) {
-      onChange({ from: next.from });
+    // Período com 1 diária (ou inválido): propaga para o wizard mostrar o aviso e bloquear avanço.
+    if (normalized?.from && normalized.to) {
+      onChange(normalized);
     }
   };
 
@@ -100,6 +118,9 @@ export function DateRangePicker({
           <Calendar
             initialFocus
             mode="range"
+            // min=1: 1º clique só define check-in (to fica aberto). Não auto-completa 2ª data.
+            // Mínimo comercial de 2 diárias é validado no wizard (não no DayPicker).
+            min={1}
             defaultMonth={displayRange?.from ?? new Date()}
             selected={displayRange}
             onSelect={handleSelect}

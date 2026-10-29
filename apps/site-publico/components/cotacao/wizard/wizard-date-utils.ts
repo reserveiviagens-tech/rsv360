@@ -7,7 +7,12 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export { WIZARD_MIN_NIGHTS };
 
 export function wizardMinNightsLabel(): string {
-  return `Estadia mínima de ${WIZARD_MIN_NIGHTS} noites para reservar.`;
+  return `Só é possível realizar a reserva a partir de ${WIZARD_MIN_NIGHTS} diárias. Selecione check-in e check-out com pelo menos ${WIZARD_MIN_NIGHTS} noites.`;
+}
+
+/** Check-in escolhido, check-out ainda pendente. */
+export function wizardSelectCheckoutHint(): string {
+  return `Selecione também a data de check-out. Reserva a partir de ${WIZARD_MIN_NIGHTS} diárias.`;
 }
 
 export function parseWizardDateString(value: string): Date | undefined {
