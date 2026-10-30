@@ -494,7 +494,7 @@ npm run docker:logs
 
 S1 usa o Postgres Docker do RSV360 (`:5433`), mas **não** é o backend monorepo (`:3002`).
 
-### 15.3 Estado agora (máquina — snapshot 2026-09-13, atualizado pós-limpeza órfãos)
+### 15.3 Estado agora (máquina — snapshot)
 
 | Endereço | Status |
 |----------|--------|
@@ -507,8 +507,7 @@ S1 usa o Postgres Docker do RSV360 (`:5433`), mas **não** é o backend monorepo
 | `:5433` / `:6379` | UP |
 | `:5000` S1 | verificar na sessão |
 
-**Limpeza 2026-09-13:** removidos 17 containers órfãos (nomes auto Docker), imagens `route-smoke-clean-backend` / `rsv360-backend:test`, redes antigas e ~613 MB volumes mortos. Restam **apenas** `rsv360-*`.
-
+> **Snapshot histórico de 2026-09-13:** houve uma limpeza de 17 containers órfãos (nomes auto Docker), imagens `route-smoke-clean-backend` / `rsv360-backend:test`, redes antigas e ~613 MB de volumes mortos. **Esse snapshot não deve ser usado como estado atual da máquina.** A auditoria Docker posterior (2026-09-28) identificou novamente 17 containers fora da nomenclatura `rsv360-*`; o inventário detalhado está em **§15.7**.
 
 ### 15.4 Apps no monorepo (workspaces)
 
@@ -539,6 +538,155 @@ Scripts raiz: `npm run dev:turismo` · `dev:site` · `dev:admin` · `dev:guest` 
 | Postgres `:5433` · DB `rsv_360_ecosystem` | Migrations 0050–0057 (local já aplicado na sessão; prod/staging = humano) |
 
 > **Auditoria profunda da stack canônica (backend, site-publico, admin, guest, infra):** ver **§19**. Turismo/Anfitrião detalhado permanece nas **§§5–6**.
+
+### 15.7 Auditoria dos containers Docker fora da stack canônica (snapshot 2026-09-28)
+
+Foram identificados **17 containers fora de `rsv360-*`**.
+Eles são resíduos locais de:
+* smoke tests;
+* testes descartáveis;
+* monitoramento ad hoc;
+* experimentos históricos de abril/2026.
+
+Nomes como `inspiring_almeida` são nomes automáticos atribuídos pelo Docker quando não existe `--name` fixo.
+
+Eles:
+* não pertencem à stack canônica;
+* não fazem parte do caminho operacional do produto;
+* não devem ser confundidos com `rsv360-*`.
+
+#### Grupos de origem
+
+| Grupo | Containers | Evidência | Origem |
+|-------|------------|-----------|--------|
+| A — route-smoke-clean | `inspiring_almeida`, `heuristic_bartik` | Compose project `route-smoke-clean`, serviço backend, imagem `route-smoke-clean-backend:latest` | Smoke/limpeza de rotas local (~24/04/2026) |
+| B — monitoramento ad hoc | 2 Prometheus, 2 Grafana, 2 Alertmanager, 2 Redis, 1 nginx | Sem labels Compose; imagens oficiais | `docker run` manual / documentação antiga |
+| C — testes one-shot | `agitated_lalande`, `pedantic_bohr`, 2 Postgres, 2 Node | Exited 0/1 | Testes descartáveis backend/DB/Node |
+
+**Observações:**
+* criação observada: `2026-04-24`;
+* reinicialização observada aproximadamente `17:36–17:37` no snapshot;
+* `RestartPolicy=no`;
+* reaparecimento relacionado ao ciclo local Docker Desktop/WSL;
+* não atribuir isso a serviço do produto.
+
+#### Inventário funcional
+
+| Container | Imagem | Função |
+|-----------|--------|--------|
+| `inspiring_almeida` | `route-smoke-clean-backend` | Backend antigo de smoke |
+| `heuristic_bartik` | `route-smoke-clean-backend` | Segunda cópia do backend smoke |
+| `gracious_kapitsa` | `redis:7-alpine` | Redis experimental |
+| `heuristic_bassi` | `redis:7-alpine` | Redis experimental |
+| `ecstatic_hodgkin` | Prometheus | Métricas ad hoc |
+| `pedantic_darwin` | Prometheus | Segunda instância |
+| `eloquent_hodgkin` | Grafana | Grafana ad hoc |
+| `friendly_newton` | Grafana | Segunda instância |
+| `intelligent_faraday` | Alertmanager | Alertas ad hoc |
+| `determined_tesla` | Alertmanager | Segunda instância |
+| `charming_brown` | nginx | Nginx genérico |
+| `agitated_lalande` | `rsv360-backend:test` | Backend teste morto |
+| `pedantic_bohr` | `rsv360-backend:test` | Backend teste morto |
+| `upbeat_golick` | Postgres 18/16 | DB teste morto |
+| `objective_vaughan` | Postgres 18/16 | DB teste morto |
+| `gifted_feynman` | `node:22-alpine` | Node teste morto |
+| `cool_hodgkin` | `node:22-alpine` | Node teste morto |
+
+#### Rede e tráfego
+
+* órfãos → rede `bridge`;
+* canônicos → `rsv360_internal`;
+* `PortBindings={}` nos órfãos;
+* `3002/tcp` sem bind NÃO significa `localhost:3002`.
+
+**Evidência:**
+`http://172.17.0.3:3002/health` → falhou a partir do host.
+`http://127.0.0.1:3002/health` → 200 do `rsv360-backend` canônico.
+
+**Conclusão:**
+O tráfego do produto não passa pelos backends `inspiring_almeida` ou `heuristic_bartik`.
+
+#### Acesso
+
+| Origem | Acesso |
+|--------|--------|
+| Usuário local com Docker Desktop | Controle total dos containers |
+| Browser/LAN/Internet | Sem acesso direto por ausência de portas publicadas |
+| `rsv360-*` | Não dependem desses containers |
+| Outros containers na `bridge` | Podem comunicar-se por IP interno |
+
+> Não foi identificada evidência de equipe remota ou serviço externo associado a esses nomes.
+
+#### Dependência / Serventia
+
+| Pergunta | Resultado |
+|----------|-----------|
+| Stack `rsv360-*` depende deles? | Não identificada |
+| Turismo `:3005` depende deles? | Não identificada |
+| Backend `:3002` depende deles? | Não identificada |
+| S1 `:5000` depende deles? | Não identificada |
+| CI `route-smoke.yml` depende deles? | Não |
+| Serventia operacional atual | Não identificada |
+| Impacto de mantê-los | CPU/RAM/disco + confusão operacional |
+
+*(Nota: o CI atual não depende dos containers históricos.)*
+
+#### Risco
+
+**Risco para o produto: baixo**, considerando:
+* isolamento de rede;
+* ausência de portas publicadas;
+* ausência de dependência identificada.
+
+**Riscos operacionais:**
+* CPU;
+* RAM;
+* disco;
+* volumes órfãos;
+* confusão operacional.
+
+**Inventário observado:** `~38 volumes`
+
+#### Política de limpeza
+
+`LIMPEZA = PENDENTE DE GO SEPARADO`
+
+Se houver futura autorização, a limpeza deverá ser seletiva.
+
+**NÃO remover:**
+* `rsv360-*`;
+* volumes do Compose canônico;
+* `:3000–3007`;
+* `:9090`;
+* `:9093`;
+* `:5433`;
+* `:6379`;
+* `rsv360_internal`;
+* `rsv_360_ecosystem`.
+
+**NÃO executar em massa:**
+`docker system prune`
+`docker volume prune`
+`docker network prune`
+
+A futura limpeza deve usar uma lista fechada de recursos previamente auditados.
+
+#### Efeito da eventual limpeza
+
+A limpeza não é necessária para o funcionamento do produto.
+O único efeito funcional previsível é que o experimento `route-smoke-clean` precisaria ser recriado caso fosse necessário no futuro.
+A imagem `route-smoke-clean-backend:latest` poderá ser removida somente mediante GO separado.
+
+#### Regra de manutenção
+
+* §15.1 = SoT da stack canônica;
+* §15.2 = serviços fora do Compose;
+* §15.3 = snapshot operacional da máquina;
+* §15.7 = inventário de órfãos;
+* atualizar §15.7 quando o inventário mudar;
+* containers fora de `rsv360-*` não são produto sem evidência de origem/rede/dependência/fluxo;
+* porta interna não deve ser tratada como publicada sem `PortBindings`;
+* não registrar secrets, tokens, credenciais, PII ou `.env`.
 
 ---
 

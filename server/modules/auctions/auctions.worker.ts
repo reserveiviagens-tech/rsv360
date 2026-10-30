@@ -1,5 +1,8 @@
 import { Worker, type Job } from 'bullmq';
-import { createBullMQConnection } from '../fornecedores-hub/redis-connection';
+import {
+  createBullMQConnection,
+  isRedisRequiredForLocks,
+} from '../fornecedores-hub/redis-connection';
 import {
   AUCTIONS_QUEUE_NAME,
   JOB_EXPIRE_PAYMENT,
@@ -81,8 +84,8 @@ async function processScanExpired(job: Job<AuctionsJobData>) {
 
 export async function startAuctionsWorker(): Promise<void> {
   if (worker) return;
-  if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
-    console.warn('[auctions] Worker BullMQ omitido — REDIS_URL ausente');
+  if (!isRedisRequiredForLocks()) {
+    console.warn('[auctions] Worker BullMQ omitido — REDIS_DISABLED ou REDIS_URL ausente');
     return;
   }
 

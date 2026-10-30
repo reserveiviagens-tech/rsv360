@@ -1,0 +1,262 @@
+name: Deploy S1 CRM (Vite :5000)
+
+# www.reserveiviagens.com.br → Docker service s1 (crm-rsv-360-s1) na VPS :5000
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Ação'
+        required: true
+        type: choice
+        options:
+          - diagnose
+          - fix-prod
+          - repair
+          - deploy
+          - rollback
+        default: diagnose
+      git_ref:
+        description: 'Branch/tag do Crm-RSV-360 (modo deploy)'
+        required: true
+        type: string
+        default: main
+
+jobs:
+  s1:
+    name: S1 CRM ops
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging
+    steps:
+      - name: Run on VPS
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          command_timeout: 40m
+          script: |
+            set -uo pipefail
+            CRM_DIR="$HOME/crm-rsv-360"
+            MODE="${{ inputs.mode }}"
+            REF="${{ inputs.git_ref }}"
+
+            echo "=== status ==="
+            docker ps -a --filter name=crm-rsv-360-s1 --format '{{.Names}} {{.Image}} {{.Status}} {{.Ports}}'
+            docker logs --tail 40 crm-rsv-360-s1 2>&1 || true
+
+            if [ "$MODE" = "diagnose" ]; then
+              echo "=== compose ==="
+              cat "$CRM_DIR/docker-compose.yml" || true
+              echo "=== Dockerfile head ==="
+              head -40 "$CRM_DIR/Dockerfile" || true
+              echo "=== curl host ==="
+              curl -sv --max-time 5 "http://127.0.0.1:5000/" 2>&1 | head -40 || true
+              echo "=== curl inside container ==="
+              docker exec crm-rsv-360-s1 wget -qO- --timeout=5 http://127.0.0.1:5000/ 2>&1 | head -20 || \
+              docker exec crm-rsv-360-s1 node -e "fetch('http://127.0.0.1:5000/').then(r=>r.text()).then(t=>console.log(r.status,t.slice(0,200))).catch(e=>console.error(e))" 2>&1 || true
+              echo "=== images ==="
+              docker images 'crm-rsv-360-s1' --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
+              echo "=== bak dirs ==="
+              ls -d "$HOME"/crm-rsv-360.bak.* 2>/dev/null | tail -5 || true
+              echo "=== listening ports 3000/5000/3002 ==="
+              ss -tlnp 2>/dev/null | grep -E ':(3000|5000|3002)\s' || netstat -tlnp 2>/dev/null | grep -E ':(3000|5000|3002)\s' || true
+              echo "=== docker ps site-publico / rsv360 ==="
+              docker ps -a --format '{{.Names}} {{.Status}} {{.Ports}}' | grep -Ei 'site-publico|rsv360|crm-rsv|3000|3002' || true
+              echo "=== curl site-publico :3000 /cotacao ==="
+              curl -sS -o /tmp/cotacao3000.html -w 'http_code=%{http_code} len=%{size_download}\n' --max-time 8 "http://127.0.0.1:3000/cotacao?hotel=lacqua-diroma&adults=2" || echo "curl3000_fail"
+              head -c 240 /tmp/cotacao3000.html 2>/dev/null; echo
+              echo "=== curl CRM :5000 /cotacao ==="
+              curl -sS -o /tmp/cotacao5000.html -w 'http_code=%{http_code} len=%{size_download} redir=%{redirect_url}\n' --max-time 8 "http://127.0.0.1:5000/cotacao?hotel=lacqua-diroma&adults=2" || echo "curl5000_fail"
+              head -c 240 /tmp/cotacao5000.html 2>/dev/null; echo
+              echo "=== CRM env MARKETING_LAB ==="
+              docker exec crm-rsv-360-s1 printenv | grep -Ei 'MARKETING|LAB|SITE_PUBLIC|PRIMARY' || true
+              echo "=== caddy/nginx snippets ==="
+              ls /etc/caddy /etc/nginx/sites-enabled "$HOME"/caddy* 2>/dev/null || true
+              grep -RniE 'cotacao|5000|3000|reserveiviagens' /etc/caddy /etc/nginx/sites-enabled 2>/dev/null | head -40 || true
+              exit 0
+            fi
+
+            if [ "$MODE" = "fix-prod" ]; then
+              set -e
+              cd "$CRM_DIR"
+              TS=$(date +%Y%m%d%H%M%S)
+              cp -a Dockerfile "Dockerfile.bak.$TS"
+              cp -a docker-compose.yml "docker-compose.yml.bak.$TS"
+
+              echo "=== sync CRM source from GitHub ($REF) before prod build ==="
+              SRC="/tmp/Crm-RSV-360-fixprod-$TS"
+              rm -rf "$SRC"
+              git clone --depth 1 --branch "$REF" \
+                https://github.com/reserveiviagens-tech/Crm-RSV-360.git "$SRC"
+              echo "Cloned $(cd "$SRC" && git log -1 --oneline)"
+              rsync -a --delete \
+                --exclude '.env' \
+                --exclude '.env.*' \
+                --exclude 'docker-compose.yml' \
+                --exclude 'docker-compose.yaml' \
+                --exclude 'Dockerfile' \
+                --exclude 'Dockerfile.*' \
+                --exclude 'node_modules' \
+                --exclude '.git' \
+                --exclude 'dist' \
+                --exclude 'uploads' \
+                --exclude 'data' \
+                "$SRC"/ "$CRM_DIR"/
+              rm -rf "$SRC"
+
+              echo "=== writing production Dockerfile (printf; evita quebrar YAML) ==="
+              printf '%s\n' \
+                'FROM node:20-bookworm-slim AS build' \
+                'WORKDIR /app' \
+                'COPY package.json package-lock.json ./' \
+                'RUN npm ci' \
+                'COPY . ./' \
+                'RUN npm run build' \
+                '' \
+                'FROM node:20-bookworm-slim AS runner' \
+                'WORKDIR /app' \
+                'ENV NODE_ENV=production' \
+                'ENV PORT=5000' \
+                'ENV HOST=0.0.0.0' \
+                'COPY package.json package-lock.json ./' \
+                'RUN npm ci --omit=dev' \
+                'COPY --from=build /app/dist ./dist' \
+                'EXPOSE 5000' \
+                'CMD ["node", "dist/index.cjs"]' \
+                > Dockerfile
+              echo "=== ensure compose NODE_ENV=production (no command override) ==="
+              # Remove accidental command: that forces npm run dev
+              if grep -qE '^\s*command:' docker-compose.yml; then
+                echo "WARN: command: found in compose — commenting out"
+                sed -i.bak-cmd 's/^\(\s*command:.*\)$/# \1  # disabled by fix-prod/' docker-compose.yml || true
+              fi
+              grep -q 'NODE_ENV: production' docker-compose.yml || \
+                echo "WARN: NODE_ENV production not found in compose — check manually"
+              echo "=== Dockerfile ==="
+              cat Dockerfile
+              echo "=== rebuild --no-cache ==="
+              docker compose build --no-cache --pull s1
+              docker compose up -d --force-recreate s1
+              OK=0
+              for i in $(seq 1 36); do
+                if curl -fsS --max-time 5 "http://127.0.0.1:5000/" >/dev/null 2>&1; then
+                  OK=1
+                  break
+                fi
+                echo "wait $i/36"
+                sleep 5
+              done
+              if [ "$OK" != "1" ]; then
+                docker logs --tail 120 crm-rsv-360-s1 || true
+                exit 1
+              fi
+              HTML=$(curl -fsS --max-time 10 "http://127.0.0.1:5000/" || true)
+              echo "=== GATE: NODE_ENV ==="
+              docker exec crm-rsv-360-s1 printenv NODE_ENV || true
+              echo "=== GATE: no vite client ==="
+              if echo "$HTML" | grep -qE '/@vite/client|/src/main\.tsx'; then
+                echo "FAIL_DEV_HTML"
+                echo "$HTML" | head -30
+                exit 1
+              fi
+              echo "PASS_NO_VITE"
+              echo "=== GATE: production assets ==="
+              if echo "$HTML" | grep -qE '/assets/'; then
+                echo "PASS_ASSETS"
+              else
+                echo "FAIL_NO_ASSETS"
+                echo "$HTML" | head -30
+                exit 1
+              fi
+              echo "OK fix-prod gates passed"
+              exit 0
+            fi
+
+            if [ "$MODE" = "repair" ]; then
+              set -e
+              cd "$CRM_DIR"
+              echo "=== docker compose down/up (fix host publish) ==="
+              docker compose down
+              docker compose up -d
+              sleep 8
+              for i in $(seq 1 24); do
+                if curl -fsS --max-time 5 "http://127.0.0.1:5000/" >/dev/null 2>&1; then
+                  echo "OK host:5000 after repair"
+                  curl -sS -o /dev/null -w 'http_code=%{http_code}\n' "http://127.0.0.1:5000/"
+                  exit 0
+                fi
+                echo "repair wait $i"
+                sleep 5
+              done
+              docker logs --tail 80 crm-rsv-360-s1 || true
+              ss -tlnp | grep 5000 || true
+              docker port crm-rsv-360-s1 || true
+              exit 1
+            fi
+
+            if [ "$MODE" = "rollback" ]; then
+              set -e
+              PREV=$(docker images 'crm-rsv-360-s1' --format '{{.ID}} {{.CreatedAt}}' | awk 'NR==2{print $1}')
+              if [ -z "$PREV" ]; then
+                echo "ERROR: no previous image — trying compose recreate"
+                cd "$CRM_DIR"
+                docker compose up -d --force-recreate s1
+              else
+                echo "Rolling back to image $PREV"
+                cd "$CRM_DIR"
+                docker tag "$PREV" crm-rsv-360-s1:staging
+                docker compose up -d --force-recreate s1
+              fi
+              sleep 10
+              curl -fsS --max-time 20 "http://127.0.0.1:5000/" >/dev/null
+              echo "OK rollback healthy"
+              exit 0
+            fi
+
+            # mode=deploy
+            set -e
+            test -f "$CRM_DIR/docker-compose.yml"
+            cd "$CRM_DIR"
+            TS=$(date +%Y%m%d%H%M%S)
+            SRC="/tmp/Crm-RSV-360-$TS"
+            rm -rf "$SRC"
+            git clone --depth 1 --branch "$REF" \
+              https://github.com/reserveiviagens-tech/Crm-RSV-360.git "$SRC"
+            echo "Cloned $(cd "$SRC" && git log -1 --oneline)"
+
+            rsync -a --delete \
+              --exclude '.env' \
+              --exclude '.env.*' \
+              --exclude 'docker-compose.yml' \
+              --exclude 'docker-compose.yaml' \
+              --exclude 'Dockerfile' \
+              --exclude 'Dockerfile.*' \
+              --exclude 'node_modules' \
+              --exclude '.git' \
+              --exclude 'dist' \
+              --exclude 'uploads' \
+              --exclude 'data' \
+              "$SRC"/ "$CRM_DIR"/
+            rm -rf "$SRC"
+
+            docker compose build --pull s1
+            docker compose up -d --force-recreate s1
+
+            OK=0
+            for i in $(seq 1 36); do
+              if docker exec crm-rsv-360-s1 wget -qO- --timeout=3 http://127.0.0.1:5000/ >/dev/null 2>&1 \
+                 || curl -fsS --max-time 3 "http://127.0.0.1:5000/" >/dev/null 2>&1; then
+                OK=1
+                break
+              fi
+              echo "attempt $i/36"
+              sleep 5
+            done
+            docker ps -a --filter name=crm-rsv-360-s1 --format '{{.Names}} {{.Status}}'
+            if [ "$OK" != "1" ]; then
+              docker logs --tail 120 crm-rsv-360-s1 || true
+              exit 1
+            fi
+            echo "OK www/:5000 healthy ref=$REF"

@@ -77,9 +77,13 @@ services:
     ports:
       # CD health check: http://STAGING_HOST:8080/health
       - '8080:3002'
+    volumes:
+      # Persist CMS + home-sections uploads (cwd of API = /workspace/backend)
+      - rsv360_staging_uploads:/workspace/backend/public/uploads
     environment:
       PORT: 3002
       NODE_ENV: production
+      HOME_SECTIONS_UPLOAD_DIR: /workspace/backend/public/uploads/home-sections
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       FORNECEDORES_ENCRYPTION_KEY: ${FORNECEDORES_ENCRYPTION_KEY:-}
@@ -125,6 +129,9 @@ services:
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
         INTERNAL_API_URL: http://backend:3002
         NODE_ENV: staging
+        RSV360_APP_MODE: marketing-lab
+        NEXT_PUBLIC_APP_MODE: marketing-lab
+        NEXT_PUBLIC_PRIMARY_SITE_URL: ${NEXT_PUBLIC_PRIMARY_SITE_URL:-https://www.reserveiviagens.com.br}
     container_name: ${RSV360_DOCKER_PROJECT:-rsv360-staging}-frontend
     restart: always
     networks: [rsv360_staging]
@@ -145,9 +152,13 @@ services:
       REDIS_URL: redis://redis:6379
       BACKEND_INTERNAL_URL: http://backend:3002
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_PUBLIC_PRIMARY_SITE_URL: ${NEXT_PUBLIC_PRIMARY_SITE_URL:-https://www.reserveiviagens.com.br}
+      RSV360_APP_MODE: marketing-lab
+      NEXT_PUBLIC_APP_MODE: marketing-lab
       OAUTH_BFF_SECRET: ${OAUTH_BFF_SECRET}
       OAUTH_DEV_MOCK: ${OAUTH_DEV_MOCK:-true}
 
 volumes:
   rsv360_staging_pgdata:
   rsv360_staging_redis:
+  rsv360_staging_uploads:

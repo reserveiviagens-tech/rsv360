@@ -10,10 +10,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { startOfDay } from 'date-fns';
 import {
   isPastDate,
   isValidDateRange,
   normalizeDateRange,
+  wizardMinNightsLabel,
 } from '@/components/cotacao/wizard/wizard-date-utils';
 
 function useIsMobile(breakpoint = 640) {
@@ -60,8 +62,24 @@ export function DateRangePicker({
   }, [value]);
 
   const handleSelect = (next: DateRange | undefined) => {
-    const normalized = normalizeDateRange(next) ?? (next?.from ? { from: next.from } : undefined);
-    setDraft(normalized);
+    if (!next?.from) {
+      setDraft(undefined);
+      onChange(undefined);
+      return;
+    }
+
+    // DayPicker com min=0 seta from===to no 1º clique — tratar como só check-in.
+    const sameOrMissingTo =
+      !next.to || startOfDay(next.to).getTime() <= startOfDay(next.from).getTime();
+    if (sameOrMissingTo) {
+      const incomplete = { from: next.from };
+      setDraft(incomplete);
+      onChange(incomplete);
+      return;
+    }
+
+    const normalized = normalizeDateRange(next);
+    setDraft(normalized ?? { from: next.from, to: next.to });
 
     if (isValidDateRange(normalized)) {
       onChange(normalized);
@@ -69,12 +87,16 @@ export function DateRangePicker({
       return;
     }
 
-    if (next?.from && !next.to) {
-      onChange({ from: next.from });
+    // Período com 1 diária (ou inválido): propaga para o wizard mostrar o aviso e bloquear avanço.
+    if (normalized?.from && normalized.to) {
+      onChange(normalized);
     }
   };
 
   const displayRange = open ? draft : value;
+  // Aviso no ato do 1º clique (só check-in) ou com menos de 2 diárias — visível com o calendário aberto.
+  const showMinNightsAttention =
+    Boolean(displayRange?.from) && !isValidDateRange(displayRange);
 
   return (
     <div className={cn('grid gap-2', className)}>
@@ -100,6 +122,9 @@ export function DateRangePicker({
           <Calendar
             initialFocus
             mode="range"
+            // min=1: 1º clique só define check-in (to fica aberto). Não auto-completa 2ª data.
+            // Mínimo comercial de 2 diárias é validado no wizard (não no DayPicker).
+            min={1}
             defaultMonth={displayRange?.from ?? new Date()}
             selected={displayRange}
             onSelect={handleSelect}
@@ -107,8 +132,26 @@ export function DateRangePicker({
             locale={ptBR}
             disabled={isPastDate}
           />
+          {showMinNightsAttention ? (
+            <p
+              className="mx-3 mb-3 max-w-[min(100%,20rem)] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 sm:max-w-none"
+              role="alert"
+              data-testid="wizard-min-nights-hint-popover"
+            >
+              {wizardMinNightsLabel()}
+            </p>
+          ) : null}
         </PopoverContent>
       </Popover>
+      {showMinNightsAttention && !open ? (
+        <p
+          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900"
+          role="alert"
+          data-testid="wizard-min-nights-hint"
+        >
+          {wizardMinNightsLabel()}
+        </p>
+      ) : null}
     </div>
   );
 }

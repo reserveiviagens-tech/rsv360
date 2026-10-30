@@ -40,7 +40,12 @@ export function resolveWizardExitHref(
   const pathFromAllowlist = EXIT_BY_CANAL[canal] ?? EXIT_BY_REF[ref] ?? null;
   if (pathFromAllowlist) {
     const build = options?.buildPrimary ?? buildPrimarySiteUrl;
-    return build(pathFromAllowlist, '');
+    const href = build(pathFromAllowlist, '');
+    // Garantir absoluto: href relativo (/hoteis) fica no host do Lab (sslip), não no www.
+    if (/^https?:\/\//i.test(href)) return href;
+    const primary = buildPrimarySiteUrl(pathFromAllowlist, '');
+    if (/^https?:\/\//i.test(primary)) return primary;
+    return `https://www.reserveiviagens.com.br${pathFromAllowlist}`;
   }
 
   const lab = options?.isMarketingLab ?? isMarketingLabMode();

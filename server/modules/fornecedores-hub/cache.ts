@@ -31,6 +31,11 @@ async function getRedisClient(): Promise<import('ioredis').default | null> {
       maxRetriesPerRequest: 1,
       enableReadyCheck: true,
       lazyConnect: true,
+      connectTimeout: 5_000,
+      retryStrategy: () => null,
+    });
+    client.on('error', (err) => {
+      console.warn('[fornecedores-hub/cache]', err?.message || err);
     });
     await client.connect();
     redisClient = client;
