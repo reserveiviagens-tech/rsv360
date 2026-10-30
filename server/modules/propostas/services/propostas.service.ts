@@ -16,6 +16,7 @@ import { recordPropostaAceita, recordPropostaGerada } from '../metrics';
 import { detectarObjecaoPreco, revelarComparativo } from '../objecao';
 import { comHoldReservaAtomico } from '../../acomodacoes/services/disponibilidade-reserva.hook';
 import { acomodacoesService } from '../../acomodacoes/services/acomodacoes.service';
+import { comissoesService } from '../../comissoes/services/comissoes.service';
 
 type HitlMode = 'ai' | 'waiting' | 'human';
 
@@ -99,7 +100,36 @@ export class PropostasService {
     if (updated && (status === 'accepted' || status === 'paid')) {
       await this.afterAcceptedStatus(id, actorId);
     }
+    if (updated && status === 'paid') {
+      await this.afterPaidStatus(id, actorId);
+    }
     return updated;
+  }
+
+  /** MVP-B: gera lançamentos em comissoes_lancamento (no-op se módulo off ou dados incompletos). */
+  private async afterPaidStatus(id: number, actorId?: number) {
+    try {
+      const result = await comissoesService.gerarLancamentos(id);
+      await this.logEvent(
+        id,
+        'comissoes_geracao',
+        result.generated ? 'Lançamentos de comissão gerados' : 'Comissões não geradas',
+        {
+          generated: result.generated,
+          ...('reason' in result && result.reason ? { reason: result.reason } : {}),
+        },
+        actorId,
+      );
+    } catch (err) {
+      console.warn('[propostas] gerarLancamentos falhou:', (err as Error).message);
+      await this.logEvent(
+        id,
+        'comissoes_geracao',
+        'Falha ao gerar comissões',
+        { error: (err as Error).message },
+        actorId,
+      );
+    }
   }
 
   private async afterAcceptedStatus(id: number, actorId?: number) {
