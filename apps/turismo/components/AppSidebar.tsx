@@ -1,7 +1,8 @@
 "use client"
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import { useAuth } from '../src/context/AuthContext'
 import { 
   Menu, 
   X, 
@@ -15,6 +16,9 @@ import {
   Home,
   KeyRound,
   Gauge,
+  Wallet,
+  Users,
+  Handshake,
 } from 'lucide-react'
 
 interface SidebarItem {
@@ -35,12 +39,15 @@ interface SidebarCategory {
 
 export default function AppSidebar() {
   const router = useRouter()
+  const { user } = useAuth()
   const pathname = (router.asPath || router.pathname || '') as string
   const [isOpen, setIsOpen] = useState(true)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isCompact, setIsCompact] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['anfitriao', 'gestao-turistica', 'cotacoes']))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(['anfitriao', 'programas-comerciais', 'gestao-turistica', 'cotacoes']),
+  )
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   // Detectar tamanho da tela e comunicar estado ao layout principal
@@ -136,7 +143,14 @@ export default function AppSidebar() {
 
   // Honest nav: only surface READY / actively used modules (Aruanda A2).
   // Mock/façade categories (Marketing, E-commerce, Relatórios standalone, etc.) stay out of the rail.
-  const categories: SidebarCategory[] = [
+  const categories: SidebarCategory[] = useMemo(() => {
+    const isCorretor = user?.role === 'corretor'
+    const anfitriaoTitle = isCorretor ? 'Corretor & anfitrião' : 'Anfitrião & corretor'
+    const anfitriaoDesc = isCorretor
+      ? 'Carteira de proprietários, comissões por reserva'
+      : 'Captação, anúncios, comissões por reserva'
+
+    return [
     {
       id: 'dashboard',
       name: 'Dashboard',
@@ -149,17 +163,30 @@ export default function AppSidebar() {
     },
     {
       id: 'anfitriao',
-      name: 'Anfitrião',
-      description: 'Anúncios, calendário e desempenho',
+      name: anfitriaoTitle,
+      description: anfitriaoDesc,
       icon: KeyRound,
       color: 'bg-rose-600',
       items: [
-        { id: 'anf-hoje', name: 'Hoje', href: '/anfitriao' },
+        { id: 'anf-hoje', name: isCorretor ? 'Minha carteira (hoje)' : 'Hoje', href: '/anfitriao' },
+        { id: 'anf-comissoes', name: 'Comissões', href: '/anfitriao/comissoes', icon: Wallet },
         { id: 'anf-calendario', name: 'Calendário', href: '/anfitriao/calendario' },
-        { id: 'anf-anuncios', name: 'Anúncios', href: '/anfitriao/unidades' },
+        { id: 'anf-anuncios', name: isCorretor ? 'Anúncios (carteira)' : 'Anúncios', href: '/anfitriao/unidades' },
         { id: 'anf-mensagens', name: 'Mensagens', href: '/anfitriao/mensagens' },
         { id: 'anf-reservas', name: 'Reservas', href: '/anfitriao/reservas' },
         { id: 'anf-desempenho', name: 'Desempenho', href: '/anfitriao/desempenho' },
+        { id: 'anf-importar', name: 'Importar unidades', href: '/anfitriao/importar' },
+      ]
+    },
+    {
+      id: 'programas-comerciais',
+      name: 'Captação comercial',
+      description: 'Afiliados e parceiros (trilhos separados)',
+      icon: Users,
+      color: 'bg-violet-600',
+      items: [
+        { id: 'prog-afiliados', name: 'Afiliados', href: '/dashboard/affiliates', icon: Users },
+        { id: 'prog-parceiros', name: 'Parceiros', href: '/partners', icon: Handshake },
       ]
     },
     {
@@ -197,6 +224,7 @@ export default function AppSidebar() {
       ]
     }
   ]
+  }, [user?.role])
 
   const SidebarContent = (
     <>
