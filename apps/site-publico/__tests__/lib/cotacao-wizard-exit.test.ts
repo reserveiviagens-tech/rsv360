@@ -49,6 +49,18 @@ describe('resolveWizardExitHref', () => {
     ).toBe('/');
   });
 
+  it('não aceita href relativo para saída S1 (evita /hoteis no host do Lab)', () => {
+    expect(
+      resolveWizardExitHref(
+        { canal: 's1-hoteis', ref: 'hoteis' },
+        {
+          buildPrimary: (pathname) => pathname,
+          isMarketingLab: true,
+        },
+      ),
+    ).toBe('https://www.reserveiviagens.com.br/hoteis');
+  });
+
   it('não usa canal/ref como URL (anti open-redirect)', () => {
     expect(
       resolveWizardExitHref(

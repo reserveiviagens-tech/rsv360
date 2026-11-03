@@ -7,8 +7,7 @@ import { Label } from '@/components/ui/label';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Calendar, Loader2, Users } from 'lucide-react';
 import { useWizard } from './WizardContext';
-import { isValidWizardRange, wizardMinNightsLabel, wizardStateToDateRange } from './wizard-date-utils';
-import { countNights } from './wizard-types';
+import { isValidWizardRange, wizardStateToDateRange } from './wizard-date-utils';
 
 interface WizardStepDatesProps {
   onNextClick?: () => void;
@@ -18,9 +17,7 @@ export function WizardStepDates({ onNextClick }: WizardStepDatesProps = {}) {
   const { state, updateState, nextStep, availabilityLoading, updateTravelDates } = useWizard();
   const handleNext = onNextClick ?? nextStep;
   const dateRange = wizardStateToDateRange(state.checkIn, state.checkOut);
-  const nights = countNights(state.checkIn, state.checkOut);
   const rangeValid = isValidWizardRange(state.checkIn, state.checkOut);
-  const showMinNightsHint = Boolean(state.checkIn && state.checkOut && !rangeValid && nights === 1);
 
   return (
     <Card>
@@ -38,11 +35,8 @@ export function WizardStepDates({ onNextClick }: WizardStepDatesProps = {}) {
           <Label htmlFor="date">Quando pretende viajar? *</Label>
           <DateRangePicker value={dateRange} onChange={updateTravelDates} />
           <p className="text-xs text-muted-foreground">
-            Toque no calendário — check-in e check-out em poucos cliques. {wizardMinNightsLabel()}
+            Toque no calendário: 1º clique = check-in, 2º = check-out. Mínimo de 2 diárias.
           </p>
-          {showMinNightsHint ? (
-            <p className="text-sm text-destructive">{wizardMinNightsLabel()}</p>
-          ) : null}
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Users className="w-4 h-4" />

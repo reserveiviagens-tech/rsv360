@@ -3,6 +3,7 @@ const { db } = require('../../../../src/db/drizzle');
 const { refunds, payments } = require('../../../../src/db/schema');
 import { getPaymentProvider } from '../factory';
 import { CreateRefundDTO, RefundResult } from '../interfaces';
+import { reverseEarningForPaymentRefund } from '../../../../../server/modules/partners/services/partner-earning-reversal.service';
 
 export class RefundService {
   private provider = getPaymentProvider();
@@ -24,6 +25,17 @@ export class RefundService {
     await db.update(payments)
       .set({ status: 'refunded' as any })
       .where(eq(payments.id, data.paymentId));
+
+    // C36-DB: reverse partner earning + ledger debit (idempotent). Never call payout.
+    // Earning failure must not undo provider refund recording.
+    try {
+      await reverseEarningForPaymentRefund(data.paymentId);
+    } catch (err) {
+      console.error('[C36-DB] earning reversal hook failed', {
+        paymentId: data.paymentId,
+        message: err instanceof Error ? err.message : 'unknown',
+      });
+    }
 
     return result;
   }

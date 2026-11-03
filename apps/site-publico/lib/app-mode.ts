@@ -6,9 +6,20 @@ const rawMode =
 export const APP_MODE: AppMode =
   rawMode === 'marketing-lab' ? 'marketing-lab' : 'public';
 
-export const PRIMARY_SITE_URL = (
-  process.env.NEXT_PUBLIC_PRIMARY_SITE_URL ?? 'http://localhost:5000'
-).replace(/\/$/, '');
+/**
+ * Site B2C (Crm-RSV-360 :5000 / www).
+ * Docker ARG vazio virava "" e quebrava o ?? — Voltar do wizard ia para /hoteis relativo no Lab.
+ */
+function resolvePrimarySiteUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_PRIMARY_SITE_URL ?? '')
+    .trim()
+    .replace(/\/$/, '');
+  if (raw && /^https?:\/\//i.test(raw)) return raw;
+  if (process.env.NODE_ENV === 'development') return 'http://localhost:5000';
+  return 'https://www.reserveiviagens.com.br';
+}
+
+export const PRIMARY_SITE_URL = resolvePrimarySiteUrl();
 
 const LAB_ROUTE_PREFIXES = [
   '/lab',
@@ -50,7 +61,13 @@ export function isStaticAssetPath(pathname: string): boolean {
   return (
     pathname.startsWith('/_next') ||
     pathname === '/favicon.ico' ||
-    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?|ttf)$/i.test(pathname)
+    pathname === '/manifest.json' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?|ttf|webmanifest)$/i.test(
+      pathname,
+    )
   );
 }
 
