@@ -122,17 +122,30 @@ export function AnfitriaoHostNav({ className = '' }: Props) {
             );
           })}
           {isStaff ? (
-            <Link
-              href="/anfitriao/admin/verificacao-local"
-              prefetch={false}
-              className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${
-                path.startsWith('/anfitriao/admin/verificacao-local')
-                  ? 'border-slate-900 font-semibold text-slate-900'
-                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
-              }`}
-            >
-              Verificação
-            </Link>
+            <>
+              <Link
+                href="/anfitriao/admin/carteira-corretor"
+                prefetch={false}
+                className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${
+                  path.startsWith('/anfitriao/admin/carteira-corretor')
+                    ? 'border-slate-900 font-semibold text-slate-900'
+                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
+                }`}
+              >
+                Carteira
+              </Link>
+              <Link
+                href="/anfitriao/admin/verificacao-local"
+                prefetch={false}
+                className={`shrink-0 border-b-2 px-3 py-3 text-sm transition ${
+                  path.startsWith('/anfitriao/admin/verificacao-local')
+                    ? 'border-slate-900 font-semibold text-slate-900'
+                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
+                }`}
+              >
+                Verificação
+              </Link>
+            </>
           ) : null}
         </nav>
         <Link
