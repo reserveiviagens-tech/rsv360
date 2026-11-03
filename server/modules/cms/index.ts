@@ -10,8 +10,10 @@ export function registerCmsModule(app: Express) {
   app.use(
     '/uploads',
     express.static(uploadRoot, {
+      maxAge: '30d',
       setHeaders(res) {
         res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       },
     }),
   );

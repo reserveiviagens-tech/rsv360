@@ -1,0 +1,117 @@
+# C36-DB — Controlled staging refund E2E (namespace c36db_*)
+# confirm = VALIDATE_REFUND_C36DB
+# Uses local earning reversal orchestrator — NO payment gateway / NO payout.
+name: C36 Staging Refund E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type exactly VALIDATE_REFUND_C36DB"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c36-staging-refund-e2e
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Staging refund E2E c36db
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    if: ${{ inputs.confirm == 'VALIDATE_REFUND_C36DB' }}
+    steps:
+      - name: Confirm gate
+        run: echo "C36-DB staging refund E2E (synthetic, no gateway)"
+
+      - name: Checkout probe script
+        uses: actions/checkout@v4
+
+      - name: Upload probe to staging host
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          source: "backend/scripts/c36db-refund-e2e-probe.ts,server/modules/partners/services/partner-earning-on-refund.service.ts,backend/server/modules/payments/services/refund.service.ts"
+          target: "${{ secrets.STAGING_PATH }}/"
+          overwrite: true
+
+      - name: SSH seed + probe + cleanup
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_PORT || 22 }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.STAGING_PATH }}"
+            if [ -f .env ]; then set -a; . <(sed 's/\r$//' .env); set +a; fi
+            : "${POSTGRES_USER:?}"; : "${POSTGRES_DB:?}"
+            COMPOSE="docker compose -f docker-compose.staging.yml"
+            NS="c36db_$(date +%s)"
+            echo "NAMESPACE=$NS"
+            trim_id() { printf '%s' "$1" | tr -d '\r' | awk 'NF { print; exit }'; }
+
+            TIP=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "SELECT COUNT(*) FROM drizzle.__drizzle_migrations;")")
+            echo "MIGRATION_ROWS=$TIP"
+            HAS_TERMS=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "SELECT CASE WHEN to_regclass('public.partner_commercial_terms') IS NULL THEN 0 ELSE 1 END;")")
+            test "$HAS_TERMS" = "1"
+
+            UID1=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "SELECT id::text FROM users ORDER BY id LIMIT 1;")")
+            if [ -z "$UID1" ]; then
+              UID1=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO users (name, email, password, role, is_active) VALUES ('c36db', '${NS}@example.invalid', 'x', 'admin', true) RETURNING id::text;")")
+            fi
+            test -n "$UID1"
+            ENT=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "SELECT gen_random_uuid()::text;")")
+
+            echo "=== SEED A ==="
+            EID_A=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO empreendimentos (slug, hotel_id, nome_oficial, nome_normalizado, metadata) VALUES ('${NS}-a', '${NS}-h-a', '${NS} a', '${NS} a', jsonb_build_object('c36db', true, 'ns', '${NS}')) RETURNING id::text;")")
+            ACO_A=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO acomodacoes (hotel_id, titulo, capacidade_max, ativo) VALUES ('${NS}-h-a', '${NS} unit a', 2, true) RETURNING id::text;")")
+            PID_A=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO partners (id, code, display_name, status, metadata, created_at, updated_at) VALUES (gen_random_uuid(), left('${NS}_pa', 64), '${NS}_pa', 'active', jsonb_build_object('c36db', true, 'ns', '${NS}'), now(), now()) RETURNING id::text;")")
+            PEA_A=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO partner_empreendimento_associations (id, partner_id, empreendimento_id, association_role, status, metadata, created_at, updated_at) VALUES (gen_random_uuid(), '${PID_A}'::uuid, ${EID_A}::int, 'commercial_owner', 'active', jsonb_build_object('c36db', true, 'ns', '${NS}'), now(), now()) RETURNING id::text;")")
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version) VALUES ('${PEA_A}'::uuid, 'percent_bps', 1500, 'booking_total', 'active', 1);"
+            BID_A=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO bookings (booking_code, booking_type, item_id, item_name, user_id, customer_name, customer_email, start_date, end_date, total_amount, currency, payment_method, payment_status, status, metadata) VALUES (left('${NS}_a', 50), 'accommodation', ${ACO_A}::int, 'c36db unit', ${UID1}::int, 'C36DB Tester', 'c36db@example.invalid', now(), now() + interval '2 days', '1000.00', 'BRL', 'pix', 'paid', 'confirmed', jsonb_build_object('c36db', true, 'ns', '${NS}')) RETURNING id::text;")")
+            PAY_A=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO payments (id, enterprise_id, provider, method, status, amount, currency, booking_id, paid_at, metadata, created_at, updated_at) VALUES (gen_random_uuid(), '${ENT}'::uuid, 'mercadopago', 'pix', 'approved', '1000.00', 'BRL', ${BID_A}::int, now(), jsonb_build_object('c36db', true, 'ns', '${NS}'), now(), now()) RETURNING id::text;")")
+            echo "PAY_A=$PAY_A"
+
+            echo "=== SEED F ==="
+            EID_F=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO empreendimentos (slug, hotel_id, nome_oficial, nome_normalizado, metadata) VALUES ('${NS}-f', '${NS}-h-f', '${NS} f', '${NS} f', jsonb_build_object('c36db', true, 'ns', '${NS}')) RETURNING id::text;")")
+            ACO_F=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO acomodacoes (hotel_id, titulo, capacidade_max, ativo) VALUES ('${NS}-h-f', '${NS} unit f', 2, true) RETURNING id::text;")")
+            PID_F=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO partners (id, code, display_name, status, metadata, created_at, updated_at) VALUES (gen_random_uuid(), left('${NS}_pf', 64), '${NS}_pf', 'active', jsonb_build_object('c36db', true, 'ns', '${NS}'), now(), now()) RETURNING id::text;")")
+            PEA_F=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO partner_empreendimento_associations (id, partner_id, empreendimento_id, association_role, status, metadata, created_at, updated_at) VALUES (gen_random_uuid(), '${PID_F}'::uuid, ${EID_F}::int, 'commercial_owner', 'active', jsonb_build_object('c36db', true, 'ns', '${NS}'), now(), now()) RETURNING id::text;")")
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "INSERT INTO partner_commercial_terms (pea_id, rate_kind, rate_bps, basis, status, version) VALUES ('${PEA_F}'::uuid, 'percent_bps', 1500, 'booking_total', 'active', 1);"
+            BID_F=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO bookings (booking_code, booking_type, item_id, item_name, user_id, customer_name, customer_email, start_date, end_date, total_amount, currency, payment_method, payment_status, status, metadata) VALUES (left('${NS}_f', 50), 'accommodation', ${ACO_F}::int, 'c36db unit', ${UID1}::int, 'C36DB Tester', 'c36db@example.invalid', now(), now() + interval '2 days', '1000.00', 'BRL', 'pix', 'paid', 'confirmed', jsonb_build_object('c36db', true, 'ns', '${NS}')) RETURNING id::text;")")
+            PAY_F=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "INSERT INTO payments (id, enterprise_id, provider, method, status, amount, currency, booking_id, paid_at, metadata, created_at, updated_at) VALUES (gen_random_uuid(), '${ENT}'::uuid, 'mercadopago', 'pix', 'approved', '1000.00', 'BRL', ${BID_F}::int, now(), jsonb_build_object('c36db', true, 'ns', '${NS}'), now(), now()) RETURNING id::text;")")
+            echo "PAY_F=$PAY_F"
+
+            echo "=== SYNC FILES INTO BACKEND CONTAINER ==="
+            $COMPOSE cp backend/scripts/c36db-refund-e2e-probe.ts backend:/workspace/backend/scripts/c36db-refund-e2e-probe.ts
+            $COMPOSE cp server/modules/partners/services/partner-earning-on-refund.service.ts backend:/workspace/server/modules/partners/services/partner-earning-on-refund.service.ts
+            $COMPOSE cp backend/server/modules/payments/services/refund.service.ts backend:/workspace/backend/server/modules/payments/services/refund.service.ts
+
+            echo "=== RUN PROBE ==="
+            $COMPOSE exec -T -e C36DB_NS="$NS" -e C36DB_PAYMENT_A="$PAY_A" -e C36DB_PAYMENT_F="$PAY_F" backend npx tsx /workspace/backend/scripts/c36db-refund-e2e-probe.ts
+
+            echo "=== CLEANUP ==="
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM partner_ledger_entries WHERE partner_id IN (SELECT id FROM partners WHERE metadata->>'ns' = '${NS}');"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM partner_earnings WHERE partner_id IN (SELECT id FROM partners WHERE metadata->>'ns' = '${NS}');"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM payments WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM bookings WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM partner_commercial_terms pct USING partner_empreendimento_associations pea WHERE pct.pea_id = pea.id AND pea.metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM partner_empreendimento_associations WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM partners WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM acomodacoes WHERE hotel_id LIKE '${NS}-h-%';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM empreendimentos WHERE metadata->>'ns' = '${NS}';"
+            $COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "DELETE FROM users WHERE email = '${NS}@example.invalid';"
+            LEFT=$(trim_id "$($COMPOSE exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc "SELECT (SELECT COUNT(*) FROM partners WHERE metadata->>'ns'='${NS}') + (SELECT COUNT(*) FROM empreendimentos WHERE metadata->>'ns'='${NS}') + (SELECT COUNT(*) FROM payments WHERE metadata->>'ns'='${NS}') + (SELECT COUNT(*) FROM partner_ledger_entries ple JOIN partners p ON p.id = ple.partner_id WHERE p.metadata->>'ns'='${NS}') + (SELECT COUNT(*) FROM partner_earnings pe JOIN partners p ON p.id = pe.partner_id WHERE p.metadata->>'ns'='${NS}');")")
+            test "$LEFT" = "0"
+            echo "C36-DB VALIDATE = SUCCESS residual=0"

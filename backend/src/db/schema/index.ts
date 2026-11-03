@@ -13,6 +13,7 @@ export * from './search-history';
 export * from './leads';
 export * from './orcamentos';
 export * from './propostas';
+export * from './home-section-placements';
 export * from './passageiros';
 export * from './financeiro';
 export * from './marketing';

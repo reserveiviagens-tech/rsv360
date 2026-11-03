@@ -328,6 +328,6 @@ docs/cotacao/ESCOPO-MODULO-ANFITRIAO.md
 ## 12. Fora de escopo (este módulo)
 
 - Backfill Stays / sync PMS externo imediato
-- MVP-B Mercado Pago (`gerarLancamentos` wiring)
+- MVP-B Mercado Pago (`gerarLancamentos` wiring) — **parcial:** hook em `changeStatus(..., 'paid')`; webhook MP futuro; runbook `RUNBOOK-COMISSOES-MVP-B-STAGING.md`
 - Tarifário dinâmico / wizard híbrido (já fechado em PRs #57–#59)
 - Alterar split de comissões (PR #60)

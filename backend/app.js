@@ -151,7 +151,7 @@ async function createApp() {
       console.log('[BOOT] LLM gateway Redis budget ✓');
     } else {
       setLlmGatewayRedis(null);
-      console.log('[BOOT] LLM gateway budget: in-memory (REDIS_URL ausente)');
+      console.log('[BOOT] LLM gateway budget: in-memory (REDIS_DISABLED ou sem REDIS_URL)');
     }
   } catch (err) {
     try {

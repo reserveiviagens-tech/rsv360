@@ -1,24 +1,19 @@
-# C36 Autonomous Execution — Checkpoint + Watchdog
+# C36 Autonomous Execution — Checkpoint FINAL
 
-**Updated:** 2026-09-28T11:10Z
+**Updated:** 2026-09-28T12:45Z  
+**WATCHDOG:** STOPPED — EXECUTION_COMPLETE
 
-## WATCHDOG_HEARTBEAT
-
-| timestamp | gate | status | evidence | next |
-|-----------|------|--------|----------|------|
-| 2026-09-28T11:07Z | C36-CN | PASS | run 36413700193 residual=0 | CO closed |
-| 2026-09-28T11:10Z | C36-CO | PASS | unit + staging snapshot | CP |
-
-## Gate ledger
+## Gate ledger (final)
 
 | Gate | Status |
 |------|--------|
-| C36-CF…CM | PASS |
-| C36-CN | PASS |
-| C36-CO | PASS |
-| C36-CP…CZ | PENDING |
+| C36-CF … C36-CY | **PASS** |
+| C36-CZ | **FORENSIC REPORT GENERATED** |
 
-## Barriers
+Tip: `def187b0`  
+Report: `.agents/shared/C36CZ_AUTONOMOUS_EXECUTION_FORENSIC_REPORT.md`
+
+## Barriers (still absolute)
 
 ```text
 PRODUCTION / PAYOUT / GATEWAY_REAL / SECRETS / 0059 / FORCE_PUSH / CI_BYPASS = BLOCKED

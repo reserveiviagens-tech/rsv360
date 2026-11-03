@@ -133,7 +133,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Tabela 6: refunds
+// Tabela 6: refunds (execution records)
 export const refunds = pgTable('refunds', {
   id: uuid('id').defaultRandom().primaryKey(),
   paymentId: uuid('payment_id').references(() => payments.id).notNull(),
@@ -145,6 +145,25 @@ export const refunds = pgTable('refunds', {
   metadata: jsonb('metadata'),
   processedAt: timestamp('processed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/** C36-DD — request domain (not execution). Mirrors backend/src/db/schema/payments.ts */
+export const refundRequests = pgTable('refund_requests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  paymentId: uuid('payment_id')
+    .references(() => payments.id, { onDelete: 'restrict' })
+    .notNull(),
+  bookingId: integer('booking_id'),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('BRL'),
+  reason: text('reason'),
+  requestedBy: integer('requested_by'),
+  status: text('status').notNull().default('pending'),
+  requestVersion: integer('request_version').notNull().default(1),
+  idempotencyKey: varchar('idempotency_key', { length: 128 }),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Tabela 7: disputes (chargebacks)
