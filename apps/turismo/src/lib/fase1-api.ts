@@ -616,6 +616,86 @@ export const fase1Api = {
       { method: 'POST', body: JSON.stringify({ motivo }) },
     ),
 
+  anfitriaoListarCarteiraCorretor: (params?: {
+    corretorId?: number;
+    q?: string;
+    status?: 'ativo' | 'inativo' | 'all';
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params?.corretorId) sp.set('corretorId', String(params.corretorId));
+    if (params?.q) sp.set('q', params.q);
+    if (params?.status) sp.set('status', params.status);
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.pageSize) sp.set('pageSize', String(params.pageSize));
+    const qs = sp.toString();
+    return fetchJson<{
+      success: boolean;
+      data: {
+        items: Array<{
+          corretorId: number;
+          proprietarioId: number;
+          status: string;
+          criadoEm: string | null;
+          corretor: { id: number; name: string | null; email: string; role: string | null } | null;
+          proprietario: { id: number; name: string | null; email: string; role: string | null } | null;
+        }>;
+        page: number;
+        pageSize: number;
+        total: number;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira${qs ? `?${qs}` : ''}`);
+  },
+
+  anfitriaoBuscarCorretoresStaff: (q?: string, limit = 20) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set('q', q);
+    sp.set('limit', String(limit));
+    return fetchJson<{
+      success: boolean;
+      data: Array<{ id: number; name: string | null; email: string; role: string | null }>;
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/corretores?${sp.toString()}`);
+  },
+
+  anfitriaoBuscarProprietariosStaff: (q?: string, limit = 20) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set('q', q);
+    sp.set('limit', String(limit));
+    return fetchJson<{
+      success: boolean;
+      data: Array<{ id: number; name: string | null; email: string; role: string | null }>;
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/proprietarios?${sp.toString()}`);
+  },
+
+  anfitriaoAtribuirCarteira: (corretorId: number, proprietarioId: number) =>
+    fetchJson<{ success: boolean; data: unknown }>(`/api/v1/acomodacoes/anfitriao/admin/carteira`, {
+      method: 'POST',
+      body: JSON.stringify({ corretorId, proprietarioId }),
+    }),
+
+  anfitriaoAtribuirCarteiraBulk: (items: Array<{ corretorId: number; proprietarioId: number }>) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        summary: { ok: number; fail: number; total: number };
+        results: Array<{ corretorId: number; proprietarioId: number; ok: boolean; error?: string }>;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }),
+
+  anfitriaoAtualizarCarteiraStatus: (
+    corretorId: number,
+    proprietarioId: number,
+    status: 'ativo' | 'inativo',
+  ) =>
+    fetchJson<{ success: boolean; data: unknown }>(`/api/v1/acomodacoes/anfitriao/admin/carteira`, {
+      method: 'PATCH',
+      body: JSON.stringify({ corretorId, proprietarioId, status }),
+    }),
+
   salvarAnfitriaoDisponibilidade: (
     id: number,
     dias: Array<{ data: string; disponivel: boolean; precoOverride?: string; observacao?: string }>,

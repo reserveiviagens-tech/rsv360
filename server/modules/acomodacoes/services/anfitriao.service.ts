@@ -1,10 +1,11 @@
 import { randomUUID } from 'crypto';
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../../../lib/db';
 import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { coanfitriaoConvites } from '../../../../backend/src/db/schema/coanfitriao-convites';
 import { conjuntosRegras } from '../../../../backend/src/db/schema/conjuntos-regras';
 import { carteiraCorretor } from '../../../../backend/src/db/schema/carteira-corretor';
+import { users } from '../../../../backend/src/db/schema/existing';
 import {
   disponibilidadeAcomodacao,
   type DisponibilidadeAcomodacao,
@@ -2327,6 +2328,10 @@ export const anfitriaoService = {
 
   async atribuirCarteira(staffRole: string, corretorId: number, proprietarioId: number) {
     if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+    if (!Number.isFinite(corretorId) || !Number.isFinite(proprietarioId) || corretorId <= 0 || proprietarioId <= 0) {
+      return { error: 'invalid_ids' as const };
+    }
+    if (corretorId === proprietarioId) return { error: 'same_user' as const };
 
     await db
       .insert(carteiraCorretor)
@@ -2338,6 +2343,227 @@ export const anfitriaoService = {
 
     return { ok: true as const };
   },
+
+  async listarCarteiraCorretor(
+    staffRole: string,
+    opts?: {
+      corretorId?: number;
+      q?: string;
+      status?: 'ativo' | 'inativo' | 'all';
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+
+    const page = Math.max(1, opts?.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, opts?.pageSize ?? 25));
+    const offset = (page - 1) * pageSize;
+    const statusFilter = opts?.status ?? 'all';
+
+    const conditions: SQL[] = [];
+    if (opts?.corretorId && opts.corretorId > 0) {
+      conditions.push(eq(carteiraCorretor.corretorId, opts.corretorId));
+    }
+    if (statusFilter !== 'all') {
+      conditions.push(eq(carteiraCorretor.status, statusFilter));
+    }
+
+    const q = opts?.q?.trim();
+    if (q) {
+      const term = `%${q.replace(/[%_]/g, '')}%`;
+      const matched = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(or(ilike(users.name, term), ilike(users.email, term)))
+        .limit(200);
+      const ids = matched.map((r) => r.id);
+      if (ids.length === 0) {
+        return { items: [] as CarteiraCorretorListItem[], page, pageSize, total: 0 };
+      }
+      conditions.push(or(inArray(carteiraCorretor.corretorId, ids), inArray(carteiraCorretor.proprietarioId, ids))!);
+    }
+
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(carteiraCorretor)
+      .where(whereClause);
+
+    const rows = await db
+      .select()
+      .from(carteiraCorretor)
+      .where(whereClause)
+      .orderBy(desc(carteiraCorretor.criadoEm))
+      .limit(pageSize)
+      .offset(offset);
+
+    const userIds = new Set<number>();
+    for (const row of rows) {
+      userIds.add(row.corretorId);
+      userIds.add(row.proprietarioId);
+    }
+    const userRows =
+      userIds.size > 0
+        ? await db
+            .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+            .from(users)
+            .where(inArray(users.id, [...userIds]))
+        : [];
+
+    const userMap = new Map(userRows.map((u) => [u.id, u]));
+
+    const items: CarteiraCorretorListItem[] = rows.map((row) => ({
+      corretorId: row.corretorId,
+      proprietarioId: row.proprietarioId,
+      status: row.status,
+      criadoEm: row.criadoEm?.toISOString() ?? null,
+      corretor: formatCarteiraUser(userMap.get(row.corretorId)),
+      proprietario: formatCarteiraUser(userMap.get(row.proprietarioId)),
+    }));
+
+    return { items, page, pageSize, total: countRow?.count ?? 0 };
+  },
+
+  async buscarCorretoresStaff(staffRole: string, q?: string, limit = 20) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+    const take = Math.min(50, Math.max(1, limit));
+    const conditions: SQL[] = [inArray(users.role, [...BROKER_ROLES]), eq(users.isActive, true)];
+    const term = q?.trim();
+    if (term) {
+      const like = `%${term.replace(/[%_]/g, '')}%`;
+      if (/^\d+$/.test(term)) {
+        conditions.push(or(eq(users.id, Number(term)), ilike(users.name, like), ilike(users.email, like))!);
+      } else {
+        conditions.push(or(ilike(users.name, like), ilike(users.email, like))!);
+      }
+    }
+    const rows = await db
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+      .from(users)
+      .where(and(...conditions))
+      .orderBy(users.name)
+      .limit(take);
+
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: maskEmail(r.email ?? ''),
+        role: r.role,
+      })),
+    };
+  },
+
+  async buscarProprietariosStaff(staffRole: string, q?: string, limit = 20) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+    const take = Math.min(50, Math.max(1, limit));
+    const conditions: SQL[] = [eq(users.role, 'anfitriao'), eq(users.isActive, true)];
+    const term = q?.trim();
+    if (term) {
+      const like = `%${term.replace(/[%_]/g, '')}%`;
+      if (/^\d+$/.test(term)) {
+        conditions.push(or(eq(users.id, Number(term)), ilike(users.name, like), ilike(users.email, like))!);
+      } else {
+        conditions.push(or(ilike(users.name, like), ilike(users.email, like))!);
+      }
+    }
+    const rows = await db
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+      .from(users)
+      .where(and(...conditions))
+      .orderBy(users.name)
+      .limit(take);
+
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: maskEmail(r.email ?? ''),
+        role: r.role,
+      })),
+    };
+  },
+
+  async atribuirCarteiraBulk(
+    staffRole: string,
+    pairs: Array<{ corretorId: number; proprietarioId: number }>,
+  ) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+    if (!Array.isArray(pairs) || pairs.length === 0 || pairs.length > 500) {
+      return { error: 'invalid_batch' as const };
+    }
+
+    const results: Array<{
+      corretorId: number;
+      proprietarioId: number;
+      ok: boolean;
+      error?: string;
+    }> = [];
+
+    for (const pair of pairs) {
+      const corretorId = Number(pair.corretorId);
+      const proprietarioId = Number(pair.proprietarioId);
+      const single = await this.atribuirCarteira(staffRole, corretorId, proprietarioId);
+      if ('error' in single && single.error) {
+        results.push({ corretorId, proprietarioId, ok: false, error: single.error });
+      } else {
+        results.push({ corretorId, proprietarioId, ok: true });
+      }
+    }
+
+    const ok = results.filter((r) => r.ok).length;
+    return { summary: { ok, fail: results.length - ok, total: results.length }, results };
+  },
+
+  async atualizarStatusCarteira(
+    staffRole: string,
+    corretorId: number,
+    proprietarioId: number,
+    status: 'ativo' | 'inativo',
+  ) {
+    if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
+    if (!Number.isFinite(corretorId) || !Number.isFinite(proprietarioId) || corretorId <= 0 || proprietarioId <= 0) {
+      return { error: 'invalid_ids' as const };
+    }
+    if (status !== 'ativo' && status !== 'inativo') return { error: 'invalid_status' as const };
+
+    const updated = await db
+      .update(carteiraCorretor)
+      .set({ status })
+      .where(
+        and(
+          eq(carteiraCorretor.corretorId, corretorId),
+          eq(carteiraCorretor.proprietarioId, proprietarioId),
+        ),
+      )
+      .returning();
+
+    if (!updated.length) return { error: 'not_found' as const };
+    return { ok: true as const, data: updated[0] };
+  },
 };
+
+type CarteiraCorretorListItem = {
+  corretorId: number;
+  proprietarioId: number;
+  status: string;
+  criadoEm: string | null;
+  corretor: { id: number; name: string | null; email: string; role: string | null } | null;
+  proprietario: { id: number; name: string | null; email: string; role: string | null } | null;
+};
+
+function formatCarteiraUser(
+  row: { id: number; name: string | null; email: string | null; role: string | null } | undefined,
+) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    email: maskEmail(row.email ?? ''),
+    role: row.role,
+  };
+}
 
 module.exports = { anfitriaoService };
