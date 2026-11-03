@@ -2556,12 +2556,12 @@ type CarteiraCorretorListItem = {
 
 function formatCarteiraUser(
   row: { id: number; name: string | null; email: string | null; role: string | null } | undefined,
-) {
+): CarteiraCorretorListItem['corretor'] {
   if (!row) return null;
   return {
     id: row.id,
     name: row.name,
-    email: maskEmail(row.email ?? ''),
+    email: maskEmail(row.email ?? '') ?? '',
     role: row.role,
   };
 }
