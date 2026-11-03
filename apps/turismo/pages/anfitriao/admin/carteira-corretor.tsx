@@ -38,17 +38,46 @@ function parseCsvPairs(text: string): Array<{ corretorId: number; proprietarioId
   return pairs;
 }
 
+const CARTEIRA_META_VINCULOS = (() => {
+  const raw = process.env.NEXT_PUBLIC_CARTEIRA_META_VINCULOS;
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+})();
+
+const MS_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+async function contarVinculosUltimos30Dias(): Promise<number> {
+  const cutoff = Date.now() - MS_30_DAYS;
+  let recent = 0;
+  let page = 1;
+  for (;;) {
+    const res = await fase1Api.anfitriaoListarCarteiraCorretor({
+      status: 'all',
+      page,
+      pageSize: 100,
+    });
+    const batch = res.data?.items ?? [];
+    const total = res.data?.total ?? 0;
+    for (const row of batch) {
+      if (!row.criadoEm) continue;
+      if (new Date(row.criadoEm).getTime() >= cutoff) recent += 1;
+      else return recent;
+    }
+    if (batch.length < 100 || page * 100 >= total) break;
+    page += 1;
+  }
+  return recent;
+}
+
 function StatusBadge({ status }: { status: string }) {
   const ativo = status === 'ativo';
+  const dotClass = ativo ? 'bg-emerald-500' : 'bg-orange-400';
+  const label = ativo ? 'Ativo' : status === 'inativo' ? 'Inativo' : status;
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ${
-        ativo
-          ? 'bg-emerald-50 text-emerald-800 ring-emerald-600/20'
-          : 'bg-slate-100 text-slate-600 ring-slate-500/15'
-      }`}
-    >
-      {status}
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium capitalize text-slate-700">
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+      {label}
     </span>
   );
 }
@@ -58,22 +87,32 @@ function KpiCard({
   value,
   hint,
   tone = 'default',
+  emphasize = false,
 }: {
   label: string;
   value: string | number;
   hint?: string;
-  tone?: 'default' | 'accent' | 'mint';
+  tone?: 'default' | 'accent' | 'mint' | 'warn';
+  emphasize?: boolean;
 }) {
   const toneClass =
     tone === 'accent'
       ? 'border-blue-200/80 bg-gradient-to-br from-white to-blue-50/50'
       : tone === 'mint'
         ? 'border-emerald-200/70 bg-gradient-to-br from-white to-emerald-50/40'
-        : 'border-slate-200/90 bg-white';
+        : tone === 'warn'
+          ? 'border-orange-200/80 bg-gradient-to-br from-white to-orange-50/40'
+          : 'border-slate-200/90 bg-white';
   return (
     <div className={`rounded-2xl border p-4 shadow-sm ${toneClass}`}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-slate-900">{value}</p>
+      <p
+        className={`mt-1 font-bold tabular-nums tracking-tight text-slate-900 ${
+          emphasize ? 'text-3xl md:text-4xl' : 'text-2xl'
+        }`}
+      >
+        {value}
+      </p>
       {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
     </div>
   );
@@ -115,6 +154,34 @@ export default function StaffCarteiraCorretorPage() {
     queryKey: ['anfitriao', 'admin', 'carteira', listParams],
     queryFn: () => fase1Api.anfitriaoListarCarteiraCorretor(listParams),
     enabled: isStaff,
+  });
+
+  const kpiAtivos = useQuery({
+    queryKey: ['anfitriao', 'admin', 'carteira', 'kpi', 'ativos'],
+    queryFn: () => fase1Api.anfitriaoListarCarteiraCorretor({ status: 'ativo', page: 1, pageSize: 1 }),
+    enabled: isStaff,
+    staleTime: 60_000,
+  });
+
+  const kpiTotal = useQuery({
+    queryKey: ['anfitriao', 'admin', 'carteira', 'kpi', 'total'],
+    queryFn: () => fase1Api.anfitriaoListarCarteiraCorretor({ status: 'all', page: 1, pageSize: 1 }),
+    enabled: isStaff,
+    staleTime: 60_000,
+  });
+
+  const kpiInativos = useQuery({
+    queryKey: ['anfitriao', 'admin', 'carteira', 'kpi', 'inativos'],
+    queryFn: () => fase1Api.anfitriaoListarCarteiraCorretor({ status: 'inativo', page: 1, pageSize: 1 }),
+    enabled: isStaff,
+    staleTime: 60_000,
+  });
+
+  const kpiRecent30 = useQuery({
+    queryKey: ['anfitriao', 'admin', 'carteira', 'kpi', 'recent30'],
+    queryFn: contarVinculosUltimos30Dias,
+    enabled: isStaff,
+    staleTime: 120_000,
   });
 
   const corretoresSearch = useQuery({
@@ -175,7 +242,31 @@ export default function StaffCarteiraCorretorPage() {
   const pageSize = payload?.pageSize ?? 25;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const ativosOnPage = useMemo(() => items.filter((r) => r.status === 'ativo').length, [items]);
+  const kpiAtivosCount = kpiAtivos.data?.data?.total ?? 0;
+  const kpiTotalCount = kpiTotal.data?.data?.total ?? 0;
+  const kpiInativosCount = kpiInativos.data?.data?.total ?? 0;
+  const kpiRecentCount = kpiRecent30.data ?? 0;
+
+  const kpiLoading =
+    kpiAtivos.isLoading || kpiTotal.isLoading || kpiInativos.isLoading || kpiRecent30.isLoading;
+
+  const zeigarnikAlerts = useMemo(() => {
+    const lines: string[] = [];
+    if (kpiInativosCount > 0) {
+      lines.push(
+        `${kpiInativosCount.toLocaleString('pt-BR')} vínculo${kpiInativosCount === 1 ? '' : 's'} aguardam reativação na carteira`,
+      );
+    }
+    if (CARTEIRA_META_VINCULOS != null && kpiAtivosCount < CARTEIRA_META_VINCULOS) {
+      const falta = CARTEIRA_META_VINCULOS - kpiAtivosCount;
+      lines.push(
+        `Conclua a vinculação de mais ${falta.toLocaleString('pt-BR')} cota${falta === 1 ? '' : 's'} para atingir a meta`,
+      );
+    }
+    return lines;
+  }, [kpiAtivosCount, kpiInativosCount]);
+
+  const formatKpi = (n: number) => (kpiLoading ? '…' : n.toLocaleString('pt-BR'));
 
   const onCsvChange = (value: string) => {
     setCsvText(value);
@@ -184,6 +275,11 @@ export default function StaffCarteiraCorretorPage() {
 
   const statusFilterLabel =
     statusFilter === 'all' ? 'Todos os status' : statusFilter === 'ativo' ? 'Somente ativos' : 'Inativos';
+
+  const emptyFilterCopy =
+    statusFilter === 'inativo' && kpiInativosCount > 0
+      ? `${kpiInativosCount.toLocaleString('pt-BR')} vínculo${kpiInativosCount === 1 ? '' : 's'} aguardam reativação — ajuste o filtro ou reative na tabela abaixo.`
+      : 'Nenhum vínculo neste filtro — ajuste a busca ou importe novos pares para completar a carteira.';
 
   if (!isStaff) {
     return (
@@ -231,32 +327,47 @@ export default function StaffCarteiraCorretorPage() {
             </div>
             <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
-                label="Total no filtro"
-                value={list.isLoading ? '…' : total.toLocaleString('pt-BR')}
-                hint={statusFilterLabel}
+                label="Vínculos ativos"
+                value={formatKpi(kpiAtivosCount)}
+                hint="Tração principal · comissão elegível após paid"
                 tone="accent"
+                emphasize
               />
               <KpiCard
-                label="Nesta página"
-                value={items.length}
-                hint={`Página ${page} de ${totalPages}`}
+                label="Volume total"
+                value={formatKpi(kpiTotalCount)}
+                hint="Ativos + inativos na carteira"
               />
               <KpiCard
-                label="Ativos (página)"
-                value={ativosOnPage}
-                hint="Badge verde = comissão elegível"
+                label="Captação recente"
+                value={formatKpi(kpiRecentCount)}
+                hint="Novos vínculos nos últimos 30 dias"
                 tone="mint"
               />
               <KpiCard
-                label="Corretor (filtro)"
-                value={filterCorretorId ? `#${filterCorretorId}` : 'Todos'}
-                hint={searchQ ? `Busca: “${searchQ.slice(0, 24)}${searchQ.length > 24 ? '…' : ''}”` : 'Sem busca textual'}
+                label="Inativos / pendentes"
+                value={formatKpi(kpiInativosCount)}
+                hint="Exigem reativação ou revisão"
+                tone="warn"
               />
             </div>
           </div>
         </div>
 
         <div className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+          {zeigarnikAlerts.length > 0 ? (
+            <div
+              className="mb-4 rounded-2xl border border-orange-200/90 bg-orange-50/90 px-4 py-3 text-[13px] text-orange-950"
+              role="status"
+            >
+              <p className="font-semibold text-orange-900">Ações em aberto</p>
+              <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-orange-900/90">
+                {zeigarnikAlerts.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">
@@ -320,34 +431,40 @@ export default function StaffCarteiraCorretorPage() {
           )}
 
           <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
               <h2 className="text-sm font-semibold text-slate-900">Vínculos</h2>
               <span className="text-xs text-slate-500">
-                {total.toLocaleString('pt-BR')} registro{total === 1 ? '' : 's'}
+                {total.toLocaleString('pt-BR')} no filtro · {statusFilterLabel}
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className="bg-slate-50/90">
                   <tr>
-                    <th className="px-4 py-3">Corretor</th>
-                    <th className="px-4 py-3">Proprietário</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="hidden px-4 py-3 sm:table-cell">Desde</th>
-                    <th className="px-4 py-3 text-right">Ações</th>
+                    <th className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Corretor</th>
+                    <th className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Proprietário
+                    </th>
+                    <th className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Status</th>
+                    <th className="hidden px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500 sm:table-cell">
+                      Desde
+                    </th>
+                    <th className="px-3 py-2 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {list.isLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
+                      <td colSpan={5} className="px-3 py-10 text-center text-slate-500">
                         Carregando carteira…
                       </td>
                     </tr>
                   ) : items.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
-                        Nenhum vínculo neste filtro.
+                      <td colSpan={5} className="px-3 py-10 text-center text-[13px] text-slate-600">
+                        {emptyFilterCopy}
                       </td>
                     </tr>
                   ) : (
@@ -356,29 +473,29 @@ export default function StaffCarteiraCorretorPage() {
                         key={`${row.corretorId}-${row.proprietarioId}`}
                         className="transition hover:bg-slate-50/80"
                       >
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-slate-900">
+                        <td className="max-w-[220px] px-3 py-2">
+                          <div className="truncate whitespace-nowrap font-medium text-slate-900">
                             {row.corretor?.name ?? `Corretor #${row.corretorId}`}
                           </div>
-                          <div className="mt-0.5 font-mono text-[11px] text-slate-500">
+                          <div className="truncate whitespace-nowrap font-mono text-xs text-slate-500">
                             ID {row.corretorId} · {row.corretor?.email}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-slate-900">
+                        <td className="max-w-[220px] px-3 py-2">
+                          <div className="truncate whitespace-nowrap font-medium text-slate-900">
                             {row.proprietario?.name ?? `Proprietário #${row.proprietarioId}`}
                           </div>
-                          <div className="mt-0.5 font-mono text-[11px] text-slate-500">
+                          <div className="truncate whitespace-nowrap font-mono text-xs text-slate-500">
                             ID {row.proprietarioId} · {row.proprietario?.email}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="whitespace-nowrap px-3 py-2">
                           <StatusBadge status={row.status} />
                         </td>
-                        <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">
+                        <td className="hidden whitespace-nowrap px-3 py-2 text-slate-600 sm:table-cell">
                           {row.criadoEm ? new Date(row.criadoEm).toLocaleDateString('pt-BR') : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="whitespace-nowrap px-3 py-2 text-right">
                           {row.status === 'ativo' ? (
                             <button
                               type="button"
