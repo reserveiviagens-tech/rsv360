@@ -1,6 +1,16 @@
-import { DEFAULT_API_URL } from './auth-v1';
+import { DEFAULT_API_URL, resolveApiBaseUrl } from './auth-v1';
 
+/** @deprecated Prefer fase1ApiBase() / resolveApiBaseUrl() — kept for legacy imports */
 export const FASE1_API_BASE = DEFAULT_API_URL;
+
+export function fase1ApiBase(): string {
+  return resolveApiBaseUrl();
+}
+
+/** Same-origin API base (call at fetch time, not module load). */
+function apiBase(): string {
+  return resolveApiBaseUrl();
+}
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
@@ -8,7 +18,7 @@ function getToken(): string {
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${FASE1_API_BASE}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -88,8 +98,8 @@ export const fase1Api = {
 
   // Relatórios
   relatoriosDashboard: () => fetchJson<{ success: boolean; data: unknown }>('/api/v1/relatorios/dashboard'),
-  exportCsvUrl: (tipo: string) => `${FASE1_API_BASE}/api/v1/relatorios/export/csv?tipo=${tipo}`,
-  exportPdfUrl: (tipo: string) => `${FASE1_API_BASE}/api/v1/relatorios/export/pdf?tipo=${tipo}`,
+  exportCsvUrl: (tipo: string) => `${apiBase()}/api/v1/relatorios/export/csv?tipo=${tipo}`,
+  exportPdfUrl: (tipo: string) => `${apiBase()}/api/v1/relatorios/export/pdf?tipo=${tipo}`,
 
   // Configurações — modulo_propostas (configuracoes_sistema)
   getModuloPropostas: () =>
@@ -285,7 +295,7 @@ export const fase1Api = {
   anfitriaoUploadTrilhoThumb: async (id: number, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/trilho-thumb`, {
+    const res = await fetch(`${apiBase()}/api/v1/acomodacoes/anfitriao/unidades/${id}/trilho-thumb`, {
       method: 'POST',
       headers: {
         ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
@@ -303,7 +313,7 @@ export const fase1Api = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(
-      `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/acessibilidade-foto`,
+      `${apiBase()}/api/v1/acomodacoes/anfitriao/unidades/${id}/acessibilidade-foto`,
       {
         method: 'POST',
         headers: {
@@ -320,7 +330,7 @@ export const fase1Api = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(
-      `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/galeria-foto`,
+      `${apiBase()}/api/v1/acomodacoes/anfitriao/unidades/${id}/galeria-foto`,
       {
         method: 'POST',
         headers: {
@@ -389,7 +399,7 @@ export const fase1Api = {
     const params = new URLSearchParams();
     if (ativo) params.set('ativo', ativo);
     const qs = params.toString();
-    const url = `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/impostos/export.csv${qs ? `?${qs}` : ''}`;
+    const url = `${apiBase()}/api/v1/acomodacoes/anfitriao/impostos/export.csv${qs ? `?${qs}` : ''}`;
     const res = await fetch(url, {
       headers: {
         ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
@@ -646,6 +656,37 @@ export const fase1Api = {
         total: number;
       };
     }>(`/api/v1/acomodacoes/anfitriao/admin/carteira${qs ? `?${qs}` : ''}`);
+  },
+
+  /** Carteira P0.5 no escopo do parceiro logado (corretor ↔ proprietário). Staff vê listagem admin. */
+  anfitriaoCarteiraVinculos: (params?: {
+    q?: string;
+    status?: 'ativo' | 'inativo' | 'all';
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params?.q) sp.set('q', params.q);
+    if (params?.status) sp.set('status', params.status);
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.pageSize) sp.set('pageSize', String(params.pageSize));
+    const qs = sp.toString();
+    return fetchJson<{
+      success: boolean;
+      data: {
+        items: Array<{
+          corretorId: number;
+          proprietarioId: number;
+          status: string;
+          criadoEm: string | null;
+          corretor: { id: number; name: string | null; email: string; role: string | null } | null;
+          proprietario: { id: number; name: string | null; email: string; role: string | null } | null;
+        }>;
+        page: number;
+        pageSize: number;
+        total: number;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/carteira/vinculos${qs ? `?${qs}` : ''}`);
   },
 
   anfitriaoBuscarCorretoresStaff: (q?: string, limit = 20) => {
@@ -988,5 +1029,5 @@ export const fase1Api = {
 };
 
 export function getWsBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_WS_URL || FASE1_API_BASE;
+  return process.env.NEXT_PUBLIC_WS_URL || apiBase();
 }

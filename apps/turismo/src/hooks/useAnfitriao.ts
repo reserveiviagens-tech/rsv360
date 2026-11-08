@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fase1Api } from '@/lib/fase1-api';
+import { useAuth } from '@/context/AuthContext';
 
 export function useAnfitriaoDashboard() {
   return useQuery({
@@ -23,6 +24,28 @@ export function useAnfitriaoMinhasComissoes(page = 1) {
   return useQuery({
     queryKey: ['anfitriao', 'comissoes', page],
     queryFn: () => fase1Api.anfitriaoMinhasComissoes(page),
+  });
+}
+
+/** Unidades no escopo do parceiro (overview mapa + featured). */
+export function useOverviewPortfolioUnits() {
+  return useQuery({
+    queryKey: ['overview', 'portfolio', 'unidades'],
+    queryFn: () => fase1Api.anfitriaoMinhas(1, 48, 'all'),
+  });
+}
+
+/** Carteira corretor ↔ proprietário (aba Contatos no overview). */
+export function useOverviewCarteiraVinculos() {
+  const { user } = useAuth();
+  const isStaff = user?.role === 'admin' || user?.role === 'manager';
+  return useQuery({
+    queryKey: ['overview', 'carteira', isStaff ? 'admin' : 'vinculos'],
+    queryFn: () =>
+      isStaff
+        ? fase1Api.anfitriaoListarCarteiraCorretor({ status: 'all', page: 1, pageSize: 100 })
+        : fase1Api.anfitriaoCarteiraVinculos({ status: 'all', page: 1, pageSize: 100 }),
+    enabled: Boolean(user?.id),
   });
 }
 
