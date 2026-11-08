@@ -1,4 +1,7 @@
-import { resolveApiBaseUrl } from './auth-v1';
+import { DEFAULT_API_URL, resolveApiBaseUrl } from './auth-v1';
+
+/** @deprecated Prefer fase1ApiBase() / resolveApiBaseUrl() — kept for legacy imports */
+export const FASE1_API_BASE = DEFAULT_API_URL;
 
 export function fase1ApiBase(): string {
   return resolveApiBaseUrl();

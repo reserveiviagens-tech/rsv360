@@ -19,6 +19,18 @@ export const AUTH_V1 = {
 export const DEFAULT_API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
+/** Browser: same-origin `/api/v1` (Next proxy). SSR: backend/internal URL. */
+export function resolveApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+  const internal = process.env.INTERNAL_API_URL || process.env.BACKEND_URL;
+  if (internal) {
+    return internal.replace(/\/$/, '');
+  }
+  return DEFAULT_API_URL.replace(/\/$/, '');
+}
+
 export interface AuthV1UserPayload {
   id: string | number;
   email?: string;
