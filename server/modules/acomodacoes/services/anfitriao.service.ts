@@ -2426,6 +2426,98 @@ export const anfitriaoService = {
     return { items, page, pageSize, total: countRow?.count ?? 0 };
   },
 
+  /** Parceiro: corretor vê proprietários; anfitrião vê corretores. Staff reutiliza listagem admin. */
+  async listarCarteiraVinculosParceiro(
+    auth: AuthContext,
+    opts?: {
+      q?: string;
+      status?: 'ativo' | 'inativo' | 'all';
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    if (STAFF_ROLES.has(auth.role)) {
+      return this.listarCarteiraCorretor(auth.role, opts);
+    }
+    if (!PARCEIRO_ROLES.has(auth.role)) {
+      return { error: 'forbidden' as const };
+    }
+
+    const page = Math.max(1, opts?.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, opts?.pageSize ?? 25));
+    const offset = (page - 1) * pageSize;
+    const statusFilter = opts?.status ?? 'ativo';
+
+    const conditions: SQL[] = [];
+    if (BROKER_ROLES.has(auth.role)) {
+      conditions.push(eq(carteiraCorretor.corretorId, auth.userId));
+    } else if (auth.role === 'anfitriao') {
+      conditions.push(eq(carteiraCorretor.proprietarioId, auth.userId));
+    } else {
+      return { error: 'forbidden' as const };
+    }
+
+    if (statusFilter !== 'all') {
+      conditions.push(eq(carteiraCorretor.status, statusFilter));
+    }
+
+    const q = opts?.q?.trim();
+    if (q) {
+      const term = `%${q.replace(/[%_]/g, '')}%`;
+      const matched = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(or(ilike(users.name, term), ilike(users.email, term)))
+        .limit(200);
+      const ids = matched.map((r) => r.id);
+      if (ids.length === 0) {
+        return { items: [] as CarteiraCorretorListItem[], page, pageSize, total: 0 };
+      }
+      conditions.push(or(inArray(carteiraCorretor.corretorId, ids), inArray(carteiraCorretor.proprietarioId, ids))!);
+    }
+
+    const whereClause = and(...conditions);
+
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(carteiraCorretor)
+      .where(whereClause);
+
+    const rows = await db
+      .select()
+      .from(carteiraCorretor)
+      .where(whereClause)
+      .orderBy(desc(carteiraCorretor.criadoEm))
+      .limit(pageSize)
+      .offset(offset);
+
+    const userIds = new Set<number>();
+    for (const row of rows) {
+      userIds.add(row.corretorId);
+      userIds.add(row.proprietarioId);
+    }
+    const userRows =
+      userIds.size > 0
+        ? await db
+            .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+            .from(users)
+            .where(inArray(users.id, [...userIds]))
+        : [];
+
+    const userMap = new Map(userRows.map((u) => [u.id, u]));
+
+    const items: CarteiraCorretorListItem[] = rows.map((row) => ({
+      corretorId: row.corretorId,
+      proprietarioId: row.proprietarioId,
+      status: row.status,
+      criadoEm: row.criadoEm?.toISOString() ?? null,
+      corretor: formatCarteiraUser(userMap.get(row.corretorId)),
+      proprietario: formatCarteiraUser(userMap.get(row.proprietarioId)),
+    }));
+
+    return { items, page, pageSize, total: countRow?.count ?? 0 };
+  },
+
   async buscarCorretoresStaff(staffRole: string, q?: string, limit = 20) {
     if (!STAFF_ROLES.has(staffRole)) return { error: 'forbidden' as const };
     const take = Math.min(50, Math.max(1, limit));

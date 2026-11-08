@@ -46,6 +46,29 @@ router.get('/dashboard', ...parceiroAuth, async (req, res) => {
   }
 });
 
+router.get('/carteira/vinculos', ...parceiroAuth, async (req, res) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+    const statusRaw = typeof req.query.status === 'string' ? req.query.status : 'ativo';
+    const status =
+      statusRaw === 'ativo' || statusRaw === 'inativo' || statusRaw === 'all' ? statusRaw : 'ativo';
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+    const result = await anfitriaoService.listarCarteiraVinculosParceiro(authFromReq(req), {
+      q,
+      status,
+      page,
+      pageSize,
+    });
+    if ('error' in result && result.error === 'forbidden') {
+      return res.status(403).json({ success: false, error: 'Acesso negado' });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.get('/desempenho', ...parceiroAuth, async (req, res) => {
   try {
     const mes = typeof req.query.mes === 'string' ? req.query.mes : undefined;
