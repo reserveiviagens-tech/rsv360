@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { tryCreateDpopProof } from '@rsv360/shared';
 import {
   AUTH_V1,
-  DEFAULT_API_URL,
   AuthV1SessionResponse,
+  resolveApiBaseUrl,
   mapAuthV1User,
   parseAuthV1LoginResponse,
   parseAuthV1RefreshResponse,
@@ -75,8 +75,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
-  const API_BASE_URL = DEFAULT_API_URL;
-
   console.log('[AuthContext] AuthProvider renderizado, isLoading:', isLoading);
 
   const clearAuth = useCallback(() => {
@@ -94,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const verifyToken = useCallback(async (token: string): Promise<boolean> => {
     try {
-      const url = `${API_BASE_URL}${AUTH_V1.SESSION}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.SESSION}`;
       const headers = await dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -119,7 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Erro ao verificar token:', error);
       return false;
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   const fetchUserData = useCallback(async (token: string) => {
     try {
@@ -127,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setTimeout(() => reject(new Error('Timeout ao buscar dados do usuário')), 5000)
       );
 
-      const url = `${API_BASE_URL}${AUTH_V1.SESSION}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.SESSION}`;
       const headers = await dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -161,7 +159,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(false);
       throw error;
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   const refreshAccessToken = useCallback(async (refreshTokenValue?: string | null): Promise<void> => {
     try {
@@ -169,7 +167,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         refreshTokenValue ||
         (typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null);
 
-      const url = `${API_BASE_URL}${AUTH_V1.REFRESH}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.REFRESH}`;
       const headers = await dpopHeaders(
         { 'Content-Type': 'application/json' },
         'POST',
@@ -206,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Erro ao renovar token:', error);
       throw error;
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   const logout = useCallback(() => {
     const token =
@@ -217,7 +215,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       (typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null);
 
     if (token && !isLegacyFabricatedToken(token)) {
-      const url = `${API_BASE_URL}${AUTH_V1.LOGOUT}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.LOGOUT}`;
       void dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -244,7 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
-  }, [API_BASE_URL, accessToken, refreshToken, clearAuth]);
+  }, [accessToken, refreshToken, clearAuth]);
 
   // Verificar token armazenado ao inicializar
   useEffect(() => {
@@ -411,7 +409,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Fail-closed: only canonical backend auth — no client-side demo/admin bypass
-    const url = `${API_BASE_URL}${AUTH_V1.LOGIN}`;
+    const url = `${resolveApiBaseUrl()}${AUTH_V1.LOGIN}`;
     const headers = await dpopHeaders(
       { 'Content-Type': 'application/json' },
       'POST',
@@ -473,7 +471,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const register = async (email: string, full_name: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}${AUTH_V1.REGISTER}`, {
+      const response = await fetch(`${resolveApiBaseUrl()}${AUTH_V1.REGISTER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -504,7 +502,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error('Sessão inválida');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+      const response = await fetch(`${resolveApiBaseUrl()}/api/users/me`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -532,7 +530,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error('Sessão inválida');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/users/change-password`, {
+      const response = await fetch(`${resolveApiBaseUrl()}/api/users/change-password`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

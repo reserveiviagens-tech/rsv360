@@ -1,4 +1,4 @@
-import { FASE1_API_BASE } from './fase1-api';
+import { fase1ApiBase } from './fase1-api';
 
 export type DealsApiStage =
   | 'viewing'
@@ -52,13 +52,13 @@ async function parseJson<T>(res: Response): Promise<T> {
 
 export const dealsApi = {
   async list(): Promise<DealsApiDeal[]> {
-    const res = await fetch(`${FASE1_API_BASE}/api/v1/deals`, { headers: authHeaders() });
+    const res = await fetch(`${fase1ApiBase()}/api/v1/deals`, { headers: authHeaders() });
     const body = await parseJson<{ success: boolean; data: { items: DealsApiDeal[] } }>(res);
     return body.data?.items ?? [];
   },
 
   async patchStage(dealId: string, stage: DealsApiStage): Promise<DealsApiDeal> {
-    const res = await fetch(`${FASE1_API_BASE}/api/v1/deals/${encodeURIComponent(dealId)}/stage`, {
+    const res = await fetch(`${fase1ApiBase()}/api/v1/deals/${encodeURIComponent(dealId)}/stage`, {
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ stage }),

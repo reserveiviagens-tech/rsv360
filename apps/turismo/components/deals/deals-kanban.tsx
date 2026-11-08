@@ -31,7 +31,7 @@ export function KanbanColumn({
   const isTarget = dragOverStage === stage;
 
   return (
-    <div className="flex h-full min-w-[18rem] max-w-[20rem] flex-shrink-0 flex-col border-r border-slate-200/80 last:border-r-0">
+    <div className="flex h-full min-h-[280px] w-full min-w-0 flex-col rounded-xl border border-slate-200/80 bg-slate-50/30 md:max-w-none lg:min-w-[18rem] lg:max-w-[20rem] lg:flex-shrink-0 lg:border-r lg:bg-transparent lg:last:border-r-0">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-bold text-slate-900">{stageLabel}</span>
@@ -130,9 +130,9 @@ export function DealsKanban({
   }));
 
   return (
-    <div className="flex h-[calc(100vh-220px)] overflow-hidden">
-      <div className="flex w-64 flex-shrink-0 flex-col border-r border-slate-200/80 p-4">
-        <div className="flex-1 space-y-3 overflow-y-auto">
+    <div className="mx-auto flex max-w-[calc(100%-2rem)] flex-col gap-4 overflow-hidden md:h-[calc(100vh-220px)] md:flex-row">
+      <div className="flex w-full flex-shrink-0 flex-col border-b border-slate-200/80 p-4 md:h-full md:w-64 md:border-b-0 md:border-r">
+        <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto md:max-h-none md:flex-col md:space-y-3 md:gap-0">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-900">Agentes</span>
             <button
@@ -189,7 +189,7 @@ export function DealsKanban({
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-2 md:grid md:grid-cols-2 md:overflow-y-auto lg:flex lg:flex-row lg:gap-0 lg:overflow-x-auto lg:overflow-y-hidden lg:p-0">
         {groupedByStage.map(({ stage, deals: columnDeals }) => (
           <KanbanColumn
             key={stage}

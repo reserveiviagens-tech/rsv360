@@ -18,6 +18,8 @@ export default function Document() {
         
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
+        {/* Legacy Docker bundles that still target :3002 */}
+        <script src="/rsv360-same-origin-api.js" defer={false} />
       </Head>
       <body>
         <Main />
