@@ -81,7 +81,26 @@ export function DealsCrmModule({
     void dealsApi
       .list()
       .then((items) => {
-        if (!cancelled && items.length > 0) setDeals(items as Deal[]);
+        if (cancelled || !items || items.length === 0) return;
+        setDeals((prev) => {
+          const prevMap = new Map(prev.map((d) => [d.id, d]));
+          // Atualiza ou adiciona itens da API preservando campos visuais do demo local
+          const mergedApiDeals: Deal[] = items.map((apiItem) => {
+            const existing = prevMap.get(apiItem.id);
+            return {
+              ...(existing || {}),
+              ...(apiItem as Deal),
+              // Garante persistência dos campos ricos se a API não os fornecer
+              imageUrl: (apiItem as Deal).imageUrl || existing?.imageUrl,
+              deepLinkSlug: (apiItem as Deal).deepLinkSlug || existing?.deepLinkSlug,
+              askingPrice: (apiItem as Deal).askingPrice || existing?.askingPrice,
+            };
+          });
+          const apiIds = new Set(items.map((i) => i.id));
+          // Mantém itens do demo que a API não possui
+          const demoOnly = prev.filter((d) => !apiIds.has(d.id));
+          return [...mergedApiDeals, ...demoOnly];
+        });
       })
       .catch(() => {
         /* mantém SAMPLE_DEALS */
@@ -137,12 +156,14 @@ export function DealsCrmModule({
     };
   }, [filteredDeals]);
 
-  const winRate = useMemo(() => {
-    const closed = filteredDeals.filter((row) => row.stage === 'closed').length;
+  const winRate = useMemo((): number | null => {
+    const won = filteredDeals.filter(
+      (row) => row.stage === 'closed' || row.status === 'won',
+    ).length;
     const lost = filteredDeals.filter((row) => row.status === 'lost').length;
-    const decided = closed + lost;
-    if (decided === 0) return 97;
-    return Math.round((closed / decided) * 100);
+    const decided = won + lost;
+    if (decided === 0) return null;
+    return Math.round((won / decided) * 100);
   }, [filteredDeals]);
 
   const toggleAgent = useCallback((agentId: string) => {
