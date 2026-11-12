@@ -11,7 +11,8 @@ export type DealsKpiStripProps = {
   weightedCommission: string;
   closingCount: number;
   closingCommissionBadge?: string | null;
-  winRate: number;
+  /** Percent 0–100, or null when no closed/lost deals in the current filter. */
+  winRate: number | null;
   lintelLayout?: boolean;
 };
 
@@ -65,7 +66,7 @@ export function DealsKpiStrip({
         surface={surface}
         valueClassName={valueClass}
         icon={<Trophy className="h-3.5 w-3.5" />}
-        value={`${winRate}%`}
+        value={winRate == null ? '—' : `${winRate}%`}
         label={d.winRateKpi}
         tone="accentViolet"
       />
