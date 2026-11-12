@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const { getNextSecurityHeaders } = require('../../packages/shared/security-headers.cjs');
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -9,6 +13,7 @@ const nextConfig = {
     externalDir: true,
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost', pathname: '/**' },
       { protocol: 'https', hostname: 'reserveiviagens.com.br', pathname: '/**' },
@@ -26,4 +31,5 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
+

@@ -68,6 +68,50 @@ function isLegacyFabricatedToken(token: string | null | undefined): boolean {
   return /^(demo|admin)-(token|refresh)(-\d+)?$/.test(token);
 }
 
+const AUTH_VERIFY_TIMEOUT_MS = 8_000;
+const AUTH_FETCH_USER_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
+
+/** Fallback CRM quando /session demora (evita overlay "Timeout" no dev). */
+function userFromJwtClaims(token: string): User | null {
+  try {
+    const segment = token.split('.')[1];
+    if (!segment) return null;
+    const json = atob(segment.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json) as Record<string, unknown>;
+    const email = String(payload.email ?? payload.sub ?? '').trim();
+    if (!email) return null;
+    const role = typeof payload.role === 'string' ? payload.role : undefined;
+    return {
+      id: 0,
+      email,
+      full_name: String(payload.name ?? payload.full_name ?? email),
+      name: typeof payload.name === 'string' ? payload.name : email.split('@')[0],
+      role,
+      is_active: true,
+      permissions: [],
+      token,
+      created_at: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   // Start loading until client initAuth resolves (avoids SSR redirect races)
@@ -120,12 +164,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const fetchUserData = useCallback(async (token: string) => {
+    const url = `${resolveApiBaseUrl()}${AUTH_V1.SESSION}`;
     try {
-      const timeoutPromise = new Promise<Response>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout ao buscar dados do usuário')), 5000)
-      );
-
-      const url = `${resolveApiBaseUrl()}${AUTH_V1.SESSION}`;
       const headers = await dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -135,11 +175,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         url,
         token,
       );
-      const fetchPromise = fetch(url, { headers });
+      const response = await withTimeout(
+        fetch(url, { headers }),
+        AUTH_FETCH_USER_TIMEOUT_MS,
+        null as Response | null,
+      );
 
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-      if (response.ok) {
+      if (response?.ok) {
         const data = (await response.json()) as AuthV1SessionResponse;
         if (data.authenticated && data.user) {
           const mapped = mapAuthV1User(data.user, token);
@@ -148,17 +190,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
             id: typeof mapped.id === 'number' ? mapped.id : parseInt(String(mapped.id), 10) || 0,
           } as User);
           setIsLoading(false);
-          console.log('[AuthContext] Dados do usuário carregados com sucesso');
           return;
         }
       }
-
-      throw new Error('Falha ao buscar dados do usuário');
     } catch (error) {
-      console.error('[AuthContext] Erro ao buscar dados do usuário:', error);
-      setIsLoading(false);
-      throw error;
+      console.warn('[AuthContext] fetchUserData indisponível:', error);
     }
+
+    const fallback = userFromJwtClaims(token);
+    if (fallback) {
+      setUser(fallback);
+    }
+    setIsLoading(false);
   }, []);
 
   const refreshAccessToken = useCallback(async (refreshTokenValue?: string | null): Promise<void> => {
@@ -303,39 +346,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Verificar token real com timeout
           try {
-            console.log('[AuthContext] Verificando token real...');
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Timeout')), 3000)
-            );
-
             let tokenToUse = storedAccessToken;
-            let isValid = (await Promise.race([
+            let isValid = await withTimeout(
               verifyToken(storedAccessToken),
-              timeoutPromise,
-            ])) as boolean;
+              AUTH_VERIFY_TIMEOUT_MS,
+              false,
+            );
 
             if (!isValid) {
               try {
-                await refreshAccessToken(storedRefreshToken);
+                await withTimeout(refreshAccessToken(storedRefreshToken), AUTH_VERIFY_TIMEOUT_MS, undefined);
                 tokenToUse =
                   (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null) ||
                   storedAccessToken;
-                isValid = true;
+                isValid = await withTimeout(verifyToken(tokenToUse), AUTH_VERIFY_TIMEOUT_MS, false);
               } catch {
                 isValid = false;
               }
             }
 
-            console.log('[AuthContext] Token válido:', isValid);
-            if (isValid && isMounted) {
-              await fetchUserData(tokenToUse);
-            } else if (isMounted) {
-              console.log('[AuthContext] Token inválido - limpando autenticação');
-              clearAuth();
+            if (isMounted) {
+              if (isValid || userFromJwtClaims(tokenToUse)) {
+                await fetchUserData(tokenToUse);
+              } else {
+                clearAuth();
+              }
             }
           } catch (error) {
-            console.error('[AuthContext] Erro ao verificar token:', error);
-            if (isMounted) clearAuth();
+            console.warn('[AuthContext] initAuth session check:', error);
+            if (isMounted) {
+              const fallback = userFromJwtClaims(storedAccessToken);
+              if (fallback) {
+                setUser(fallback);
+                setIsLoading(false);
+              } else {
+                clearAuth();
+              }
+            }
           }
         } else {
           // Não há token armazenado, apenas definir loading como false IMEDIATAMENTE

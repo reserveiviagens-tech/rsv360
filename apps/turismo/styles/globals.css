@@ -144,8 +144,8 @@
   --color-info-500: #3b82f6;
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
-  --font-sans: Inter, system-ui, sans-serif;
-  --font-display: Poppins, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', Poppins, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius-4xl: 2rem;
   --radius-5xl: 2.5rem;
@@ -174,10 +174,19 @@ body {
   color: hsl(var(--foreground));
   background: hsl(var(--background));
   font-feature-settings: 'rlig' 1, 'calt' 1;
+  font-family: var(--font-sans);
 }
 
 @utility text-balance {
   text-wrap: balance;
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes fadeIn {
@@ -203,4 +212,970 @@ body {
 @keyframes bounceGentle {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-5px); }
+}
+
+/* Lintel-style overview (referência: comissão.mp4 / caregamento da comissão.mp4) */
+@keyframes lintelShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.lintel-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(226 232 240 / 0.45) 0%,
+    rgb(241 245 249 / 0.95) 45%,
+    rgb(226 232 240 / 0.45) 90%
+  );
+  background-size: 200% 100%;
+  animation: lintelShimmer 1.35s ease-in-out infinite;
+}
+
+.dark .lintel-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(30 41 59 / 0.5) 0%,
+    rgb(51 65 85 / 0.85) 45%,
+    rgb(30 41 59 / 0.5) 90%
+  );
+  background-size: 200% 100%;
+}
+
+.lintel-overview-enter {
+  animation: lintelOverviewIn 0.45s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-rentals-enter {
+  animation: lintelOverviewIn 0.45s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelOverviewIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lintel-card-hover {
+  transition:
+    box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lintel-card-hover:hover {
+  box-shadow: 0 12px 40px -12px rgb(18 23 34 / 0.12);
+  transform: translateY(-1px);
+}
+
+.lintel-stagger > * {
+  animation: lintelOverviewIn 0.55s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-stagger > *:nth-child(1) {
+  animation-delay: 0.03s;
+}
+.lintel-stagger > *:nth-child(2) {
+  animation-delay: 0.09s;
+}
+.lintel-stagger > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.lintel-stagger > *:nth-child(4) {
+  animation-delay: 0.21s;
+}
+.lintel-stagger > *:nth-child(5) {
+  animation-delay: 0.29s;
+}
+
+/** Timeline Overview.mp4 — hero + KPI após boot (~580ms). */
+.lintel-overview-greeting-enter {
+  animation: lintelOverviewIn 0.48s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-kpi-strip-enter {
+  animation: lintelKpiStripIn 0.52s cubic-bezier(0.2, 0, 0, 1) both;
+  animation-delay: 0.05s;
+}
+
+@keyframes lintelKpiStripIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.lintel-chat-panel-enter {
+  animation: lintelChatPanelIn 0.55s cubic-bezier(0.2, 0, 0, 1) both;
+  animation-delay: 0.14s;
+}
+
+@keyframes lintelChatPanelIn {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.lintel-pipeline-enter {
+  animation: lintelOverviewIn 0.5s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-pipeline-stage-bar {
+  transform-origin: left center;
+  animation: lintelDealBarFill 0.72s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-pipeline-bars .lintel-pipeline-stage-bar:nth-child(1) {
+  animation-delay: 0.08s;
+}
+.lintel-pipeline-bars .lintel-pipeline-stage-bar:nth-child(2) {
+  animation-delay: 0.14s;
+}
+.lintel-pipeline-bars .lintel-pipeline-stage-bar:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.lintel-pipeline-bars .lintel-pipeline-stage-bar:nth-child(4) {
+  animation-delay: 0.26s;
+}
+
+.lintel-overview-skeleton-stagger > * {
+  animation: lintelOverviewIn 0.4s cubic-bezier(0.2, 0, 0, 1) both;
+}
+.lintel-overview-skeleton-stagger > *:nth-child(1) {
+  animation-delay: 0s;
+}
+.lintel-overview-skeleton-stagger > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.lintel-overview-skeleton-stagger > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.lintel-overview-skeleton-stagger > *:nth-child(4) {
+  animation-delay: 0.18s;
+}
+
+.lintel-hero-fade {
+  animation: lintelHeroFade 0.52s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelHeroFade {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lintel-deal-card-enter {
+  animation: lintelDealCardIn 0.42s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-deal-card-menu-enter {
+  animation: lintelDealMenuIn 0.16s cubic-bezier(0.2, 0, 0, 1) both;
+  transform-origin: top right;
+}
+
+.lintel-deal-detail-enter {
+  animation: lintelDealDetailIn 0.28s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelDealDetailIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes lintelDealMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes lintelDealCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lintel-deal-dragging {
+  opacity: 0.5;
+  transform: scale(0.97) rotate(-1deg);
+  box-shadow: 0 16px 40px rgb(47 91 234 / 0.22);
+}
+
+.lintel-deal-column-bar {
+  transform-origin: left center;
+  animation: lintelDealBarFill 0.72s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelDealBarFill {
+  from {
+    transform: scaleX(0.08);
+    opacity: 0.45;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.lintel-deal-offer-bar-fill {
+  transform-origin: left center;
+  animation: lintelDealBarFill 0.85s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-deals-agent-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background-color: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.06),
+    0 4px 14px rgb(15 23 42 / 0.06);
+}
+
+.dark .lintel-deals-agent-strip {
+  border-color: rgb(255 255 255 / 0.1);
+  background-color: rgb(23 27 35 / 0.95);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 6px 18px rgb(0 0 0 / 0.28);
+}
+
+.lintel-deals-agent-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(71 85 105);
+  opacity: 0.82;
+  transition:
+    opacity 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.lintel-deals-agent-btn:hover {
+  opacity: 1;
+}
+
+.lintel-deals-agent-btn.is-pressed {
+  opacity: 1;
+  color: rgb(15 23 42);
+  background-color: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.1),
+    0 3px 10px rgb(15 23 42 / 0.12),
+    0 0 0 1px rgb(226 232 240 / 0.9);
+}
+
+.dark .lintel-deals-agent-btn {
+  color: rgb(203 213 225);
+}
+
+.dark .lintel-deals-agent-btn.is-pressed {
+  color: #ffffff;
+  background-color: rgb(29 34 44);
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.45),
+    0 4px 12px rgb(0 0 0 / 0.35),
+    0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.lintel-kanban-col-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+
+.lintel-kanban-col-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.lintel-kanban-col-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(203 213 225);
+}
+
+.lintel-kanban-board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+
+.lintel-kanban-board-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.lintel-kanban-board-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(203 213 225);
+}
+
+/* Deals Kanban — swimlanes sólidas (referência LINTEL Deals) */
+.lintel-deals-kanban-canvas {
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: #f4f5f7;
+}
+
+.dark .lintel-deals-kanban-canvas {
+  background-color: rgb(14 17 23 / 0.55);
+}
+
+.lintel-deals-kanban-column {
+  display: flex;
+  flex-direction: column;
+  width: 250px;
+  min-height: 394px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.dark .lintel-deals-kanban-column {
+  border-color: rgb(255 255 255 / 0.1);
+  background-color: #171b23;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 6px 16px rgb(0 0 0 / 0.25);
+}
+
+.lintel-deals-kanban-column[data-stage='viewing'] {
+  border-top: 3px solid #9ca3af;
+}
+
+.lintel-deals-kanban-column[data-stage='offer'] {
+  border-top: 3px solid #f97316;
+}
+
+.lintel-deals-kanban-column[data-stage='negotiation'] {
+  border-top: 3px solid #3b82f6;
+}
+
+.lintel-deals-kanban-column[data-stage='under_contract'] {
+  border-top: 3px solid #111827;
+}
+
+.dark .lintel-deals-kanban-column[data-stage='under_contract'] {
+  border-top-color: #ffffff;
+}
+
+.lintel-deals-kanban-column[data-stage='closed'] {
+  border-top: 3px solid #10b981;
+}
+
+.lintel-deals-kanban-column.is-drop-target {
+  box-shadow:
+    0 0 0 2px rgb(47 91 234 / 0.35),
+    0 6px 16px rgb(15 23 42 / 0.1);
+}
+
+.lintel-deals-kanban-column-header {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.5rem 0.75rem;
+}
+
+.dark .lintel-deals-kanban-column-header {
+  border-bottom-color: rgb(255 255 255 / 0.08);
+}
+
+.lintel-deals-kanban-column-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding: 0.75rem;
+  background-color: #ffffff;
+}
+
+.dark .lintel-deals-kanban-column-body {
+  background-color: #171b23;
+}
+
+.lintel-rental-card-enter {
+  animation: lintelRentalCardIn 0.44s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelRentalCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lintel-rent-roll-total {
+  animation: lintelRentRollTotal 0.5s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelRentRollTotal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lintel-rent-roll-bar {
+  transform-origin: bottom center;
+  animation: lintelRentRollBarGrow 0.62s cubic-bezier(0.2, 0, 0, 1) both;
+  min-height: 4px;
+}
+
+@keyframes lintelRentRollBarGrow {
+  from {
+    transform: scaleY(0.08);
+    opacity: 0.45;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.lintel-rent-occ-bar {
+  transform-origin: left center;
+  animation: lintelRentOccFill 0.72s cubic-bezier(0.2, 0, 0, 1) 0.12s both;
+}
+
+.lintel-rent-panel-expand {
+  animation: lintelRentPanelExpand 0.42s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelRentPanelExpand {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.lintel-rent-calendar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184) rgb(241 245 249);
+}
+
+.lintel-rent-calendar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.lintel-rent-calendar-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgb(241 245 249);
+}
+
+.lintel-rent-calendar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(148 163 184);
+}
+
+.lintel-rental-card-actions button {
+  transform: translateY(6px);
+  opacity: 0;
+  animation: lintelRentalCardActionsIn 0.32s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.lintel-rental-card-actions button:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.lintel-rental-card-actions button:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.lintel-rental-card-actions button:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.lintel-chat-msg-enter {
+  animation: lintelChatMsgIn 0.38s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelChatMsgIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.lintel-chat-sheet {
+  animation: lintelChatSheetUp 0.42s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelChatSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lintelRentalCardActionsIn {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .group:not(:hover):not(:focus-within) .lintel-rental-card-actions button {
+    animation: none;
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes lintelRentOccFill {
+  from {
+    transform: scaleX(0.12);
+    opacity: 0.5;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.lintel-commission-stroke {
+  /* pathLength={1} no SVG — draw proporcional ao comprimento real da curva */
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: lintelCommissionDraw 0.85s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.lintel-commission-area {
+  opacity: 0;
+  animation: lintelCommissionArea 0.55s cubic-bezier(0.2, 0, 0, 1) 0.08s forwards;
+}
+
+@keyframes lintelCommissionDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lintelCommissionArea {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lintel-map-tooltip {
+  animation: lintelMapTooltip 0.18s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelMapTooltip {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.lintel-chat-panel {
+  transition:
+    flex-basis 0.5s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.35s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.5s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* KPI strip com live chat expandido — pills mais estreitas e scroll horizontal suave */
+.lintel-kpi-strip {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.lintel-kpi-strip--chat-open .lintel-kpi-pill--inline,
+.lintel-kpi-strip--chat-open .lintel-kpi-pill {
+  max-width: 8rem;
+}
+
+.lintel-kpi-strip--chat-open .lintel-kpi-pill .truncate {
+  font-size: 0.8125rem;
+}
+
+.lintel-overview-main {
+  width: 100%;
+}
+
+.lintel-overview-hero {
+  row-gap: 0.65rem;
+}
+
+.lintel-agenda-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.lintel-pipeline-legend-cell {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .lintel-overview-row-1,
+  .lintel-overview-row-3,
+  .lintel-overview-row-4 {
+    gap: 1rem;
+  }
+
+  .lintel-overview-pipeline {
+    margin-top: 0.125rem;
+  }
+
+  .lintel-crm-canvas--chat-collapsed .lintel-overview-featured {
+    min-height: 392px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .lintel-shell-body .overview-lintel-hero {
+    margin-bottom: 0.85rem;
+  }
+
+  .lintel-stagger > .lintel-overview-row-3 {
+    animation-delay: 0.12s;
+  }
+
+  .lintel-stagger > .lintel-overview-row-4 {
+    animation-delay: 0.2s;
+  }
+}
+
+/* Overview: largura dos cards vs chat Lintel (fechado = rail estreito, aberto = painel). */
+@media (min-width: 1024px) {
+  .lintel-crm-canvas--chat-open .lintel-kpi-strip {
+    max-width: 100%;
+  }
+
+  .lintel-crm-canvas--chat-collapsed {
+    max-width: min(1328px, calc(100vw - 4rem));
+  }
+
+  .lintel-crm-canvas--chat-open {
+    max-width: min(1328px, calc(100vw - min(20rem, 24vw) - 2.75rem));
+  }
+
+  .lintel-overview-bento .lintel-overview-featured > * {
+    min-height: 100%;
+  }
+
+  .lintel-pipeline-legend-row {
+    min-height: 1.625rem;
+  }
+
+  .lintel-rentals-skeleton-stagger > * {
+    animation: lintelOverviewStagger 0.55s cubic-bezier(0.2, 0, 0, 1) both;
+  }
+
+  .lintel-rentals-skeleton-stagger > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .lintel-rentals-skeleton-stagger > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .lintel-rentals-skeleton-stagger > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  .lintel-agenda-rail {
+    position: relative;
+    display: flex;
+    width: 0.625rem;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .lintel-agenda-rail::before {
+    content: '';
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: #e2e8f0;
+  }
+
+  .dark .lintel-agenda-rail::before {
+    background: rgb(255 255 255 / 0.12);
+  }
+
+  .lintel-agenda-now {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0;
+  }
+
+  .lintel-agenda-now-line {
+    flex: 1;
+    height: 1px;
+    background: rgb(249 115 22 / 0.75);
+  }
+
+  .lintel-shell-body--chat-collapsed .lintel-chat-rail-collapsed {
+    padding-top: 0.25rem;
+  }
+}
+
+/* Sales — Market pulse (accordion + barras divergentes, ref. Lintel GIF) */
+.lintel-market-pulse-card {
+  transition:
+    box-shadow 0.35s cubic-bezier(0.2, 0, 0, 1),
+    padding 0.35s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lintel-market-pulse-card--expanded {
+  box-shadow: 0 10px 36px -14px rgb(15 23 42 / 0.14);
+  padding-bottom: 1.125rem;
+}
+
+.lintel-market-pulse-body--collapsed {
+  max-height: 3.85rem;
+  transition: max-height 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lintel-market-pulse-body--expanded {
+  max-height: 11.5rem;
+  transition: max-height 0.45s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lintel-market-pulse-grid {
+  transition: gap 0.35s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.lintel-market-pulse-body--expanded .lintel-market-pulse-grid {
+  gap: 0.85rem 1rem;
+}
+
+.lintel-market-pulse-cell--defer {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.lintel-market-pulse-cell--defer-in {
+  pointer-events: auto;
+  animation: lintelMarketPulseCellIn 0.42s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-market-pulse-pct--in {
+  animation: lintelMarketPulsePctIn 0.35s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.lintel-market-pulse-bar-fill {
+  transform: scaleX(0);
+}
+
+.lintel-market-pulse-bar-fill--play {
+  animation: lintelMarketPulseBar 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.lintel-market-pulse-bar-fill--defer {
+  animation-duration: 0.52s;
+}
+
+@keyframes lintelMarketPulseBar {
+  0% {
+    transform: scaleX(0);
+    opacity: 0.65;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes lintelMarketPulseCellIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lintelMarketPulsePctIn {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.lintel-sales-share-enter {
+  animation: lintelSalesShareIn 0.28s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes lintelSalesShareIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.55) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(148 163 184 / 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lintel-shimmer {
+    animation: none;
+  }
+  .lintel-market-pulse-bar-fill--play,
+  .lintel-market-pulse-cell--defer-in,
+  .lintel-market-pulse-pct--in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .lintel-market-pulse-bar-fill--play {
+    transform: scaleX(1);
+  }
+  .lintel-market-pulse-body--collapsed,
+  .lintel-market-pulse-body--expanded {
+    transition: none;
+  }
+  .lintel-overview-enter,
+  .lintel-rentals-enter {
+    animation: none;
+  }
+  .lintel-stagger > * {
+    animation: none;
+  }
+  .lintel-hero-fade {
+    animation: none;
+  }
+  .lintel-deal-card-enter,
+  .lintel-deal-column-bar,
+  .lintel-deal-offer-bar-fill,
+  .lintel-rental-card-enter,
+  .lintel-rent-roll-total,
+  .lintel-rent-roll-bar,
+  .lintel-rent-occ-bar,
+  .lintel-rent-panel-expand,
+  .lintel-chat-sheet {
+    animation: none;
+  }
+  .lintel-deal-dragging {
+    transform: none;
+  }
+  .lintel-commission-stroke {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .lintel-commission-area {
+    opacity: 1;
+    animation: none;
+  }
+  .lintel-map-tooltip {
+    animation: none;
+  }
+  .lintel-chat-panel {
+    transition: none;
+  }
+  .lintel-chat-panel-enter,
+  .lintel-kpi-strip-enter,
+  .lintel-overview-greeting-enter,
+  .lintel-pipeline-stage-bar,
+  .lintel-overview-skeleton-stagger > * {
+    animation: none;
+  }
 }
