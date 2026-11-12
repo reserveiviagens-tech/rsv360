@@ -294,6 +294,8 @@ export type CrmCopy = {
       note: string;
       earned: string;
       soldStage: string;
+      moveToQuick: string;
+      copyLinkAria: string;
     };
     stages: {
       viewing: { label: string; hint: string };
@@ -697,6 +699,8 @@ const PT: CrmCopy = {
       note: 'Nota',
       earned: 'recebida',
       soldStage: 'Vendido',
+      moveToQuick: 'Mover para:',
+      copyLinkAria: 'Copiar link do negócio',
     },
     stages: {
       viewing: { label: 'Visitas', hint: 'Agendamentos' },
@@ -1101,6 +1105,8 @@ const EN: CrmCopy = {
       note: 'Note',
       earned: 'earned',
       soldStage: 'Sold',
+      moveToQuick: 'Move to:',
+      copyLinkAria: 'Copy deal link',
     },
     stages: {
       viewing: { label: 'Viewing', hint: 'Bookings' },

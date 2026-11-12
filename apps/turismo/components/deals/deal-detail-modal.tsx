@@ -8,6 +8,7 @@ import {
   Mail,
   MessageCircle,
   Phone,
+  Share2,
   User,
   X,
 } from 'lucide-react';
@@ -56,10 +57,12 @@ export interface DealDetailModalProps {
   allDeals: Deal[];
   onClose: () => void;
   onSave?: (dealId: string, patch: Partial<Deal>) => void;
+  onStageChange?: (dealId: string, stage: DealStage) => void;
   onMarkLost?: (deal: Deal) => void;
   onOpenProperty?: (deal: Deal) => void;
   onMessageBuyer?: (deal: Deal) => void;
   onSelectDeal?: (deal: Deal) => void;
+  onCopyLink?: (deal: Deal) => void;
 }
 
 export function DealDetailModal({
@@ -67,10 +70,12 @@ export function DealDetailModal({
   allDeals,
   onClose,
   onSave,
+  onStageChange,
   onMarkLost,
   onOpenProperty,
   onMessageBuyer,
   onSelectDeal,
+  onCopyLink,
 }: DealDetailModalProps) {
   const { copy } = useCrmLocale();
   const d = copy.deals;
@@ -149,14 +154,27 @@ export function DealDetailModal({
               {stageLabel}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            aria-label={d.closeDetail}
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onCopyLink ? (
+              <button
+                type="button"
+                onClick={() => onCopyLink(deal)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                aria-label={dm.copyLinkAria}
+                title={d.cardMenu.copyLink}
+              >
+                <Share2 className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              aria-label={d.closeDetail}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
         <div className="grid max-h-[min(85vh,880px)] gap-6 overflow-y-auto p-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -250,6 +268,33 @@ export function DealDetailModal({
                   </p>
                 ))}
               </div>
+              {onStageChange ? (
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    {dm.moveToQuick}
+                  </span>
+                  {STAGE_ORDER.map((stage) => {
+                    const isCurrent = deal.stage === stage;
+                    const label =
+                      stage === 'closed' ? dm.soldStage : d.stages[stage]?.label ?? stage;
+                    return (
+                      <button
+                        key={stage}
+                        type="button"
+                        disabled={isCurrent}
+                        onClick={() => onStageChange(deal.id, stage)}
+                        className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition-all ${
+                          isCurrent
+                            ? 'cursor-default bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

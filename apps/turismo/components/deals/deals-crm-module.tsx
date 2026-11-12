@@ -482,6 +482,11 @@ export function DealsCrmModule({
           onSave={(dealId, patch) => {
             setDeals((prev) => prev.map((row) => (row.id === dealId ? { ...row, ...patch } : row)));
           }}
+          onStageChange={(dealId, stage) => {
+            handleStageChange(dealId, stage);
+            setSelectedDeal((prev) => (prev && prev.id === dealId ? { ...prev, stage } : prev));
+          }}
+          onCopyLink={(row) => buildCardMenuHandlers(row).onCopyLink()}
           onMarkLost={handleMarkLost}
           onOpenProperty={(row) => buildCardMenuHandlers(row).onOpenProperty()}
           onMessageBuyer={(row) => buildCardMenuHandlers(row).onMessageClient()}
