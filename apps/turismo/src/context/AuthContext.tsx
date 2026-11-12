@@ -339,7 +339,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isLegacyFabricatedToken(storedRefreshToken)
           ) {
             console.log('[AuthContext] Legacy fabricated token detected — clearing auth');
-            if (isMounted) clearAuth();
+            if (isMounted) {
+              clearAuth();
+              setIsLoading(false);
+            }
             if (timeoutId) clearTimeout(timeoutId);
             return;
           }
@@ -369,6 +372,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               if (isValid || userFromJwtClaims(tokenToUse)) {
                 await fetchUserData(tokenToUse);
               } else {
+                setIsLoading(false);
                 clearAuth();
               }
             }
@@ -380,6 +384,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 setUser(fallback);
                 setIsLoading(false);
               } else {
+                setIsLoading(false);
                 clearAuth();
               }
             }
