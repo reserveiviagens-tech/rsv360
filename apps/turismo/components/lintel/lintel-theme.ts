@@ -13,6 +13,33 @@ export const LINTEL_THEME_TOKENS = {
   clientAvatarTones: ['f4a582', 'ff8a3d', '2f5bea', '138a63', 'c4b5fd'] as const,
 } as const;
 
+/**
+ * Kanban Deals (swimlanes + agent strip) — valores espelhados em
+ * `apps/turismo/styles/globals.css` como `--lintel-kanban-*` / `--lintel-deals-*`.
+ */
+export const LINTEL_KANBAN_THEME = {
+  surfaceCard: 'ffffff',
+  kanbanCanvas: 'f4f5f7',
+  /** rgb components for `rgb(var(--lintel-kanban-canvas-dark-rgb) / 0.55)` */
+  kanbanCanvasDarkRgb: '14 17 23',
+  columnBorder: 'e2e8f0',
+  columnSurfaceDark: '171b23',
+  headerBorder: 'f1f5f9',
+  agentStripDarkRgb: '23 27 35',
+  agentPressedDarkRgb: '29 34 44',
+  stageViewing: '9ca3af',
+  stageOffer: LINTEL_THEME_TOKENS.accentOrangeStrong,
+  stageNegotiation: '3b82f6',
+  stageUnderContract: '111827',
+  stageUnderContractDark: 'ffffff',
+  stageClosed: '10b981',
+  dropTargetRing: '2f5bea',
+} as const;
+
+export function lintelCssHex(hexWithoutHash: string): string {
+  return `#${hexWithoutHash}`;
+}
+
 /** Classes Tailwind pré-montadas — único lugar com hex arbitrário no CRM Deals. */
 export const LINTEL_TW_CLASSES = {
   surfaceDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceDark}]`,
