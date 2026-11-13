@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { Facebook, Instagram, Link2, Mail } from 'lucide-react';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import type { SalesListing } from './sales-data';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 import { openSalesListingShare, type SalesShareChannel } from './sales-listing-share';
 
 function WhatsAppGlyph({ className }: { className?: string }) {
@@ -79,19 +80,19 @@ export function SalesListingShareMenu({
     {
       id: 'facebook',
       label: sm.shareFacebook,
-      className: 'bg-[#1877f2] focus-visible:ring-[#1877f2]',
+      className: LINTEL_SALES_TW.shareFacebook,
       icon: <Facebook className="h-4 w-4" strokeWidth={2.2} />,
     },
     {
       id: 'whatsapp',
       label: sm.shareWhatsApp,
-      className: 'bg-[#25d366] focus-visible:ring-[#25d366]',
+      className: LINTEL_SALES_TW.shareWhatsApp,
       icon: <WhatsAppGlyph className="h-4 w-4" />,
     },
     {
       id: 'instagram',
       label: sm.shareInstagram,
-      className: 'bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af] focus-visible:ring-[#dd2a7b]',
+      className: LINTEL_SALES_TW.shareInstagram,
       icon: <Instagram className="h-4 w-4" strokeWidth={2.2} />,
     },
     {
@@ -113,7 +114,7 @@ export function SalesListingShareMenu({
       ref={ref}
       role="dialog"
       aria-label={sm.sharePanelAria}
-      className="lintel-sales-share-enter absolute bottom-full left-1/2 z-[40] mb-2 w-max max-w-[calc(100%+1rem)] -translate-x-1/2 rounded-2xl border border-white/90 bg-white/95 p-2.5 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-[#1d222c]/95"
+      className={`lintel-sales-share-enter absolute bottom-full left-1/2 z-[40] mb-2 w-max max-w-[calc(100%+1rem)] -translate-x-1/2 rounded-2xl border border-white/90 bg-white/95 p-2.5 shadow-lg backdrop-blur-md dark:border-white/10 ${LINTEL_SALES_TW.sharePanelDark}`}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >

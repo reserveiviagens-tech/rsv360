@@ -6,21 +6,22 @@ import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { lintelIconBtn } from '../lintel/overview-primitives';
 import type { LeaseCalendarEventKind, LeaseCalendarItem } from './rentals-data';
 import { RentalsPanelExpand } from './rentals-panel-expand';
+import { LINTEL_RENTALS_TW } from '../lintel/lintel-theme';
 import { loadLeaseCalendarState, saveLeaseCalendarState } from './lease-calendar-storage';
 
 const DATE_BADGE: Record<LeaseCalendarItem['tone'], string> = {
-  blue: 'bg-[#2f5bea]/12 text-[#2f5bea]',
-  apricot: 'bg-[#ff8a3d]/15 text-[#c45c12]',
+  blue: LINTEL_RENTALS_TW.toneBlueBadge,
+  apricot: LINTEL_RENTALS_TW.toneApricotBadge,
 };
 
 const TIME_PILL: Record<LeaseCalendarItem['tone'], string> = {
-  blue: 'text-[#2f5bea] bg-[#2f5bea]/10',
-  apricot: 'text-[#c45c12] bg-[#ff8a3d]/12',
+  blue: LINTEL_RENTALS_TW.toneBluePill,
+  apricot: LINTEL_RENTALS_TW.toneApricotPill,
 };
 
 const EVENT_TAG: Record<LeaseCalendarEventKind, string> = {
-  sign: 'bg-[#2f5bea]/12 text-[#2f5bea]',
-  lease_end: 'bg-[#ff8a3d]/12 text-[#c45c12]',
+  sign: LINTEL_RENTALS_TW.eventSignTag,
+  lease_end: LINTEL_RENTALS_TW.eventLeaseEndTag,
   review: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
 };
 
@@ -105,7 +106,7 @@ function LeaseCalendarList({
     <div className={`relative ${className}`}>
       {toast ? (
         <div
-          className="lintel-overview-enter lintel-lease-toast mb-2 flex items-center justify-center gap-2 rounded-full bg-[#121722] px-2 py-1 text-[10px] font-bold text-white dark:bg-white dark:text-[#121722]"
+          className={`lintel-overview-enter lintel-lease-toast mb-2 flex items-center justify-center gap-2 rounded-full px-2 py-1 text-[10px] font-bold text-white ${LINTEL_RENTALS_TW.toastBar}`}
           role="status"
         >
           <span className="px-1">{toast.message}</span>
@@ -113,7 +114,7 @@ function LeaseCalendarList({
             <button
               type="button"
               onClick={runUndo}
-              className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide hover:bg-white/25 dark:bg-[#121722]/10 dark:hover:bg-[#121722]/20"
+              className={`rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide hover:bg-white/25 ${LINTEL_RENTALS_TW.toastUndoOnDark}`}
             >
               {r.leaseUndoAction}
             </button>
@@ -146,12 +147,12 @@ function LeaseCalendarList({
                     {eventLabel(item.eventKind, r)}
                   </span>
                   {signed ? (
-                    <span className="rounded-full bg-[#138a63]/12 px-1.5 py-0.5 text-[9px] font-bold text-[#138a63]">
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${LINTEL_RENTALS_TW.signedBadge}`}>
                       {r.leaseSignedBadge}
                     </span>
                   ) : null}
                   {onCal && !signed ? (
-                    <span className="rounded-full bg-[#138a63]/12 px-1.5 py-0.5 text-[9px] font-bold text-[#138a63]">
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${LINTEL_RENTALS_TW.signedBadge}`}>
                       {r.leaseOnCalendar}
                     </span>
                   ) : null}
@@ -176,7 +177,7 @@ function LeaseCalendarList({
                 signed ? (
                   <button
                     type="button"
-                    className={`h-8 w-8 shrink-0 ${lintelIconBtn} border-[#ff8a3d]/35 bg-[#ff8a3d]/10 text-[#c45c12]`}
+                    className={`h-8 w-8 shrink-0 ${lintelIconBtn} ${LINTEL_RENTALS_TW.actionApricotIcon}`}
                     aria-label={r.leaseUndoSignAria}
                     onClick={() => {
                       onUnmarkSigned(item.id);
@@ -201,7 +202,7 @@ function LeaseCalendarList({
               ) : onCal ? (
                 <button
                   type="button"
-                  className={`h-8 w-8 shrink-0 ${lintelIconBtn} border-[#2f5bea]/40 bg-[#2f5bea]/10 text-[#2f5bea]`}
+                  className={`h-8 w-8 shrink-0 ${lintelIconBtn} ${LINTEL_RENTALS_TW.actionBlueIcon}`}
                   aria-label={r.leaseUndoCalendarAria}
                   onClick={() => {
                     onRemoveFromCalendar(item.id);
@@ -298,7 +299,9 @@ export const LeaseCalendarPanel = memo(function LeaseCalendarPanel({
 
   return (
     <>
-      <div className="flex flex-col rounded-2xl border border-white/80 bg-white/70 p-5 shadow-xs backdrop-blur-md dark:border-white/10 dark:bg-[#171b23]/80">
+      <div
+        className={`flex flex-col rounded-2xl border border-white/80 bg-white/70 p-5 shadow-xs backdrop-blur-md dark:border-white/10 ${LINTEL_RENTALS_TW.cardSurfaceDark}`}
+      >
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex min-w-0 items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
             <Calendar className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
@@ -308,7 +311,7 @@ export const LeaseCalendarPanel = memo(function LeaseCalendarPanel({
             {loading ? (
               <div className="lintel-shimmer h-5 w-28 rounded-full" />
             ) : (
-              <span className="rounded-full bg-[#ff8a3d]/15 px-2 py-0.5 text-[10px] font-bold text-[#c45c12]">
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${LINTEL_RENTALS_TW.endingBadge}`}>
                 {r.leaseEndingBadge}
               </span>
             )}
@@ -332,7 +335,7 @@ export const LeaseCalendarPanel = memo(function LeaseCalendarPanel({
       </div>
 
       <RentalsPanelExpand open={expanded} title={r.leaseCalendarTitle} onClose={() => setExpanded(false)}>
-        <p className="mb-3 text-xs font-bold text-[#c45c12]">{r.leaseEndingBadge}</p>
+        <p className={`mb-3 text-xs font-bold ${LINTEL_RENTALS_TW.textAccentDeep}`}>{r.leaseEndingBadge}</p>
         <LeaseCalendarList
           loading={false}
           scrollClassName="max-h-[28rem]"

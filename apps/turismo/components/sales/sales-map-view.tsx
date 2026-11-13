@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { PortfolioMapPin, PortfolioMapPriceTone } from '../lintel/portfolio-map';
 import { PortfolioMapCanvas } from '../lintel/portfolio-map';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 import type { SalesListing } from './sales-data';
 
 function listingPriceTone(item: SalesListing): PortfolioMapPriceTone {
@@ -77,7 +78,9 @@ export function SalesMapView({
           : sm.statusSold;
 
   return (
-    <div className="flex min-h-[31.25rem] flex-col gap-4 rounded-2xl bg-white p-2 shadow-sm dark:bg-[#171b23] lg:h-[calc(100vh-21rem)] lg:min-h-[31.25rem] lg:flex-row">
+    <div
+      className={`flex min-h-[31.25rem] flex-col gap-4 rounded-2xl bg-white p-2 shadow-sm lg:h-[calc(100vh-21rem)] lg:min-h-[31.25rem] lg:flex-row ${LINTEL_SALES_TW.mapSurfaceDark}`}
+    >
       <div className="h-full min-h-[18rem] w-full shrink-0 lg:h-full lg:w-[45%]">
         <PortfolioMapCanvas
           heightClass="h-full min-h-[18rem]"

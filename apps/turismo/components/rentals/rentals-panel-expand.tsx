@@ -4,6 +4,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { lintelBtnGhost, lintelIconBtn } from '../lintel/overview-primitives';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
+import { LINTEL_RENTALS_TW } from '../lintel/lintel-theme';
 
 export function RentalsPanelExpand({
   open,
@@ -28,7 +29,7 @@ export function RentalsPanelExpand({
       onClick={onClose}
     >
       <div
-        className="lintel-rent-panel-expand max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[26px] border border-white/80 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#171b23]"
+        className={`lintel-rent-panel-expand max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[26px] border border-white/80 bg-white p-6 shadow-2xl dark:border-white/10 ${LINTEL_RENTALS_TW.panelSolidDark}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between gap-3">

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 
-const menuShell =
-  'absolute left-0 top-full z-[60] mt-2 min-w-[12rem] rounded-xl border border-gray-200/90 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-[#171b23]';
+const menuShell = `absolute left-0 top-full z-[60] mt-2 min-w-[12rem] rounded-xl border border-gray-200/90 bg-white p-1 shadow-lg dark:border-gray-700 ${LINTEL_SALES_TW.toolbarMenuDark}`;
 
 const menuItem = (active: boolean) =>
   [
@@ -58,8 +58,7 @@ export function SalesToolbarSelect<T extends string>({
     };
   }, [open, close]);
 
-  const chipClass =
-    'inline-flex h-[26px] items-center gap-1 rounded-full border border-gray-200/80 bg-white px-2.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-[#1d222c] dark:text-gray-200';
+  const chipClass = `inline-flex h-[26px] items-center gap-1 rounded-full border border-gray-200/80 bg-white px-2.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 ${LINTEL_SALES_TW.toolbarChipDark}`;
 
   return (
     <div ref={ref} className={`relative ${className}`}>
