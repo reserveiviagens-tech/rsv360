@@ -5,6 +5,7 @@ import { useCrmLocale } from './crm-locale-provider';
 import { LintelKpiPill } from './lintel-kpi-pill';
 import { LintelKpiStripRow } from './lintel-kpi-strip-row';
 import { LintelPrimaryActions } from './lintel-primary-actions';
+import { LINTEL_TW_CLASSES } from './lintel-theme';
 
 export type DealsKpiStripProps = {
   openDeals: number;
@@ -58,7 +59,9 @@ export function DealsKpiStrip({
         tone="accentOrange"
         valueSuffix={
           closingCommissionBadge ? (
-            <span className="shrink-0 text-[9px] font-bold text-[#f97316]">({closingCommissionBadge})</span>
+            <span className={`shrink-0 text-[9px] font-bold ${LINTEL_TW_CLASSES.textAccentOrangeStrong}`}>
+              ({closingCommissionBadge})
+            </span>
           ) : undefined
         }
       />

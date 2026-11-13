@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { lintelBtnGhost, lintelBtnPrimary } from '../lintel/overview-primitives';
+import { LINTEL_TW_CLASSES } from '../lintel/lintel-theme';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { agentById } from './deals-agents';
 import {
@@ -141,7 +142,7 @@ export function DealDetailModal({
       onClick={onClose}
     >
       <div
-        className="lintel-deal-detail-enter my-auto w-full max-w-[800px] overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-[#121722]"
+        className={`lintel-deal-detail-enter my-auto w-full max-w-[800px] overflow-hidden rounded-2xl bg-white shadow-2xl ${LINTEL_TW_CLASSES.surfaceDark}`}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
@@ -305,7 +306,7 @@ export function DealDetailModal({
                   inputMode="numeric"
                   value={offerAmount}
                   onChange={(e) => setOfferAmount(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-[#1d222c] dark:text-white"
+                  className={`mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-900 dark:border-slate-700 ${LINTEL_TW_CLASSES.surfaceElevated} dark:text-white`}
                 />
               </label>
               <label className="block text-xs font-bold text-slate-500">
@@ -315,7 +316,7 @@ export function DealDetailModal({
                     type="date"
                     value={closeDate}
                     onChange={(e) => setCloseDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-9 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-[#1d222c] dark:text-white"
+                    className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-9 text-sm font-semibold text-slate-900 dark:border-slate-700 ${LINTEL_TW_CLASSES.surfaceElevated} dark:text-white`}
                   />
                   <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
@@ -327,7 +328,7 @@ export function DealDetailModal({
                 rows={3}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800 dark:border-slate-700 dark:bg-[#1d222c] dark:text-slate-100"
+                className={`mt-1 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800 dark:border-slate-700 ${LINTEL_TW_CLASSES.surfaceElevated} dark:text-slate-100`}
               />
             </label>
 

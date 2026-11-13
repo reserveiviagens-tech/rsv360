@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
+import { LINTEL_TW_CLASSES } from '../lintel/lintel-theme';
 import type { Deal, DealStage } from './deal-card';
 
 const STAGE_ORDER: DealStage[] = ['viewing', 'offer', 'negotiation', 'under_contract', 'closed'];
@@ -85,7 +86,7 @@ export function DealCardOverflowMenu({
       id={menuId}
       role="menu"
       aria-label={copy.deals.cardMenuAria}
-      className="lintel-deal-card-menu-enter absolute right-0 top-full z-[80] mt-1 w-[11.25rem] overflow-visible rounded-xl border border-slate-200/90 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-[#1d222c]"
+      className={`lintel-deal-card-menu-enter absolute right-0 top-full z-[80] mt-1 w-[11.25rem] overflow-visible rounded-xl border border-slate-200/90 bg-white py-1 shadow-lg dark:border-white/10 ${LINTEL_TW_CLASSES.surfaceElevated}`}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >

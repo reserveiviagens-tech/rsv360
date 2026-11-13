@@ -8,6 +8,7 @@ import { DealsKpiStrip } from '../lintel/deals-kpi-strip';
 import { useCrmLiveChatOptional } from '../lintel/crm-live-chat-provider';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { lintelSegment } from '../lintel/overview-primitives';
+import { LINTEL_TW_CLASSES } from '../lintel/lintel-theme';
 import { DEAL_AGENT_DIRECTORY } from './deals-agents';
 import { dealPropertySlug, dealToChatPropertyPayload } from './deal-card-helpers';
 import type { DealCardMenuHandlers } from './deal-card-menu';
@@ -465,7 +466,7 @@ export function DealsCrmModule({
             </span>
             <button
               type="button"
-              className="rounded-full bg-[#ff8a3d] px-3 py-1 text-xs font-bold text-white transition hover:bg-[#f97316]"
+              className={`rounded-full px-3 py-1 text-xs font-bold text-white transition ${LINTEL_TW_CLASSES.bgAccentOrange} ${LINTEL_TW_CLASSES.hoverAccentOrangeStrong}`}
               onClick={undoSold}
             >
               {d.cardMenu.undo}

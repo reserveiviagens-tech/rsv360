@@ -7,6 +7,7 @@ import React, { memo, useRef, useState } from 'react';
 import { Clock, MoreHorizontal } from 'lucide-react';
 
 import { useCrmLocale } from '../lintel/crm-locale-provider';
+import { lintelClientAvatarColor, LINTEL_TW_CLASSES } from '../lintel/lintel-theme';
 
 import { agentById } from './deals-agents';
 
@@ -126,10 +127,6 @@ const DELTA_CLASS: Record<DealDeltaTone, string> = {
 
 
 
-const CLIENT_TONES = ['#f4a582', '#ff8a3d', '#2f5bea', '#138a63', '#c4b5fd'] as const;
-
-
-
 function clientInitials(name: string): string {
 
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -147,13 +144,7 @@ function clientInitials(name: string): string {
 
 
 function clientTone(name: string): string {
-
-  let sum = 0;
-
-  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
-
-  return CLIENT_TONES[sum % CLIENT_TONES.length] ?? CLIENT_TONES[0];
-
+  return lintelClientAvatarColor(name);
 }
 
 
@@ -218,7 +209,9 @@ export function DealCardSkeleton() {
 
   return (
 
-    <div className="w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#1d222c]">
+    <div
+      className={`w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-white/10 ${LINTEL_TW_CLASSES.surfaceElevated}`}
+    >
 
       <div className="lintel-shimmer h-[120px] w-full" />
 
@@ -332,7 +325,7 @@ export const DealCard = memo(function DealCard({
 
     <article
 
-      className={`lintel-deal-card-enter group relative z-0 w-full overflow-visible rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow hover:z-10 hover:shadow-md dark:border-white/10 dark:bg-[#1d222c] ${
+      className={`lintel-deal-card-enter group relative z-0 w-full overflow-visible rounded-lg border border-slate-200 bg-white shadow-sm transition-shadow hover:z-10 hover:shadow-md dark:border-white/10 ${LINTEL_TW_CLASSES.surfaceElevated} ${
 
         isDragging ? 'lintel-deal-dragging cursor-grabbing' : 'cursor-grab active:cursor-grabbing'
 
@@ -484,7 +477,7 @@ export const DealCard = memo(function DealCard({
 
         <span
 
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold text-[#121722]"
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold ${LINTEL_TW_CLASSES.textInk}`}
 
           style={{ backgroundColor: clientTone(client) }}
 
