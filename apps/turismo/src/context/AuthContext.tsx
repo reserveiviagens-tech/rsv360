@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { tryCreateDpopProof } from '@rsv360/shared';
 import {
   AUTH_V1,
-  DEFAULT_API_URL,
   AuthV1SessionResponse,
+  resolveApiBaseUrl,
   mapAuthV1User,
   parseAuthV1LoginResponse,
   parseAuthV1RefreshResponse,
@@ -68,14 +68,56 @@ function isLegacyFabricatedToken(token: string | null | undefined): boolean {
   return /^(demo|admin)-(token|refresh)(-\d+)?$/.test(token);
 }
 
+const AUTH_VERIFY_TIMEOUT_MS = 8_000;
+const AUTH_FETCH_USER_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
+
+/** Fallback CRM quando /session demora (evita overlay "Timeout" no dev). */
+function userFromJwtClaims(token: string): User | null {
+  try {
+    const segment = token.split('.')[1];
+    if (!segment) return null;
+    const json = atob(segment.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json) as Record<string, unknown>;
+    const email = String(payload.email ?? payload.sub ?? '').trim();
+    if (!email) return null;
+    const role = typeof payload.role === 'string' ? payload.role : undefined;
+    return {
+      id: 0,
+      email,
+      full_name: String(payload.name ?? payload.full_name ?? email),
+      name: typeof payload.name === 'string' ? payload.name : email.split('@')[0],
+      role,
+      is_active: true,
+      permissions: [],
+      token,
+      created_at: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   // Start loading until client initAuth resolves (avoids SSR redirect races)
   const [isLoading, setIsLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
-
-  const API_BASE_URL = DEFAULT_API_URL;
 
   console.log('[AuthContext] AuthProvider renderizado, isLoading:', isLoading);
 
@@ -94,7 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const verifyToken = useCallback(async (token: string): Promise<boolean> => {
     try {
-      const url = `${API_BASE_URL}${AUTH_V1.SESSION}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.SESSION}`;
       const headers = await dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -119,15 +161,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Erro ao verificar token:', error);
       return false;
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   const fetchUserData = useCallback(async (token: string) => {
+    const url = `${resolveApiBaseUrl()}${AUTH_V1.SESSION}`;
     try {
-      const timeoutPromise = new Promise<Response>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout ao buscar dados do usuário')), 5000)
-      );
-
-      const url = `${API_BASE_URL}${AUTH_V1.SESSION}`;
       const headers = await dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -137,11 +175,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         url,
         token,
       );
-      const fetchPromise = fetch(url, { headers });
+      const response = await withTimeout(
+        fetch(url, { headers }),
+        AUTH_FETCH_USER_TIMEOUT_MS,
+        null as Response | null,
+      );
 
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-      if (response.ok) {
+      if (response?.ok) {
         const data = (await response.json()) as AuthV1SessionResponse;
         if (data.authenticated && data.user) {
           const mapped = mapAuthV1User(data.user, token);
@@ -150,18 +190,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
             id: typeof mapped.id === 'number' ? mapped.id : parseInt(String(mapped.id), 10) || 0,
           } as User);
           setIsLoading(false);
-          console.log('[AuthContext] Dados do usuário carregados com sucesso');
           return;
         }
       }
-
-      throw new Error('Falha ao buscar dados do usuário');
     } catch (error) {
-      console.error('[AuthContext] Erro ao buscar dados do usuário:', error);
-      setIsLoading(false);
-      throw error;
+      console.warn('[AuthContext] fetchUserData indisponível:', error);
     }
-  }, [API_BASE_URL]);
+
+    const fallback = userFromJwtClaims(token);
+    if (fallback) {
+      setUser(fallback);
+    }
+    setIsLoading(false);
+  }, []);
 
   const refreshAccessToken = useCallback(async (refreshTokenValue?: string | null): Promise<void> => {
     try {
@@ -169,7 +210,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         refreshTokenValue ||
         (typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null);
 
-      const url = `${API_BASE_URL}${AUTH_V1.REFRESH}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.REFRESH}`;
       const headers = await dpopHeaders(
         { 'Content-Type': 'application/json' },
         'POST',
@@ -206,7 +247,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Erro ao renovar token:', error);
       throw error;
     }
-  }, [API_BASE_URL]);
+  }, []);
 
   const logout = useCallback(() => {
     const token =
@@ -217,7 +258,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       (typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null);
 
     if (token && !isLegacyFabricatedToken(token)) {
-      const url = `${API_BASE_URL}${AUTH_V1.LOGOUT}`;
+      const url = `${resolveApiBaseUrl()}${AUTH_V1.LOGOUT}`;
       void dpopHeaders(
         {
           Authorization: `Bearer ${token}`,
@@ -244,7 +285,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
-  }, [API_BASE_URL, accessToken, refreshToken, clearAuth]);
+  }, [accessToken, refreshToken, clearAuth]);
 
   // Verificar token armazenado ao inicializar
   useEffect(() => {
@@ -298,46 +339,55 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isLegacyFabricatedToken(storedRefreshToken)
           ) {
             console.log('[AuthContext] Legacy fabricated token detected — clearing auth');
-            if (isMounted) clearAuth();
+            if (isMounted) {
+              clearAuth();
+              setIsLoading(false);
+            }
             if (timeoutId) clearTimeout(timeoutId);
             return;
           }
 
           // Verificar token real com timeout
           try {
-            console.log('[AuthContext] Verificando token real...');
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Timeout')), 3000)
-            );
-
             let tokenToUse = storedAccessToken;
-            let isValid = (await Promise.race([
+            let isValid = await withTimeout(
               verifyToken(storedAccessToken),
-              timeoutPromise,
-            ])) as boolean;
+              AUTH_VERIFY_TIMEOUT_MS,
+              false,
+            );
 
             if (!isValid) {
               try {
-                await refreshAccessToken(storedRefreshToken);
+                await withTimeout(refreshAccessToken(storedRefreshToken), AUTH_VERIFY_TIMEOUT_MS, undefined);
                 tokenToUse =
                   (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null) ||
                   storedAccessToken;
-                isValid = true;
+                isValid = await withTimeout(verifyToken(tokenToUse), AUTH_VERIFY_TIMEOUT_MS, false);
               } catch {
                 isValid = false;
               }
             }
 
-            console.log('[AuthContext] Token válido:', isValid);
-            if (isValid && isMounted) {
-              await fetchUserData(tokenToUse);
-            } else if (isMounted) {
-              console.log('[AuthContext] Token inválido - limpando autenticação');
-              clearAuth();
+            if (isMounted) {
+              if (isValid || userFromJwtClaims(tokenToUse)) {
+                await fetchUserData(tokenToUse);
+              } else {
+                setIsLoading(false);
+                clearAuth();
+              }
             }
           } catch (error) {
-            console.error('[AuthContext] Erro ao verificar token:', error);
-            if (isMounted) clearAuth();
+            console.warn('[AuthContext] initAuth session check:', error);
+            if (isMounted) {
+              const fallback = userFromJwtClaims(storedAccessToken);
+              if (fallback) {
+                setUser(fallback);
+                setIsLoading(false);
+              } else {
+                setIsLoading(false);
+                clearAuth();
+              }
+            }
           }
         } else {
           // Não há token armazenado, apenas definir loading como false IMEDIATAMENTE
@@ -411,7 +461,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Fail-closed: only canonical backend auth — no client-side demo/admin bypass
-    const url = `${API_BASE_URL}${AUTH_V1.LOGIN}`;
+    const url = `${resolveApiBaseUrl()}${AUTH_V1.LOGIN}`;
     const headers = await dpopHeaders(
       { 'Content-Type': 'application/json' },
       'POST',
@@ -473,7 +523,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const register = async (email: string, full_name: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}${AUTH_V1.REGISTER}`, {
+      const response = await fetch(`${resolveApiBaseUrl()}${AUTH_V1.REGISTER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -504,7 +554,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error('Sessão inválida');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+      const response = await fetch(`${resolveApiBaseUrl()}/api/users/me`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -532,7 +582,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error('Sessão inválida');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/users/change-password`, {
+      const response = await fetch(`${resolveApiBaseUrl()}/api/users/change-password`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

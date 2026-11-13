@@ -12,12 +12,18 @@ export default function Document() {
         {/* Preconnect para melhor performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap"
+          rel="stylesheet"
+        />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://analytics.tiktok.com" />
         
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
+        {/* Legacy Docker bundles that still target :3002 */}
+        <script src="/rsv360-same-origin-api.js" defer={false} />
       </Head>
       <body>
         <Main />

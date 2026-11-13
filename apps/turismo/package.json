@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "next dev -p 3005",
     "build": "next build",
+    "analyze": "cross-env ANALYZE=true next build",
     "start": "next start -p 3005",
     "lint": "eslint .",
     "type-check": "tsc --noEmit"
@@ -66,6 +67,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.4.5",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.10.0",
     "eslint": "^9.39.0",
