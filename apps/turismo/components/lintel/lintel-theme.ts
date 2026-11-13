@@ -15,6 +15,7 @@ export const LINTEL_THEME_TOKENS = {
   accentBlue: '2f5bea',
   accentGreen: '138a63',
   accentChartBlue: '2563eb',
+  accentTitleBlue: '3563e9',
   favorite: 'ff4d6d',
   surfaceMutedLight: 'f8f9fb',
   borderSlack: 'e2e8f0',
@@ -81,6 +82,20 @@ export const LINTEL_RENTALS_TW = {
   occBar: `bg-[#${LINTEL_THEME_TOKENS.accentChartBlue}]`,
   unitFilled: `bg-[#${LINTEL_THEME_TOKENS.accentChartBlue}]`,
   unitEmpty: `bg-[#${LINTEL_THEME_TOKENS.borderSlack}]`,
+  cardFooterBorder: `border-[#${LINTEL_THEME_TOKENS.borderHeader}]`,
+} as const;
+
+/** Sales — chips, título, listagem/cards (Fatia 3b; hex só neste mapa). */
+export const LINTEL_SALES_TW = {
+  chipActive: `bg-[#${LINTEL_THEME_TOKENS.ink}] dark:bg-white dark:text-[#${LINTEL_THEME_TOKENS.ink}]`,
+  chipInactiveDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]`,
+  pageTitleAccent: `text-[#${LINTEL_THEME_TOKENS.accentTitleBlue}]`,
+  searchDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]`,
+  statusActive: `bg-[#${LINTEL_THEME_TOKENS.accentChartBlue}]`,
+  statusOffer: `bg-[#${LINTEL_THEME_TOKENS.accentOrangeStrong}]`,
+  cardSurfaceDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/80`,
+  tableSurfaceDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/80`,
+  favoriteActive: `border-[#${LINTEL_THEME_TOKENS.favorite}]/30 text-[#${LINTEL_THEME_TOKENS.favorite}]`,
   cardFooterBorder: `border-[#${LINTEL_THEME_TOKENS.borderHeader}]`,
 } as const;
 

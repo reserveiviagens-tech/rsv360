@@ -2,12 +2,13 @@
 
 import { Bath, BedDouble, Eye } from 'lucide-react';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 import type { SalesListing } from './sales-data';
 
 const STATUS_DOT: Record<SalesListing['status'], string> = {
   draft: 'bg-slate-400',
-  active: 'bg-[#2563eb]',
-  offer: 'bg-[#f97316]',
+  active: LINTEL_SALES_TW.statusActive,
+  offer: LINTEL_SALES_TW.statusOffer,
   sold: 'bg-slate-600',
 };
 
@@ -31,7 +32,9 @@ export function SalesListTable({
           : sm.statusSold;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-white/80 bg-white/70 shadow-xs dark:border-white/10 dark:bg-[#171b23]/80">
+    <div
+      className={`overflow-x-auto rounded-2xl border border-white/80 bg-white/70 shadow-xs dark:border-white/10 ${LINTEL_SALES_TW.tableSurfaceDark}`}
+    >
       <table className="w-full min-w-[720px] border-collapse text-left text-[11px]">
         <thead>
           <tr className="border-b border-gray-100 text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:border-gray-800">
