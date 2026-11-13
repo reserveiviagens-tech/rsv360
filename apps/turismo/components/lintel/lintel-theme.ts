@@ -7,9 +7,18 @@
 export const LINTEL_THEME_TOKENS = {
   surfaceDark: '121722',
   surfaceElevatedDark: '1d222c',
+  surfaceColumnDark: '171b23',
   ink: '121722',
   accentOrange: 'ff8a3d',
   accentOrangeStrong: 'f97316',
+  accentOrangeDeep: 'c45c12',
+  accentBlue: '2f5bea',
+  accentGreen: '138a63',
+  accentChartBlue: '2563eb',
+  favorite: 'ff4d6d',
+  surfaceMutedLight: 'f8f9fb',
+  borderSlack: 'e2e8f0',
+  borderHeader: 'f1f5f9',
   clientAvatarTones: ['f4a582', 'ff8a3d', '2f5bea', '138a63', 'c4b5fd'] as const,
 } as const;
 
@@ -48,6 +57,31 @@ export const LINTEL_TW_CLASSES = {
   bgAccentOrange: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]`,
   hoverAccentOrangeStrong: `hover:bg-[#${LINTEL_THEME_TOKENS.accentOrangeStrong}]`,
   textAccentOrangeStrong: `text-[#${LINTEL_THEME_TOKENS.accentOrangeStrong}]`,
+} as const;
+
+/** Rentals — chips, KPIs, cards (Fatia 3a; hex só neste mapa). */
+export const LINTEL_RENTALS_TW = {
+  chipActive: `bg-[#${LINTEL_THEME_TOKENS.ink}] dark:bg-white dark:text-[#${LINTEL_THEME_TOKENS.ink}]`,
+  chipInactiveDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]`,
+  kpiBadgeBlue: `bg-[#${LINTEL_THEME_TOKENS.accentBlue}]/12 text-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  kpiBadgeOrange: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/15 text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  searchDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]`,
+  popoverDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]`,
+  sortActive: `text-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  cardSurfaceDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/80`,
+  skeletonDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/80`,
+  statusLeased: `bg-[#${LINTEL_THEME_TOKENS.accentGreen}]`,
+  statusApplication: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]`,
+  statusForRent: `bg-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  favoriteActive: `border-[#${LINTEL_THEME_TOKENS.favorite}]/30 text-[#${LINTEL_THEME_TOKENS.favorite}]`,
+  applicationBadge: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/15 text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  ghostBtnDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]/90`,
+  occPanel: `bg-[#${LINTEL_THEME_TOKENS.surfaceMutedLight}]`,
+  occTrack: `bg-[#${LINTEL_THEME_TOKENS.borderSlack}]`,
+  occBar: `bg-[#${LINTEL_THEME_TOKENS.accentChartBlue}]`,
+  unitFilled: `bg-[#${LINTEL_THEME_TOKENS.accentChartBlue}]`,
+  unitEmpty: `bg-[#${LINTEL_THEME_TOKENS.borderSlack}]`,
+  cardFooterBorder: `border-[#${LINTEL_THEME_TOKENS.borderHeader}]`,
 } as const;
 
 export function lintelClientAvatarColor(name: string): string {

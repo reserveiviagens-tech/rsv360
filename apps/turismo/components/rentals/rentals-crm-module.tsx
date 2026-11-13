@@ -20,6 +20,7 @@ import {
   rentalMatchesFilter,
   type RentalPortfolioItem,
 } from './rentals-data';
+import { LINTEL_RENTALS_TW } from '../lintel/lintel-theme';
 import { RentalsSkeleton } from './rentals-skeleton';
 
 export const RENTALS_PAGE_BOOT_MS = 580;
@@ -34,8 +35,8 @@ export type RentalsCrmModuleProps = {
 
 function chipClass(active: boolean) {
   return active
-    ? 'inline-flex h-[26px] items-center gap-1.5 rounded-full bg-[#121722] px-3 text-[11px] font-bold text-white shadow-sm dark:bg-white dark:text-[#121722]'
-    : 'inline-flex h-[26px] items-center gap-1.5 rounded-full border border-gray-200/80 bg-white px-3 text-[11px] font-bold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-[#1d222c] dark:text-white';
+    ? `inline-flex h-[26px] items-center gap-1.5 rounded-full px-3 text-[11px] font-bold text-white shadow-sm ${LINTEL_RENTALS_TW.chipActive}`
+    : `inline-flex h-[26px] items-center gap-1.5 rounded-full border border-gray-200/80 bg-white px-3 text-[11px] font-bold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-white ${LINTEL_RENTALS_TW.chipInactiveDark}`;
 }
 
 function chipCount(active: boolean) {
@@ -44,10 +45,8 @@ function chipCount(active: boolean) {
     : 'flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gray-100 px-1 text-[10px] font-black text-gray-600 dark:bg-gray-800 dark:text-gray-300';
 }
 
-const kpiBadgeBlue =
-  'shrink-0 rounded-full bg-[#2f5bea]/12 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-[#2f5bea]';
-const kpiBadgeOrange =
-  'shrink-0 rounded-full bg-[#ff8a3d]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#c45c12]';
+const kpiBadgeBlue = `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums ${LINTEL_RENTALS_TW.kpiBadgeBlue}`;
+const kpiBadgeOrange = `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${LINTEL_RENTALS_TW.kpiBadgeOrange}`;
 
 export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: RentalsCrmModuleProps) {
   const { copy } = useCrmLocale();
@@ -218,7 +217,9 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <div className="flex h-[26px] w-full min-w-[12.5rem] max-w-[14rem] items-center gap-2 rounded-full border border-gray-200/90 bg-white px-3 shadow-xs dark:border-gray-700 dark:bg-[#171b23]">
+          <div
+            className={`flex h-[26px] w-full min-w-[12.5rem] max-w-[14rem] items-center gap-2 rounded-full border border-gray-200/90 bg-white px-3 shadow-xs dark:border-gray-700 ${LINTEL_RENTALS_TW.searchDark}`}
+          >
             <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
             <input
               type="search"
@@ -241,14 +242,16 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
           <button
             type="button"
             onClick={() => setSortOpen((v) => !v)}
-            className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-gray-200/80 bg-white px-3 text-xs font-bold text-gray-800 shadow-xs dark:border-gray-700 dark:bg-[#1d222c] dark:text-white"
+            className={`inline-flex h-[26px] items-center gap-1.5 rounded-full border border-gray-200/80 bg-white px-3 text-xs font-bold text-gray-800 shadow-xs dark:border-gray-700 dark:text-white ${LINTEL_RENTALS_TW.popoverDark}`}
             aria-expanded={sortOpen}
           >
             {sort === 'newest' ? r.sortNewest : r.sortName}
             <ChevronDown className="h-3.5 w-3.5 text-gray-400" aria-hidden />
           </button>
           {sortOpen ? (
-            <div className="absolute right-0 top-full z-20 mt-1 min-w-[10rem] rounded-2xl border border-gray-200 bg-white p-1 shadow-xl dark:border-gray-700 dark:bg-[#1d222c]">
+            <div
+              className={`absolute right-0 top-full z-20 mt-1 min-w-[10rem] rounded-2xl border border-gray-200 bg-white p-1 shadow-xl dark:border-gray-700 ${LINTEL_RENTALS_TW.popoverDark}`}
+            >
               {(
                 [
                   ['newest', r.sortNewest],
@@ -259,7 +262,7 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
                   key={key}
                   type="button"
                   className={`flex w-full rounded-xl px-3 py-2 text-left text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                    sort === key ? 'text-[#2f5bea]' : 'text-gray-700 dark:text-gray-200'
+                    sort === key ? LINTEL_RENTALS_TW.sortActive : 'text-gray-700 dark:text-gray-200'
                   }`}
                   onClick={() => {
                     setSort(key);

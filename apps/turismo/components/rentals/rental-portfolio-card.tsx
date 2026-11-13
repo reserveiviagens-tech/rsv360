@@ -3,6 +3,7 @@
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Calendar, FileText, Heart, KeyRound, MessageCircle, UserPlus } from 'lucide-react';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
+import { LINTEL_RENTALS_TW } from '../lintel/lintel-theme';
 import { lintelBtnGhost, lintelBtnPrimary, lintelIconBtn } from '../lintel/overview-primitives';
 import type { RentalPortfolioItem } from './rentals-data';
 import { isRentalFavorite, setRentalFavorite } from './rental-favorites';
@@ -11,7 +12,7 @@ export type RentalCardAction = 'viewing' | 'lead' | 'contact';
 
 export function RentalPortfolioCardSkeleton() {
   return (
-    <div className="rounded-[22px] border border-white/80 bg-white/70 p-3.5 dark:border-white/10 dark:bg-[#171b23]/80">
+    <div className={`rounded-[22px] border border-white/80 bg-white/70 p-3.5 dark:border-white/10 ${LINTEL_RENTALS_TW.skeletonDark}`}>
       <div className="lintel-shimmer mb-3 h-44 w-full rounded-2xl" />
       <div className="lintel-shimmer mb-2 h-3.5 w-2/3 rounded-md" />
       <div className="lintel-shimmer mb-3 h-2.5 w-1/2 rounded-md" />
@@ -24,9 +25,9 @@ export function RentalPortfolioCardSkeleton() {
 }
 
 const STATUS_DOT: Record<RentalPortfolioItem['listingStatus'], string> = {
-  leased: 'bg-[#138a63]',
-  application: 'bg-[#ff8a3d]',
-  for_rent: 'bg-[#2f5bea]',
+  leased: LINTEL_RENTALS_TW.statusLeased,
+  application: LINTEL_RENTALS_TW.statusApplication,
+  for_rent: LINTEL_RENTALS_TW.statusForRent,
 };
 
 const UNIT_GRID_COLS = 16;
@@ -94,7 +95,7 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
 
   return (
     <article
-      className={`group lintel-rental-card-enter flex h-full flex-col justify-between rounded-2xl border border-white/80 bg-white/70 p-3 shadow-xs backdrop-blur-md transition-shadow hover:shadow-md dark:border-white/10 dark:bg-[#171b23]/80 ${
+      className={`group lintel-rental-card-enter flex h-full flex-col justify-between rounded-2xl border border-white/80 bg-white/70 p-3 shadow-xs backdrop-blur-md transition-shadow hover:shadow-md dark:border-white/10 ${LINTEL_RENTALS_TW.cardSurfaceDark} ${
         lintelUniformHeight ? 'min-h-[290px]' : ''
       }`}
       style={{ animationDelay: `${enterDelayMs}ms` }}
@@ -122,7 +123,7 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
               toggleFav();
             }}
             className={`absolute right-2.5 top-2.5 z-[2] h-8 w-8 ${lintelIconBtn} ${
-              fav ? 'border-[#ff4d6d]/30 bg-white text-[#ff4d6d]' : ''
+              fav ? `border bg-white ${LINTEL_RENTALS_TW.favoriteActive}` : ''
             }`}
             aria-label={r.favoriteAria}
             aria-pressed={fav}
@@ -146,7 +147,7 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
             </button>
             <button
               type="button"
-              className={`${lintelBtnGhost} w-full justify-center border-white/30 bg-white/90 py-2 text-[11px] text-gray-900 dark:border-white/20 dark:bg-[#1d222c]/90 dark:text-white`}
+              className={`${lintelBtnGhost} w-full justify-center border-white/30 bg-white/90 py-2 text-[11px] text-gray-900 dark:border-white/20 dark:text-white ${LINTEL_RENTALS_TW.ghostBtnDark}`}
               onClick={(e) => runAction('lead', e)}
             >
               <UserPlus className="h-3.5 w-3.5" aria-hidden />
@@ -154,7 +155,7 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
             </button>
             <button
               type="button"
-              className={`${lintelBtnGhost} w-full justify-center border-white/30 bg-white/90 py-2 text-[11px] text-gray-900 dark:border-white/20 dark:bg-[#1d222c]/90 dark:text-white`}
+              className={`${lintelBtnGhost} w-full justify-center border-white/30 bg-white/90 py-2 text-[11px] text-gray-900 dark:border-white/20 dark:text-white ${LINTEL_RENTALS_TW.ghostBtnDark}`}
               onClick={(e) => runAction('contact', e)}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
@@ -173,7 +174,7 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
             <p className="truncate text-[8.5px] text-gray-400">{item.address}</p>
           </div>
           {!lintelUniformHeight && (item.applications ?? 0) > 0 ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#ff8a3d]/15 px-2 py-0.5 text-[10px] font-bold text-[#c45c12]">
+            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${LINTEL_RENTALS_TW.applicationBadge}`}>
               <FileText className="h-3 w-3" aria-hidden />
               {r.applicationBadge.replace('{n}', String(item.applications))}
             </span>
@@ -198,16 +199,16 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
           </div>
         ) : null}
 
-        <div className="mt-auto min-h-[4rem] rounded-lg bg-[#f8f9fb] p-2 dark:bg-gray-800/50">
+        <div className={`mt-auto min-h-[4rem] rounded-lg p-2 dark:bg-gray-800/50 ${LINTEL_RENTALS_TW.occPanel}`}>
           <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-gray-500">
             <span>
               {item.occupied} / {item.units} {r.unitsLetLabel}
             </span>
             <span className="text-gray-900 dark:text-white">{Math.round(occupancy)}%</span>
           </div>
-          <div className="mb-1.5 h-1 overflow-hidden rounded-full bg-[#e2e8f0] dark:bg-gray-700">
+          <div className={`mb-1.5 h-1 overflow-hidden rounded-full dark:bg-gray-700 ${LINTEL_RENTALS_TW.occTrack}`}>
             <div
-              className="lintel-rent-occ-bar h-full rounded-full bg-[#2563eb]"
+              className={`lintel-rent-occ-bar h-full rounded-full ${LINTEL_RENTALS_TW.occBar}`}
               style={{ width: `${occupancy}%` }}
             />
           </div>
@@ -224,8 +225,8 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
                     key={i}
                     className={`lintel-rental-unit-cell h-[5px] w-full max-w-[5px] justify-self-center rounded-[1px] ${
                       i < item.occupied
-                        ? 'bg-[#2563eb]'
-                        : 'bg-[#e2e8f0] dark:bg-gray-600'
+                        ? LINTEL_RENTALS_TW.unitFilled
+                        : `${LINTEL_RENTALS_TW.unitEmpty} dark:bg-gray-600`
                     }`}
                   />
                 ))
@@ -234,7 +235,9 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#f1f5f9] pt-2 text-[10px] dark:border-gray-800">
+      <div
+        className={`mt-2 flex items-center justify-between gap-2 border-t pt-2 text-[10px] dark:border-gray-800 ${LINTEL_RENTALS_TW.cardFooterBorder}`}
+      >
         <span className="flex min-w-0 items-center gap-1.5 font-medium text-gray-500">
           {item.listingStatus === 'leased' ? (
             <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden />
