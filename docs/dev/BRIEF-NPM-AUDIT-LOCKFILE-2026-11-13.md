@@ -3,6 +3,8 @@
 **Data:** 13/11/2026  
 **Contexto:** PRs **#517–#520** falham check **Security Scan / NPM Audit** com o mesmo padrão da base `develop` (não regressão das fatias de UI).
 
+**Atualização 13/11 (noite):** **#522** mergeado (lockfile). Gate **NPM Audit** ainda vermelho por CVE — fatia seguinte = allowlist/renovações em PR dedicada (`chore/audit-allowlist-renew-2026-11`), **sem** CRM Lintel.
+
 ---
 
 ## Como o CI decide
