@@ -14,11 +14,19 @@ Workflow: `.github/workflows/security-scan.yml` (job `NPM Audit`).
 
 ---
 
+## Diagnóstico local (13/11 — executado)
+
+**Causa confirmada (H1):** `npm ci --dry-run` na raiz falha com **Missing** de `@next/bundle-analyzer` e cadeia `webpack-bundle-analyzer` — devDep de `apps/turismo` sem árvore completa no lock.
+
+**Regeneração lock:** use **Node 24 + npm 10.9.7** (como CI); npm 11 local reescreve o lock inteiro (~50k linhas).
+
+**Correção sugerida:** no runner CI, `npm install -w apps/turismo @next/bundle-analyzer@16.4.5 --ignore-scripts` + `check-lockfiles.sh` verde.
+
 ## Hipóteses (ordenadas)
 
 | # | Causa provável | Evidência a colher |
 |---|----------------|-------------------|
-| H1 | `package-lock.json` dessincronizado de `package.json` (root ou backend) | Log do step **Validate lockfiles** no Actions |
+| H1 | `package-lock.json` dessincronizado de `package.json` (root ou backend) | **Confirmado local** + log **Validate lockfiles** |
 | H2 | Vulnerabilidade prod não allowlisted | Saída do `audit-gate.py` no job |
 | H3 | Workspace `apps/site-publico` com audit distinto | Step **NPM Audit (frontend)** |
 
