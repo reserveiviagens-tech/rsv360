@@ -21,7 +21,7 @@
 
 | # | Teste | Resultado esperado | Status |
 |---|-------|-------------------|--------|
-| 3R.1 | Aba abre sem erro | KPIs, filtros, grid de carteira | ☐ |
+| 3R.1 | Aba abre sem erro | KPIs, filtros, grid de carteira | ✅ |
 | 3R.2 | Chips filtro (All / Vacant / Let / Application) | Ativo = token ink; dark legível | ☐ |
 | 3R.3 | Pesquisa + ordenação | Popover/sort consistentes com Deals | ☐ |
 | 3R.4 | Card portfólio | Status dots, favorito, ocupação sem regressão | ☐ |
@@ -37,7 +37,7 @@
 
 | # | Teste | Resultado esperado | Status |
 |---|-------|-------------------|--------|
-| 3S.1 | Aba abre sem erro | KPI strip, market pulse, filtros | ☐ |
+| 3S.1 | Aba abre sem erro | KPI strip, market pulse, filtros | ✅ |
 | 3S.2 | Título accent | Cor `accentTitleBlue` (token) | ☐ |
 | 3S.3 | Chips status + toolbar (type/beds/sort) | Menu dark = `surfaceColumn` / `surfaceElevated` | ☐ |
 | 3S.4 | Vista grid | Property cards: status, favorito, footer border | ☐ |
@@ -66,9 +66,9 @@
 
 | Campo | Valor |
 |-------|--------|
-| Executado em | _preencher_ |
-| Veredito global | ☐ VERDE · ☐ AMARELO · ☐ VERMELHO |
-| Notas | |
+| Executado em | 13/11/2026 (Cursor browser, `:3005`, sessão autenticada) |
+| Veredito global | 🟢 **VERDE parcial** (3R.1 + 3S.1 + navegação abas; restante manual) |
+| Notas | Rentals: rent roll + calendário + 6 cards visíveis. Sales: grid 10 listagens + filtros + market pulse. |
 
 ---
 
