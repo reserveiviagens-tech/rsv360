@@ -1,11 +1,6 @@
 {
   "_doc": "Audit allowlist for known tech-debt vulnerabilities. Each entry MUST have severity, reason, and expires (YYYY-MM-DD). Expired entries become BLOCKING violations. See .github/scripts/audit-gate.py.",
   "allow": {
-    "@sentry/nextjs": {
-      "severity": "critical",
-      "reason": "Sentry tunnel middleware CVE GHSA-mchm-gjx6-7h55; bump to >=10.75.2 in dedicated observability PR (not lockfile-only)",
-      "expires": "2027-03-31"
-    },
     "@xmldom/xmldom": {
       "severity": "high",
       "reason": "Transitive XML parser; no drop-in patch in current lockfile — track upgrade with calendar/iCal consumers",
