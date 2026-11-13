@@ -6,12 +6,13 @@ import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { useLintelCreateOptional } from '../lintel/lintel-create-provider';
 import { lintelIconBtn } from '../lintel/overview-primitives';
 import { SalesListingShareMenu } from './sales-listing-share-menu';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 import type { SalesListing } from './sales-data';
 
 const STATUS_DOT: Record<SalesListing['status'], string> = {
   draft: 'bg-slate-400',
-  active: 'bg-[#2563eb]',
-  offer: 'bg-[#f97316]',
+  active: LINTEL_SALES_TW.statusActive,
+  offer: LINTEL_SALES_TW.statusOffer,
   sold: 'bg-slate-600',
 };
 
@@ -53,7 +54,7 @@ export const SalesPropertyCard = memo(function SalesPropertyCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') onSelect(item);
       }}
-      className="lintel-rental-card-enter group flex min-h-[336px] cursor-pointer flex-col rounded-2xl border border-white/80 bg-white/70 p-2 shadow-xs backdrop-blur-md transition-shadow hover:shadow-md dark:border-white/10 dark:bg-[#171b23]/80"
+      className={`lintel-rental-card-enter group flex min-h-[336px] cursor-pointer flex-col rounded-2xl border border-white/80 bg-white/70 p-2 shadow-xs backdrop-blur-md transition-shadow hover:shadow-md dark:border-white/10 ${LINTEL_SALES_TW.cardSurfaceDark}`}
       style={{ animationDelay: `${enterDelayMs}ms` }}
     >
       <div className="relative mb-2 h-[8.5rem] shrink-0 overflow-hidden rounded-[10px] bg-gray-100 dark:bg-gray-800">
@@ -70,7 +71,7 @@ export const SalesPropertyCard = memo(function SalesPropertyCard({
             setFav((v) => !v);
           }}
           className={`absolute right-2 top-2 z-[2] h-7 w-7 ${lintelIconBtn} ${
-            fav ? 'border-[#ff4d6d]/30 text-[#ff4d6d]' : ''
+            fav ? LINTEL_SALES_TW.favoriteActive : ''
           }`}
           aria-pressed={fav}
           aria-label={sm.favoriteAria}
@@ -168,7 +169,9 @@ export const SalesPropertyCard = memo(function SalesPropertyCard({
           </span>
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-[#f1f5f9] pt-2 text-[9px] font-medium text-gray-400 dark:border-gray-800">
+        <div
+          className={`mt-auto flex items-center justify-between gap-2 border-t pt-2 text-[9px] font-medium text-gray-400 dark:border-gray-800 ${LINTEL_SALES_TW.cardFooterBorder}`}
+        >
           <span className="min-w-0 truncate">
             {item.dom} {sm.daysOnMarket} · {item.views}{' '}
             <Eye className="mb-px inline h-3 w-3" aria-hidden /> · {item.inquiries ?? 0}{' '}

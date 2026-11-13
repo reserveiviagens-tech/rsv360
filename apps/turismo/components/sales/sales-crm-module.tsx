@@ -23,6 +23,7 @@ import {
   type SalesTypeFilter,
   type SalesViewMode,
 } from './sales-data';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 import { SalesSkeleton } from './sales-skeleton';
 
 export const SALES_PAGE_BOOT_MS = 580;
@@ -128,8 +129,8 @@ export function SalesCrmModule({
 
   const chipClass = (active: boolean) =>
     active
-      ? 'inline-flex h-[26px] items-center gap-1 rounded-full bg-[#121722] px-2.5 text-[11px] font-bold text-white dark:bg-white dark:text-[#121722]'
-      : 'inline-flex h-[26px] items-center gap-1 rounded-full border border-gray-200/80 bg-white px-2.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-[#1d222c] dark:text-gray-200';
+      ? `inline-flex h-[26px] items-center gap-1 rounded-full px-2.5 text-[11px] font-bold text-white ${LINTEL_SALES_TW.chipActive}`
+      : `inline-flex h-[26px] items-center gap-1 rounded-full border border-gray-200/80 bg-white px-2.5 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 ${LINTEL_SALES_TW.chipInactiveDark}`;
 
   if (!isActive) return null;
 
@@ -144,7 +145,9 @@ export function SalesCrmModule({
           <span className="block text-2xl font-black tracking-tight text-gray-900 dark:text-white">
             {sm.pageTitleMain}
           </span>
-          <span className="block text-lg font-bold text-[#3563e9]">{sm.pageTitleAccent}</span>
+          <span className={`block text-lg font-bold ${LINTEL_SALES_TW.pageTitleAccent}`}>
+            {sm.pageTitleAccent}
+          </span>
         </h1>
         <div className="min-w-0 flex-1 xl:flex xl:justify-end">
           <SalesKpiStrip
@@ -164,7 +167,9 @@ export function SalesCrmModule({
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <div className="flex h-[26px] w-full min-w-[12.5rem] max-w-[13.5rem] items-center gap-2 rounded-full border border-gray-200/90 bg-white px-3 shadow-xs dark:border-gray-700 dark:bg-[#171b23]">
+          <div
+            className={`flex h-[26px] w-full min-w-[12.5rem] max-w-[13.5rem] items-center gap-2 rounded-full border border-gray-200/90 bg-white px-3 shadow-xs dark:border-gray-700 ${LINTEL_SALES_TW.searchDark}`}
+          >
             <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
             <input
               type="search"
