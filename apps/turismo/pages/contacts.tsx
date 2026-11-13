@@ -1,6 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useOverviewCarteiraVinculos } from '@/hooks/useAnfitriao';
+import {
+  carteiraToOverviewContacts,
+  overviewContactToPageCard,
+} from '@/lib/overview-contacts';
 import Head from 'next/head';
 import {
   Search,
@@ -34,6 +40,7 @@ export interface Contact {
   avatarInitials?: string;
 }
 
+/** Demo fallback só quando carteira vazia e sem API (dev visual). */
 export const INITIAL_CONTACTS: Contact[] = [
   {
     id: 'c1',
@@ -127,7 +134,32 @@ export const INITIAL_CONTACTS: Contact[] = [
 
 function ContactsPageContent() {
   const { copy } = useCrmLocale();
-  const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
+  const { user } = useAuth();
+  const role = String(user?.role ?? '');
+  const { data: carteiraData, isLoading, isError } = useOverviewCarteiraVinculos();
+  const [localContacts, setLocalContacts] = useState<Contact[]>([]);
+
+  const apiContacts = useMemo(() => {
+    const items = carteiraData?.data?.items ?? [];
+    if (items.length === 0) return [];
+    return carteiraToOverviewContacts(items, role).map((row) =>
+      overviewContactToPageCard(row) as Contact,
+    );
+  }, [carteiraData, role]);
+
+  const useDemoFallback = !isLoading && !isError && apiContacts.length === 0;
+
+  const [starOverrides, setStarOverrides] = useState<Record<string, boolean>>({});
+
+  const contacts = useMemo(() => {
+    const base =
+      apiContacts.length > 0 ? apiContacts : useDemoFallback ? INITIAL_CONTACTS : [];
+    return [...localContacts, ...base].map((c) => ({
+      ...c,
+      starred: starOverrides[c.id] ?? c.starred,
+    }));
+  }, [apiContacts, localContacts, useDemoFallback, starOverrides]);
+
   const [filter, setFilter] = useState<'all' | 'buyer' | 'seller' | 'tenant' | 'landlord' | 'investor'>('all');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -136,9 +168,8 @@ function ContactsPageContent() {
   const [newContactRole, setNewContactRole] = useState<'buyer' | 'seller' | 'tenant' | 'landlord' | 'investor'>('buyer');
 
   const toggleStarred = (id: string) => {
-    setContacts((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, starred: !c.starred } : c))
-    );
+    const current = contacts.find((c) => c.id === id)?.starred ?? false;
+    setStarOverrides((prev) => ({ ...prev, [id]: !current }));
   };
 
   const filtered = useMemo(() => {
@@ -175,7 +206,7 @@ function ContactsPageContent() {
       starred: false,
       avatarInitials: initials,
     };
-    setContacts((prev) => [created, ...prev]);
+    setLocalContacts((prev) => [created, ...prev]);
     setNewContactName('');
     setNewContactEmail('');
     setModalOpen(false);
@@ -200,7 +231,16 @@ function ContactsPageContent() {
               {copy.nav.contacts}
             </h1>
             <p className="text-sm font-medium text-[#5f6878] dark:text-[#a0a8b6] mt-0.5">
-              <strong>{contacts.length} relacionamentos ativos</strong> com clientes · Diretório VIP de Investidores & Proprietários
+              {isLoading ? (
+                'Carregando carteira…'
+              ) : isError ? (
+                'Não foi possível carregar a carteira.'
+              ) : (
+                <>
+                  <strong>{contacts.length} relacionamentos</strong>
+                  {apiContacts.length > 0 ? ' (carteira API)' : useDemoFallback ? ' (demo)' : ''} · Diretório VIP
+                </>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
