@@ -30,6 +30,20 @@
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
   --radius: 0.5rem;
+
+  /* Lintel Deals kanban — sync LINTEL_KANBAN_THEME (lintel-theme.ts) */
+  --lintel-deals-surface-card: #ffffff;
+  --lintel-kanban-canvas: #f4f5f7;
+  --lintel-kanban-column-border: #e2e8f0;
+  --lintel-kanban-header-border: #f1f5f9;
+  --lintel-stage-viewing: #9ca3af;
+  --lintel-stage-offer: #f97316;
+  --lintel-stage-negotiation: #3b82f6;
+  --lintel-stage-under-contract: #111827;
+  --lintel-stage-closed: #10b981;
+  --lintel-deals-agent-muted: 71 85 105;
+  --lintel-deals-agent-ink: 15 23 42;
+  --lintel-drop-target-ring: 47 91 234;
 }
 
 .dark {
@@ -52,6 +66,16 @@
   --warning-foreground: 48 96% 89%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
+
+  --lintel-kanban-canvas-dark-rgb: 14 17 23;
+  --lintel-kanban-column-border: rgb(255 255 255 / 0.1);
+  --lintel-kanban-column-surface: #171b23;
+  --lintel-kanban-header-border: rgb(255 255 255 / 0.08);
+  --lintel-stage-under-contract: #ffffff;
+  --lintel-deals-agent-strip-dark-rgb: 23 27 35;
+  --lintel-deals-agent-pressed-dark-rgb: 29 34 44;
+  --lintel-deals-agent-muted: 203 213 225;
+  --lintel-deals-agent-on-pressed: #ffffff;
 }
 
 @theme inline {
@@ -468,7 +492,7 @@ body {
   padding: 0.35rem 0.5rem;
   border-radius: 9999px;
   border: 1px solid rgb(226 232 240 / 0.9);
-  background-color: #ffffff;
+  background-color: var(--lintel-deals-surface-card);
   box-shadow:
     0 1px 2px rgb(15 23 42 / 0.06),
     0 4px 14px rgb(15 23 42 / 0.06);
@@ -476,7 +500,7 @@ body {
 
 .dark .lintel-deals-agent-strip {
   border-color: rgb(255 255 255 / 0.1);
-  background-color: rgb(23 27 35 / 0.95);
+  background-color: rgb(var(--lintel-deals-agent-strip-dark-rgb) / 0.95);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.35),
     0 6px 18px rgb(0 0 0 / 0.28);
@@ -490,7 +514,7 @@ body {
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgb(71 85 105);
+  color: rgb(var(--lintel-deals-agent-muted));
   opacity: 0.82;
   transition:
     opacity 0.18s ease,
@@ -505,8 +529,8 @@ body {
 
 .lintel-deals-agent-btn.is-pressed {
   opacity: 1;
-  color: rgb(15 23 42);
-  background-color: #ffffff;
+  color: rgb(var(--lintel-deals-agent-ink));
+  background-color: var(--lintel-deals-surface-card);
   box-shadow:
     0 1px 2px rgb(15 23 42 / 0.1),
     0 3px 10px rgb(15 23 42 / 0.12),
@@ -514,12 +538,12 @@ body {
 }
 
 .dark .lintel-deals-agent-btn {
-  color: rgb(203 213 225);
+  color: rgb(var(--lintel-deals-agent-muted));
 }
 
 .dark .lintel-deals-agent-btn.is-pressed {
-  color: #ffffff;
-  background-color: rgb(29 34 44);
+  color: var(--lintel-deals-agent-on-pressed);
+  background-color: rgb(var(--lintel-deals-agent-pressed-dark-rgb));
   box-shadow:
     0 1px 3px rgb(0 0 0 / 0.45),
     0 4px 12px rgb(0 0 0 / 0.35),
@@ -560,11 +584,11 @@ body {
   min-width: 0;
   padding: 0.75rem;
   border-radius: 0.75rem;
-  background-color: #f4f5f7;
+  background-color: var(--lintel-kanban-canvas);
 }
 
 .dark .lintel-deals-kanban-canvas {
-  background-color: rgb(14 17 23 / 0.55);
+  background-color: rgb(var(--lintel-kanban-canvas-dark-rgb) / 0.55);
 }
 
 .lintel-deals-kanban-column {
@@ -575,46 +599,46 @@ body {
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 0.75rem;
-  border: 1px solid #e2e8f0;
-  background-color: #ffffff;
+  border: 1px solid var(--lintel-kanban-column-border);
+  background-color: var(--lintel-deals-surface-card);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .dark .lintel-deals-kanban-column {
-  border-color: rgb(255 255 255 / 0.1);
-  background-color: #171b23;
+  border-color: var(--lintel-kanban-column-border);
+  background-color: var(--lintel-kanban-column-surface);
   box-shadow:
     0 1px 2px rgb(0 0 0 / 0.35),
     0 6px 16px rgb(0 0 0 / 0.25);
 }
 
 .lintel-deals-kanban-column[data-stage='viewing'] {
-  border-top: 3px solid #9ca3af;
+  border-top: 3px solid var(--lintel-stage-viewing);
 }
 
 .lintel-deals-kanban-column[data-stage='offer'] {
-  border-top: 3px solid #f97316;
+  border-top: 3px solid var(--lintel-stage-offer);
 }
 
 .lintel-deals-kanban-column[data-stage='negotiation'] {
-  border-top: 3px solid #3b82f6;
+  border-top: 3px solid var(--lintel-stage-negotiation);
 }
 
 .lintel-deals-kanban-column[data-stage='under_contract'] {
-  border-top: 3px solid #111827;
+  border-top: 3px solid var(--lintel-stage-under-contract);
 }
 
 .dark .lintel-deals-kanban-column[data-stage='under_contract'] {
-  border-top-color: #ffffff;
+  border-top-color: var(--lintel-stage-under-contract);
 }
 
 .lintel-deals-kanban-column[data-stage='closed'] {
-  border-top: 3px solid #10b981;
+  border-top: 3px solid var(--lintel-stage-closed);
 }
 
 .lintel-deals-kanban-column.is-drop-target {
   box-shadow:
-    0 0 0 2px rgb(47 91 234 / 0.35),
+    0 0 0 2px rgb(var(--lintel-drop-target-ring) / 0.35),
     0 6px 16px rgb(15 23 42 / 0.1);
 }
 
@@ -623,12 +647,12 @@ body {
   min-height: 2.5rem;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--lintel-kanban-header-border);
   padding: 0.5rem 0.75rem;
 }
 
 .dark .lintel-deals-kanban-column-header {
-  border-bottom-color: rgb(255 255 255 / 0.08);
+  border-bottom-color: var(--lintel-kanban-header-border);
 }
 
 .lintel-deals-kanban-column-body {
@@ -639,11 +663,11 @@ body {
   gap: 0.75rem;
   overflow-y: auto;
   padding: 0.75rem;
-  background-color: #ffffff;
+  background-color: var(--lintel-deals-surface-card);
 }
 
 .dark .lintel-deals-kanban-column-body {
-  background-color: #171b23;
+  background-color: var(--lintel-kanban-column-surface);
 }
 
 .lintel-rental-card-enter {
