@@ -8,11 +8,12 @@
 
 | Item | Valor |
 |------|--------|
-| Base remota | Merge **PR #516** (`55661a55`) |
-| **PR aberta** | **#517** — `fix/turismo-deals-kpi-kanban-css` → `develop` (`74f4f8e5` KPI + `da94ba42` kanban vars) |
-| `develop` local | **6 commits** à frente de `origin/develop` (docs smoke/CONTINUAR) — **não** fazer `push origin develop` |
-| CI #517 (13/11) | Analyze, CodeQL, Trivy, gitleaks, dependency-review: **pass** · **NPM Audit: fail** (classificar pré-existente vs PR) |
-| Pós-merge #517 | `git pull origin develop`; alinhar docs locais (PR só docs ou descartar duplicados) |
+| Base remota | Merge **PR #518** (`9e80b673`) — fatia **3a Rentals** |
+| **PR #517** | ✅ MERGED @ `ff5df20c` (kanban + KPI) |
+| **PR #518** | ✅ MERGED @ `9e80b673` (tokens Rentals) |
+| **PR 3b** | Sales — branch `style/turismo-lintel-sales-3b` |
+| CI #518 | Checks do diff: pass · NPM Audit: fora do escopo (lockfile base) |
+| Stash local | `wip-unrelated-pre-3a` (Anfitrião, package-lock, etc.) — não aplicar na fatia Rentals |
 
 **Não misturar** com stash/working tree alheio: `fase1-api.ts` / carteira anfitrião (ver notas antigas no handoff 11/11).
 
@@ -76,10 +77,10 @@ Backend/auth: ver troubleshooting login (`:3005` proxy para `/api/v1/auth/login`
 
 ## Próximos passos (ordem recomendada)
 
-1. **Gate CI #517** — `gh pr checks 517`; documentar NPM Audit se fora do escopo; merge humano.
-2. **`git pull origin develop`** após merge; limpar 6 commits/docs duplicados localmente.
-3. ~~**Opção 2**~~ ✅ na #517.
-4. **Opção 3** — ver brief abaixo (**só iniciar implementação após #517 merge + CI OK**).
+1. ~~**Gate + merge #517**~~ ✅
+2. ~~**Opção 3a Rentals + PR #518**~~ ✅
+3. **Opção 3b Sales** — `LINTEL_SALES_TW` + `sales-crm-module`, `sales-list-table`, `sales-property-card` (hex restantes: toolbar, map, share, skeleton)
+4. Gate 3b → polish Rentals restante (`lease-calendar`, `rent-roll`, skeleton) em fatia opcional 3a+
 5. Backlog Deals: 2.3.3 / 2.3.4 manual; 2.3.5 Perfil N/A.
 
 ---
@@ -138,8 +139,8 @@ Backend/auth: ver troubleshooting login (`:3005` proxy para `/api/v1/auth/login`
 
 ## Gate enterprise
 
-- **Bloqueado:** implementação Opção 3 até merge **#517** + classificação CI (NPM Audit).
-- **Não** `git push origin develop` com os 6 commits locais de docs.
+- **3a:** fechada (#518). **3b:** PR dedicada; não misturar WIP `pages/overview.tsx`.
+- NPM Audit na base: fora do escopo das fatias CRM Lintel.
 
 ---
 
