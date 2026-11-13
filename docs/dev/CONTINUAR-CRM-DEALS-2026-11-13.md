@@ -8,7 +8,7 @@
 
 | Item | Valor |
 |------|--------|
-| Base remota | Merge **PR #520** (`a5fb633b`) — Opção 3 **fechada** |
+| Base remota | `develop` @ **#522** (`92a95457`) lockfile + **#521** Overview |
 | **#517–#520** | Deals KPI · Rentals 3a · Sales 3b · polish 3c — todos MERGED |
 | CI CRM | CodeQL/gitleaks OK · NPM Audit fora do escopo (ver brief lockfile) |
 | Stash local | `wip-unrelated-pre-3a` (Anfitrião, package-lock, etc.) — não aplicar na fatia Rentals |
@@ -79,8 +79,8 @@ Backend/auth: ver troubleshooting login (`:3005` proxy para `/api/v1/auth/login`
 2. ~~**Opção 3a Rentals + PR #518**~~ ✅
 3. ~~**Opção 3b Sales + PR #519**~~ ✅
 4. ~~**3c polish (#520)**~~ ✅
-5. **Smoke Sales/Rentals** — `SMOKE-CRM-SALES-RENTALS-2026-11-13.md` (checklist ☐)
-6. **Backlog:** PR NPM Audit (`BRIEF-NPM-AUDIT-LOCKFILE-2026-11-13.md`) · Overview Anfitrião (`BRIEF-OVERVIEW-ANFITRIAO-2026-11-13.md`)
+5. ~~**Smoke Sales/Rentals**~~ ✅ — `SMOKE-CRM-SALES-RENTALS-2026-11-13.md` (manual 3R.7–3S.8 fechado 13/11)
+6. ~~**PR lockfile #522**~~ ✅ merged; **Backlog:** NPM Audit CVE gate (`BRIEF-NPM-AUDIT-LOCKFILE-2026-11-13.md`) · Overview Anfitrião P1+
 7. Deals: 2.3.3 / 2.3.4 manual; 2.3.5 Perfil N/A.
 
 ---
