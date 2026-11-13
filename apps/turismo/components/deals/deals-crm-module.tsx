@@ -158,9 +158,7 @@ export function DealsCrmModule({
   }, [filteredDeals]);
 
   const winRate = useMemo((): number | null => {
-    const won = filteredDeals.filter(
-      (row) => row.stage === 'closed' || row.status === 'won',
-    ).length;
+    const won = filteredDeals.filter((row) => row.status === 'won').length;
     const lost = filteredDeals.filter((row) => row.status === 'lost').length;
     const decided = won + lost;
     if (decided === 0) return null;
