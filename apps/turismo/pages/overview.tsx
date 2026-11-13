@@ -41,8 +41,15 @@ function OverviewContent() {
   const { user } = useAuth();
   const { data: comissoesData, isLoading: commissionQueryLoading } = useAnfitriaoMinhasComissoes();
   const { data: dashboardData, isLoading: dashboardLoading } = useAnfitriaoDashboard();
-  const { data: unidadesData } = useOverviewPortfolioUnits();
-  const { data: carteiraData, isLoading: carteiraLoading } = useOverviewCarteiraVinculos();
+  const {
+    data: unidadesData,
+    isError: portfolioError,
+  } = useOverviewPortfolioUnits();
+  const {
+    data: carteiraData,
+    isLoading: carteiraLoading,
+    isError: carteiraError,
+  } = useOverviewCarteiraVinculos();
   const { copy } = useCrmLocale();
   const role = String(user?.role ?? '');
   const displayName = lintelDisplayFirstName(
@@ -98,6 +105,14 @@ function OverviewContent() {
           content="Cockpit parceiro — captação, carteira, leads e comissões RSV360°"
         />
       </Head>
+      {(carteiraError || portfolioError) && !useCommissionDemo ? (
+        <p
+          role="alert"
+          className="mx-4 mb-2 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100"
+        >
+          Alguns dados do cockpit não carregaram. Atualize a página ou tente novamente em instantes.
+        </p>
+      ) : null}
       <RSV360ExecutiveDashboard
         userName={displayName}
         roleTitle={roleTitle}
