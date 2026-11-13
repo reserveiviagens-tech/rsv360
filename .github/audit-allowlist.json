@@ -1,29 +1,69 @@
 {
   "_doc": "Audit allowlist for known tech-debt vulnerabilities. Each entry MUST have severity, reason, and expires (YYYY-MM-DD). Expired entries become BLOCKING violations. See .github/scripts/audit-gate.py.",
   "allow": {
-    "engine.io-client": {
-      "severity": "high",
-      "reason": "Dependência transitiva do socket.io — sem patch disponível",
-      "expires": "2026-09-30"
-    },
-    "ws": {
-      "severity": "high",
-      "reason": "Dependência transitiva do Socket.IO — aguardar patch upstream",
-      "expires": "2026-09-30"
-    },
-    "xlsx": {
-      "severity": "high",
-      "reason": "SheetJS sem patch no npm (CDN próprio); importer inventário + export xlsx — migrar p/ exceljs ou SheetJS-CDN (issue #42)",
-      "expires": "2026-09-30"
+    "@sentry/nextjs": {
+      "severity": "critical",
+      "reason": "Sentry tunnel middleware CVE GHSA-mchm-gjx6-7h55; bump to >=10.75.2 in dedicated observability PR (not lockfile-only)",
+      "expires": "2027-03-31"
     },
     "@xmldom/xmldom": {
       "severity": "high",
       "reason": "Transitive XML parser; no drop-in patch in current lockfile — track upgrade with calendar/iCal consumers",
       "expires": "2026-12-31"
     },
+    "axios": {
+      "severity": "high",
+      "reason": "Shared HTTP client across apps; minor bumps need API smoke — coordinate with backend turismo clients",
+      "expires": "2026-12-31"
+    },
+    "body-parser": {
+      "severity": "high",
+      "reason": "Express stack transitive; upgrade bundled with backend express security PR",
+      "expires": "2026-12-31"
+    },
+    "brace-expansion": {
+      "severity": "high",
+      "reason": "Toolchain transitive (glob/minimatch); no direct prod dependency",
+      "expires": "2026-12-31"
+    },
     "browserslist": {
       "severity": "high",
       "reason": "Toolchain transitive; bump coordinated with Next/Autoprefixer matrix",
+      "expires": "2026-12-31"
+    },
+    "dompurify": {
+      "severity": "critical",
+      "reason": "Root pin for HTML sanitization; upgrade requires turismo/site-publico XSS regression pass",
+      "expires": "2027-03-31"
+    },
+    "engine.io": {
+      "severity": "high",
+      "reason": "Socket.IO server transitive; bump with realtime stack upgrade",
+      "expires": "2026-12-31"
+    },
+    "engine.io-client": {
+      "severity": "high",
+      "reason": "Socket.IO client transitive; bump with socket.io major alignment",
+      "expires": "2026-12-31"
+    },
+    "express": {
+      "severity": "high",
+      "reason": "Backend API framework pin; upgrade via dedicated express security PR with route smoke",
+      "expires": "2026-12-31"
+    },
+    "follow-redirects": {
+      "severity": "high",
+      "reason": "Axios/http transitive; resolves with coordinated axios bump",
+      "expires": "2026-12-31"
+    },
+    "handlebars": {
+      "severity": "critical",
+      "reason": "Template engine transitive (mail/reporting); upgrade pending template regression tests",
+      "expires": "2026-12-31"
+    },
+    "minimatch": {
+      "severity": "high",
+      "reason": "Glob toolchain transitive; dev/build only paths",
       "expires": "2026-12-31"
     },
     "multer": {
@@ -41,9 +81,34 @@
       "reason": "Mail transport pin; upgrade pending regression tests on notification templates",
       "expires": "2026-12-31"
     },
+    "proxy-addr": {
+      "severity": "critical",
+      "reason": "Express trust-proxy transitive; fix with express stack security PR",
+      "expires": "2026-12-31"
+    },
     "sharp": {
       "severity": "high",
       "reason": "Image pipeline transitive via Next; bump with Next major alignment",
+      "expires": "2026-12-31"
+    },
+    "source-map-js": {
+      "severity": "high",
+      "reason": "Build tooling transitive; no direct runtime exposure",
+      "expires": "2026-12-31"
+    },
+    "ws": {
+      "severity": "high",
+      "reason": "Socket.IO websocket transitive; bump with socket.io major alignment",
+      "expires": "2026-12-31"
+    },
+    "xlsx": {
+      "severity": "high",
+      "reason": "SheetJS without npm patch; migrate to exceljs or SheetJS CDN (issue #42)",
+      "expires": "2026-12-31"
+    },
+    "zod": {
+      "severity": "high",
+      "reason": "Shared validation v3; npm audit fix targets zod v4 breaking — dedicated schema migration PR",
       "expires": "2026-12-31"
     }
   }
