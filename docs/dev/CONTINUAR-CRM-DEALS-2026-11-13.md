@@ -11,7 +11,7 @@
 | Base remota | Merge **PR #518** (`9e80b673`) — fatia **3a Rentals** |
 | **PR #517** | ✅ MERGED @ `ff5df20c` (kanban + KPI) |
 | **PR #518** | ✅ MERGED @ `9e80b673` (tokens Rentals) |
-| **PR 3b** | Sales — branch `style/turismo-lintel-sales-3b` |
+| **PR #519** | ✅ MERGED @ `ed75b8fd` (tokens Sales — fatia 3b) |
 | CI #518 | Checks do diff: pass · NPM Audit: fora do escopo (lockfile base) |
 | Stash local | `wip-unrelated-pre-3a` (Anfitrião, package-lock, etc.) — não aplicar na fatia Rentals |
 
