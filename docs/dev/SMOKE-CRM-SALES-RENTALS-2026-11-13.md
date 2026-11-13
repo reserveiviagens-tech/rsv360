@@ -1,7 +1,7 @@
 # Smoke Test — CRM Sales / Rentals / Lintel tokens (RSV360)
 
 **Data:** 13/11/2026  
-**Branch:** `develop` (@ merge **#520** + **#521** Overview P0)  
+**Branch:** `develop` (@ merge **#520** + **#521** Overview P0 + **#522** lockfile)  
 **Escopo:** Homologação pós-**#518–#520** (tokens) e **#521** (rota `/overview`)  
 **Ambiente:** `http://localhost:3005` · login dev em `docs/cotacao/TROUBLESHOOTING-LOGIN-LOCAL.md`
 
@@ -27,9 +27,9 @@
 | 3R.4 | Card portfólio | Status dots, favorito, ocupação sem regressão | ✅ |
 | 3R.5 | Rent roll (barras) | Último mês laranja/azul via tokens | ✅ |
 | 3R.6 | Calendário leases | Badges blue/apricot, toast undo | ✅ (UI; toast não exercitado) |
-| 3R.7 | Expand painel rent roll / calendário | Modal dark surface token | ☐ manual expand |
-| 3R.8 | Skeleton boot (~580 ms) | Sem flash de hex; dark `/40` surface | ☐ timing |
-| 3R.9 | Dark mode | Alternar tema; contraste WCAG razoável | ☐ manual toggle |
+| 3R.7 | Expand painel rent roll / calendário | Modal dark surface token | ✅ (h2 + Fechar; dark ativo) |
+| 3R.8 | Skeleton boot (~580 ms) | Sem flash de hex; dark `/40` surface | ✅ (`OVERVIEW_BOOT_MS`/`RentalsSkeleton`; reload `:3005`) |
+| 3R.9 | Dark mode | Alternar tema; contraste WCAG razoável | ✅ (system → light → **dark**; chips/cards legíveis) |
 
 ---
 
@@ -43,8 +43,8 @@
 | 3S.4 | Vista grid | Property cards: status, favorito, footer border | ✅ |
 | 3S.5 | Vista list | Tabela dark surface; dots active/offer | ✅ |
 | 3S.6 | Vista map | Canvas mapa fundo dark token | ✅ |
-| 3S.7 | Share menu (hover card) | Facebook/WhatsApp/Instagram = brand tokens | ☐ hover manual |
-| 3S.8 | Skeleton boot | Igual padrão Rentals | ☐ timing |
+| 3S.7 | Share menu (hover card) | Facebook/WhatsApp/Instagram = brand tokens | ✅ (barra quick actions + **Partilhar** → FB/WA/IG/TikTok/e-mail) |
+| 3S.8 | Skeleton boot | Igual padrão Rentals | ✅ (`SALES_PAGE_BOOT_MS=580`; reload `tab=sales`) |
 | 3S.9 | Sem regressão Deals | `tab=deals` kanban + Win Rate ainda OK | ✅ |
 
 ---
@@ -64,9 +64,9 @@
 
 | Campo | Valor |
 |-------|--------|
-| Executado em | 13/11/2026 (Cursor browser, `:3005`, sessão autenticada) |
-| Veredito global | 🟢 **VERDE** (itens restantes = expand/share/skeleton/dark — não bloqueantes) |
-| Notas | Rentals: 6 cards + rent roll + calendário. Sales: grid/lista/mapa + 10 listagens. Deals: swimlanes + filtros agente OK. |
+| Executado em | 13/11/2026 (Cursor browser, `:3005`, sessão autenticada; rerun pós-itens manuais) |
+| Veredito global | 🟢 **VERDE** (checklist 3R/3S completo) |
+| Notas | Rentals: expand rent roll + calendário; dark mode. Sales: menu partilha (5 canais). **#522** merged (`92a95457`) — lock dry-run CI OK; NPM Audit gate ainda vermelho (CVE allowlist, fora do escopo lock). |
 
 ---
 
