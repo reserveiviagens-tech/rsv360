@@ -1,5 +1,62 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/context/AuthContext';
 import { fase1Api } from '@/lib/fase1-api';
+import type { CarteiraVinculoRow } from '@/lib/overview-contacts';
+
+const OVERVIEW_CARTEIRA_STAFF_ROLES = new Set(['admin', 'manager']);
+
+function parseAuthUserId(id: unknown): number | undefined {
+  const n = typeof id === 'number' ? id : Number(id);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** Unidades do parceiro para mapa/heróis no Overview (reusa `/anfitriao/minhas`). */
+export function useOverviewPortfolioUnits(page = 1, pageSize = 50) {
+  return useQuery({
+    queryKey: ['anfitriao', 'overview', 'portfolio-units', page, pageSize],
+    queryFn: () => fase1Api.anfitriaoMinhas(page, pageSize, 'all'),
+  });
+}
+
+/** Vínculos carteira para aba Contatos no Overview (staff ou corretor com escopo). */
+export function useOverviewCarteiraVinculos() {
+  const { user, isAuthenticated } = useAuth();
+  const role = String(user?.role ?? '');
+  const userId = parseAuthUserId(user?.id);
+  const isStaff = OVERVIEW_CARTEIRA_STAFF_ROLES.has(role);
+  const isBroker = role === 'corretor' || role === 'agente' || role === 'promotor';
+
+  return useQuery({
+    queryKey: ['anfitriao', 'overview', 'carteira', isStaff, isBroker, userId],
+    queryFn: async () => {
+      const params: Parameters<typeof fase1Api.anfitriaoListarCarteiraCorretor>[0] = {
+        page: 1,
+        pageSize: 100,
+        status: 'ativo',
+      };
+      if (isBroker && userId != null) params.corretorId = userId;
+
+      try {
+        return await fase1Api.anfitriaoListarCarteiraCorretor(params);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/403|forbidden/i.test(msg)) {
+          return {
+            success: true as const,
+            data: {
+              items: [] as CarteiraVinculoRow[],
+              page: 1,
+              pageSize: 100,
+              total: 0,
+            },
+          };
+        }
+        throw err;
+      }
+    },
+    enabled: Boolean(isAuthenticated && (isStaff || isBroker)),
+  });
+}
 
 export function useAnfitriaoDashboard() {
   return useQuery({
