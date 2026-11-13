@@ -20,6 +20,13 @@ export const LINTEL_THEME_TOKENS = {
   surfaceMutedLight: 'f8f9fb',
   borderSlack: 'e2e8f0',
   borderHeader: 'f1f5f9',
+  chartTrackLight: 'f1f3f6',
+  chartBarApricot: 'f38b4a',
+  brandFacebook: '1877f2',
+  brandWhatsApp: '25d366',
+  brandInstagramStart: 'f58529',
+  brandInstagramMid: 'dd2a7b',
+  brandInstagramEnd: '8134af',
   clientAvatarTones: ['f4a582', 'ff8a3d', '2f5bea', '138a63', 'c4b5fd'] as const,
 } as const;
 
@@ -83,6 +90,27 @@ export const LINTEL_RENTALS_TW = {
   unitFilled: `bg-[#${LINTEL_THEME_TOKENS.accentChartBlue}]`,
   unitEmpty: `bg-[#${LINTEL_THEME_TOKENS.borderSlack}]`,
   cardFooterBorder: `border-[#${LINTEL_THEME_TOKENS.borderHeader}]`,
+  toneBlueBadge: `bg-[#${LINTEL_THEME_TOKENS.accentBlue}]/12 text-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  toneApricotBadge: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/15 text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  toneBluePill: `text-[#${LINTEL_THEME_TOKENS.accentBlue}] bg-[#${LINTEL_THEME_TOKENS.accentBlue}]/10`,
+  toneApricotPill: `text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}] bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/12`,
+  eventSignTag: `bg-[#${LINTEL_THEME_TOKENS.accentBlue}]/12 text-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  eventLeaseEndTag: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/12 text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  toastBar: `bg-[#${LINTEL_THEME_TOKENS.ink}] dark:bg-white dark:text-[#${LINTEL_THEME_TOKENS.ink}]`,
+  toastUndoOnDark: `dark:bg-[#${LINTEL_THEME_TOKENS.ink}]/10 dark:hover:bg-[#${LINTEL_THEME_TOKENS.ink}]/20`,
+  signedBadge: `bg-[#${LINTEL_THEME_TOKENS.accentGreen}]/12 text-[#${LINTEL_THEME_TOKENS.accentGreen}]`,
+  actionApricotIcon: `border-[#${LINTEL_THEME_TOKENS.accentOrange}]/35 bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/10 text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  actionBlueIcon: `border-[#${LINTEL_THEME_TOKENS.accentBlue}]/40 bg-[#${LINTEL_THEME_TOKENS.accentBlue}]/10 text-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  panelSolidDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]`,
+  skeletonMutedDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/40`,
+  endingBadge: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]/15 text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  textAccentDeep: `text-[#${LINTEL_THEME_TOKENS.accentOrangeDeep}]`,
+  chartTrack: `bg-[#${LINTEL_THEME_TOKENS.chartTrackLight}]`,
+  chartBarTitleBlue: `bg-[#${LINTEL_THEME_TOKENS.accentTitleBlue}]`,
+  chartBarApricot: `bg-[#${LINTEL_THEME_TOKENS.chartBarApricot}]`,
+  chartBarAccentBlue: `bg-[#${LINTEL_THEME_TOKENS.accentBlue}]`,
+  chartBarAccentOrange: `bg-[#${LINTEL_THEME_TOKENS.accentOrange}]`,
+  legacyChipDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]`,
 } as const;
 
 /** Sales — chips, título, listagem/cards (Fatia 3b; hex só neste mapa). */
@@ -97,6 +125,14 @@ export const LINTEL_SALES_TW = {
   tableSurfaceDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/80`,
   favoriteActive: `border-[#${LINTEL_THEME_TOKENS.favorite}]/30 text-[#${LINTEL_THEME_TOKENS.favorite}]`,
   cardFooterBorder: `border-[#${LINTEL_THEME_TOKENS.borderHeader}]`,
+  toolbarMenuDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]`,
+  toolbarChipDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]`,
+  mapSurfaceDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]`,
+  skeletonMutedDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceColumnDark}]/40`,
+  sharePanelDark: `dark:bg-[#${LINTEL_THEME_TOKENS.surfaceElevatedDark}]/95`,
+  shareFacebook: `bg-[#${LINTEL_THEME_TOKENS.brandFacebook}] focus-visible:ring-[#${LINTEL_THEME_TOKENS.brandFacebook}]`,
+  shareWhatsApp: `bg-[#${LINTEL_THEME_TOKENS.brandWhatsApp}] focus-visible:ring-[#${LINTEL_THEME_TOKENS.brandWhatsApp}]`,
+  shareInstagram: `bg-gradient-to-br from-[#${LINTEL_THEME_TOKENS.brandInstagramStart}] via-[#${LINTEL_THEME_TOKENS.brandInstagramMid}] to-[#${LINTEL_THEME_TOKENS.brandInstagramEnd}] focus-visible:ring-[#${LINTEL_THEME_TOKENS.brandInstagramMid}]`,
 } as const;
 
 export function lintelClientAvatarColor(name: string): string {

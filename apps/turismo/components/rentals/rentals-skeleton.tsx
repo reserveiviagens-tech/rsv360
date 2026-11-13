@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { LINTEL_RENTALS_TW } from '../lintel/lintel-theme';
 
 /** Espelha RentalsCrmModule (layout Lintel Rentals). */
 export function RentalsSkeleton() {
@@ -51,7 +52,9 @@ function RentalsHeaderSkeleton() {
 
 function CardSkeleton() {
   return (
-    <div className="flex min-h-[290px] flex-col rounded-2xl border border-white/80 bg-white/40 p-3 dark:border-white/10 dark:bg-[#171b23]/40">
+    <div
+      className={`flex min-h-[290px] flex-col rounded-2xl border border-white/80 bg-white/40 p-3 dark:border-white/10 ${LINTEL_RENTALS_TW.skeletonMutedDark}`}
+    >
       <div className="lintel-shimmer mb-2.5 h-[7.875rem] w-full rounded-[10px]" />
       <div className="lintel-shimmer mb-1.5 h-3.5 w-2/5 rounded-md" />
       <div className="lintel-shimmer mb-1 h-3 w-3/5 rounded-md" />

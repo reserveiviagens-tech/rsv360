@@ -79,8 +79,8 @@ Backend/auth: ver troubleshooting login (`:3005` proxy para `/api/v1/auth/login`
 
 1. ~~**Gate + merge #517**~~ ✅
 2. ~~**Opção 3a Rentals + PR #518**~~ ✅
-3. **Opção 3b Sales** — `LINTEL_SALES_TW` + `sales-crm-module`, `sales-list-table`, `sales-property-card` (hex restantes: toolbar, map, share, skeleton)
-4. Gate 3b → polish Rentals restante (`lease-calendar`, `rent-roll`, skeleton) em fatia opcional 3a+
+3. ~~**Opção 3b Sales + PR #519**~~ ✅
+4. **3c polish** — em PR `style/turismo-lintel-3c-polish` (ver `BRIEF-CRM-LINTEL-3C-2026-11-13.md`)
 5. Backlog Deals: 2.3.3 / 2.3.4 manual; 2.3.5 Perfil N/A.
 
 ---

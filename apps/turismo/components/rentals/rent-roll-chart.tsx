@@ -5,6 +5,7 @@ import { ArrowUpRight, BarChart3 } from 'lucide-react';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { lintelIconBtn } from '../lintel/overview-primitives';
 import { RENT_ROLL_MONTHS, RENT_ROLL_SERIES } from './rentals-data';
+import { LINTEL_RENTALS_TW } from '../lintel/lintel-theme';
 import { RentalsPanelExpand } from './rentals-panel-expand';
 
 const ROLL_CEILING = 380;
@@ -37,11 +38,11 @@ function RentRollBars({
                 <div className="lintel-shimmer h-[70%] w-8 rounded-lg" />
               ) : isLintel ? (
                 <div
-                  className={`flex w-8 items-end justify-center rounded-lg bg-[#f1f3f6] dark:bg-gray-800/90 ${trackH}`}
+                  className={`flex w-8 items-end justify-center rounded-lg dark:bg-gray-800/90 ${trackH} ${LINTEL_RENTALS_TW.chartTrack}`}
                 >
                   <div
                     className={`lintel-rent-roll-bar w-full rounded-lg ${
-                      isLast ? 'bg-[#f38b4a]' : 'bg-[#3563e9]'
+                      isLast ? LINTEL_RENTALS_TW.chartBarApricot : LINTEL_RENTALS_TW.chartBarTitleBlue
                     }`}
                     style={
                       {
@@ -59,7 +60,7 @@ function RentRollBars({
                   />
                   <div
                     className={`lintel-rent-roll-bar relative z-[1] w-[72%] rounded-full ${
-                      isLast ? 'bg-[#ff8a3d]' : 'bg-[#2f5bea]'
+                      isLast ? LINTEL_RENTALS_TW.chartBarAccentOrange : LINTEL_RENTALS_TW.chartBarAccentBlue
                     }`}
                     style={
                       {
@@ -121,10 +122,12 @@ export const RentRollChart = memo(function RentRollChart({
           </div>
           {variant === 'legacy' ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#138a63]/12 px-2.5 py-1 text-[11px] font-bold text-[#138a63]">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${LINTEL_RENTALS_TW.signedBadge}`}>
                 {r.rentRollGrowth}
               </span>
-              <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-bold text-gray-800 dark:border-gray-700 dark:bg-[#1d222c] dark:text-white">
+              <span
+                className={`rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-bold text-gray-800 dark:border-gray-700 dark:text-white ${LINTEL_RENTALS_TW.legacyChipDark}`}
+              >
                 {r.rentRollLeasesSigned}
               </span>
             </div>
@@ -142,7 +145,9 @@ export const RentRollChart = memo(function RentRollChart({
 
   return (
     <>
-      <div className="rounded-2xl border border-white/80 bg-white/70 p-5 shadow-xs backdrop-blur-md dark:border-white/10 dark:bg-[#171b23]/80">
+      <div
+        className={`rounded-2xl border border-white/80 bg-white/70 p-5 shadow-xs backdrop-blur-md dark:border-white/10 ${LINTEL_RENTALS_TW.cardSurfaceDark}`}
+      >
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
             <BarChart3 className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />

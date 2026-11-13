@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { LINTEL_SALES_TW } from '../lintel/lintel-theme';
 
 /** Espelha SalesCrmModule (layout Lintel Sales). */
 export function SalesSkeleton() {
@@ -56,7 +57,9 @@ function SalesHeaderSkeleton() {
 
 function SalesCardSkeleton() {
   return (
-    <div className="flex min-h-[336px] flex-col rounded-2xl border border-white/80 bg-white/40 p-2 dark:border-white/10 dark:bg-[#171b23]/40">
+    <div
+      className={`flex min-h-[336px] flex-col rounded-2xl border border-white/80 bg-white/40 p-2 dark:border-white/10 ${LINTEL_SALES_TW.skeletonMutedDark}`}
+    >
       <div className="lintel-shimmer mb-2 h-[8.5rem] w-full rounded-[10px]" />
       <div className="flex flex-1 flex-col px-1 pb-1">
         <div className="mb-1 flex justify-between gap-2">
