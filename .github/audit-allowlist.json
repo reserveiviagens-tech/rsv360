@@ -28,8 +28,8 @@
     },
     "dompurify": {
       "severity": "critical",
-      "reason": "Root pin for HTML sanitization; upgrade requires turismo/site-publico XSS regression pass",
-      "expires": "2027-03-31"
+      "reason": "Override pinned 3.4.17 (GHSA follow-ups); residual npm audit until jspdf chain catches up",
+      "expires": "2026-12-31"
     },
     "engine.io": {
       "severity": "high",
