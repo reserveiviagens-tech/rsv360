@@ -41,6 +41,42 @@ function displayName(user: CarteiraUser, fallbackId: number): string {
 }
 
 /** Carteira P0.5 → cards da aba Contatos (LGPD: e-mail já mascarado pela API). */
+export type ContactsPageCard = {
+  id: string;
+  name: string;
+  role: OverviewContactRow['kind'];
+  email: string;
+  phone: string;
+  budgetOrUnits: string;
+  areas: string[];
+  starred: boolean;
+  avatarInitials?: string;
+};
+
+function initialsFromName(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+export function overviewContactToPageCard(row: OverviewContactRow): ContactsPageCard {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.kind,
+    email: row.email,
+    phone: row.phone,
+    budgetOrUnits: row.budget,
+    areas: row.city ? [row.city] : [],
+    starred: row.favorite,
+    avatarInitials: initialsFromName(row.name),
+  };
+}
+
 export function carteiraToOverviewContacts(
   items: CarteiraVinculoRow[],
   viewerRole: string,
