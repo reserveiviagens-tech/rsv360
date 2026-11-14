@@ -31,18 +31,18 @@
   --destructive-foreground: 210 40% 98%;
   --radius: 0.5rem;
 
-  /* Lintel Deals kanban — sync LINTEL_KANBAN_THEME (lintel-theme.ts) */
+  /* Lintel Kanban Tokens (Alinhados com LINTEL_THEME_TOKENS) */
   --lintel-deals-surface-card: #ffffff;
   --lintel-kanban-canvas: #f4f5f7;
   --lintel-kanban-column-border: #e2e8f0;
   --lintel-kanban-header-border: #f1f5f9;
   --lintel-stage-viewing: #9ca3af;
-  --lintel-stage-offer: #f97316;
-  --lintel-stage-negotiation: #3b82f6;
-  --lintel-stage-under-contract: #111827;
-  --lintel-stage-closed: #10b981;
+  --lintel-stage-offer: #ff8a3d; /* LINTEL_THEME_TOKENS.accentOrange */
+  --lintel-stage-negotiation: #2f5bea; /* LINTEL_THEME_TOKENS tone */
+  --lintel-stage-under-contract: #121722; /* LINTEL_THEME_TOKENS.surfaceDark */
+  --lintel-stage-closed: #138a63; /* LINTEL_THEME_TOKENS tone */
   --lintel-deals-agent-muted: 71 85 105;
-  --lintel-deals-agent-ink: 15 23 42;
+  --lintel-deals-agent-ink: 18 23 34; /* 121722 */
   --lintel-drop-target-ring: 47 91 234;
 }
 
@@ -67,13 +67,13 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
 
-  --lintel-kanban-canvas-dark-rgb: 14 17 23;
+  --lintel-kanban-canvas-dark-rgb: 15 17 22; /* 0f1116 */
   --lintel-kanban-column-border: rgb(255 255 255 / 0.1);
-  --lintel-kanban-column-surface: #171b23;
+  --lintel-kanban-column-surface: #1d222c; /* LINTEL_THEME_TOKENS.surfaceElevatedDark */
   --lintel-kanban-header-border: rgb(255 255 255 / 0.08);
   --lintel-stage-under-contract: #ffffff;
-  --lintel-deals-agent-strip-dark-rgb: 23 27 35;
-  --lintel-deals-agent-pressed-dark-rgb: 29 34 44;
+  --lintel-deals-agent-strip-dark-rgb: 18 23 34; /* 121722 */
+  --lintel-deals-agent-pressed-dark-rgb: 29 34 44; /* 1d222c */
   --lintel-deals-agent-muted: 203 213 225;
   --lintel-deals-agent-on-pressed: #ffffff;
 }
