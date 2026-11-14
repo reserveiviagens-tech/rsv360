@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import {
   Search,
@@ -23,6 +23,7 @@ import { LintelPrimaryActions } from '../components/lintel/lintel-primary-action
 import { LintelShellNav } from '../components/lintel/lintel-shell-nav';
 import { useCrmLocale } from '../components/lintel/crm-locale-provider';
 import { maskEmail, maskPhone } from '@/lib/pii-mask';
+import { fetchLeads, LeadPageCard } from '@/lib/overview-leads';
 
 export interface LeadItem {
   id: string;
@@ -164,9 +165,35 @@ function LeadsPageContent() {
   const [filter, setFilter] = useState<'all' | 'hot' | 'new'>('all');
   const [search, setSearch] = useState('');
   const [convertedNotice, setConvertedNotice] = useState<string | null>(null);
+  const [leads, setLeads] = useState<LeadPageCard[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLeads({
+      sampleDeals: SAMPLE_LEADS.map((l) => ({
+        id: l.id,
+        name: l.name,
+        email: l.email,
+        phone: l.phone,
+        score: l.score,
+        intent: l.intent,
+        budget: l.budget,
+        source: l.source,
+        time: l.time,
+        status: l.status,
+        fitFactors: l.fitFactors,
+        notes: l.notes,
+      })),
+    }).then((loaded) => {
+      if (!cancelled) setLeads(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredLeads = useMemo(() => {
-    return SAMPLE_LEADS.filter((lead) => {
+    return leads.filter((lead) => {
       if (filter === 'hot' && lead.score < 80) return false;
       if (filter === 'new' && lead.status !== 'new') return false;
       if (!search.trim()) return true;
@@ -182,9 +209,9 @@ function LeadsPageContent() {
 
   const selectedLead = useMemo(() => {
     return (
-      SAMPLE_LEADS.find((l) => l.id === selectedId) ||
+      leads.find((l) => l.id === selectedId) ||
       filteredLeads[0] ||
-      SAMPLE_LEADS[0]
+      leads[0]
     );
   }, [selectedId, filteredLeads]);
 
@@ -216,7 +243,7 @@ function LeadsPageContent() {
               {copy.nav.leads}
             </h1>
             <p className="text-sm font-medium text-[#5f6878] dark:text-[#a0a8b6] mt-0.5">
-              <strong>{SAMPLE_LEADS.length} novas oportunidades</strong> recebidas hoje · AI Qualification Engine ativo
+              <strong>{leads.length} novas oportunidades</strong> recebidas hoje · AI Qualification Engine ativo
             </p>
           </div>
           <LintelPrimaryActions variant="listings" />
