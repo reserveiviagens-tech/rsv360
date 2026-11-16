@@ -11,7 +11,7 @@ export default function RentalsPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    void router.replace({ pathname: '/overview', query: { tab: 'rentals' } });
+    void router.replace({ pathname: '/overview', query: { ...router.query, tab: 'rentals' } });
   }, [router, router.isReady]);
 
   return (

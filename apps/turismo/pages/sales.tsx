@@ -23,7 +23,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    void router.replace({ pathname: '/overview', query: { tab: 'sales' } });
+    void router.replace({ pathname: '/overview', query: { ...router.query, tab: 'sales' } });
   }, [router, router.isReady]);
 
   return (

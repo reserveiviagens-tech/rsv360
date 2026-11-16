@@ -1,4 +1,4 @@
-﻿describe('CRM Logic & Helpers Unit Tests', () => {
+describe('CRM Logic & Helpers Unit Tests', () => {
   describe('Win Rate Calculation Logic', () => {
     function computeWinRate(deals: Array<{ stage?: string; status?: string }>): number | null {
       const won = deals.filter((d) => d.stage === 'closed' || d.status === 'won').length;
@@ -92,6 +92,69 @@
       expect(parseDealHash('#overview')).toBeNull();
       expect(parseDealHash('#rentals')).toBeNull();
       expect(parseDealHash('')).toBeNull();
+    });
+  });
+
+  describe('Sales & Rentals Property Dossier Resolution Logic', () => {
+    const mockSalesListings = [
+      { id: 's1', slug: 'hollis-modern-house', name: 'Hollis Modern House' },
+      { id: 's2', slug: 'villa-sol-marina', name: 'Villa Sol Marina' },
+    ];
+
+    const mockRentalPortfolio = [
+      { id: 'r1', name: 'Arbor Tower', units: 48, occupied: 44 },
+      { id: 'r2', name: 'Northbank Lofts', units: 36, occupied: 31 },
+    ];
+
+    function resolveSalesListing(slug: string, listings: typeof mockSalesListings) {
+      const normalized = slug.trim().toLowerCase();
+      return listings.find(
+        (l) =>
+          l.slug === normalized ||
+          l.name.toLowerCase().replace(/\s+/g, '-') === normalized ||
+          l.name.toLowerCase() === normalized,
+      ) || null;
+    }
+
+    function resolveRentalProperty(param: string, rentals: typeof mockRentalPortfolio) {
+      const normalized = param.trim().toLowerCase();
+      return rentals.find(
+        (r) =>
+          r.id.toLowerCase() === normalized ||
+          r.name.toLowerCase().replace(/\s+/g, '-') === normalized ||
+          r.name.toLowerCase() === normalized,
+      ) || null;
+    }
+
+    it('resolves sales property by exact slug or name', () => {
+      expect(resolveSalesListing('hollis-modern-house', mockSalesListings)?.id).toBe('s1');
+      expect(resolveSalesListing('Villa Sol Marina', mockSalesListings)?.id).toBe('s2');
+      expect(resolveSalesListing('non-existent', mockSalesListings)).toBeNull();
+    });
+
+    it('resolves rental property by ID, slug or full name', () => {
+      expect(resolveRentalProperty('r1', mockRentalPortfolio)?.name).toBe('Arbor Tower');
+      expect(resolveRentalProperty('arbor-tower', mockRentalPortfolio)?.id).toBe('r1');
+      expect(resolveRentalProperty('Northbank Lofts', mockRentalPortfolio)?.id).toBe('r2');
+      expect(resolveRentalProperty('r999', mockRentalPortfolio)).toBeNull();
+    });
+
+    it('preserves query params during tab redirects', () => {
+      const originalQuery = { property: 'villa-sol-marina', ref: 'campaign123' };
+      const salesRedirect = { ...originalQuery, tab: 'sales' };
+      expect(salesRedirect).toEqual({
+        property: 'villa-sol-marina',
+        ref: 'campaign123',
+        tab: 'sales',
+      });
+
+      const rentalQuery = { rental: 'r1', filter: 'active' };
+      const rentalRedirect = { ...rentalQuery, tab: 'rentals' };
+      expect(rentalRedirect).toEqual({
+        rental: 'r1',
+        filter: 'active',
+        tab: 'rentals',
+      });
     });
   });
 });

@@ -38,12 +38,14 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
   loading = false,
   lintelUniformHeight = false,
   onAction,
+  onSelect,
 }: {
   item?: RentalPortfolioItem;
   enterDelayMs?: number;
   loading?: boolean;
   lintelUniformHeight?: boolean;
   onAction?: (action: RentalCardAction, item: RentalPortfolioItem) => void;
+  onSelect?: (item: RentalPortfolioItem) => void;
 }) {
   const { copy } = useCrmLocale();
   const r = copy.rentals;
@@ -95,7 +97,16 @@ export const RentalPortfolioCard = memo(function RentalPortfolioCard({
 
   return (
     <article
-      className={`group lintel-rental-card-enter flex h-full flex-col justify-between rounded-2xl border border-white/80 bg-white/70 p-3 shadow-xs backdrop-blur-md transition-shadow hover:shadow-md dark:border-white/10 ${LINTEL_RENTALS_TW.cardSurfaceDark} ${
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect?.(item)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect?.(item);
+        }
+      }}
+      className={`group lintel-rental-card-enter flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-white/80 bg-white/70 p-3 shadow-xs backdrop-blur-md transition-shadow hover:shadow-md dark:border-white/10 ${LINTEL_RENTALS_TW.cardSurfaceDark} ${
         lintelUniformHeight ? 'min-h-[290px]' : ''
       }`}
       style={{ animationDelay: `${enterDelayMs}ms` }}
