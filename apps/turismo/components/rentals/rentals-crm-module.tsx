@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 import { CRM_RENTAL_FOCUS_ID_KEY } from '../lintel/crm-live-chat-data';
 import { Building2, CalendarClock, ChevronDown, KeyRound, Search, TrendingUp } from 'lucide-react';
 import { LintelPrimaryActions } from '../lintel/lintel-primary-actions';
@@ -13,6 +14,7 @@ import type { RentalCardAction } from './rental-portfolio-card';
 import { LeaseCalendarPanel } from './lease-calendar-panel';
 import { RentRollChart } from './rent-roll-chart';
 import { RentalPortfolioCard } from './rental-portfolio-card';
+import { RentalPropertyDetailModal } from './rental-property-detail-modal';
 import {
   SAMPLE_LEASE_CALENDAR,
   SAMPLE_RENTAL_PORTFOLIO,
@@ -49,10 +51,34 @@ const kpiBadgeBlue = `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold t
 const kpiBadgeOrange = `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${LINTEL_RENTALS_TW.kpiBadgeOrange}`;
 
 export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: RentalsCrmModuleProps) {
+  const router = useRouter();
   const { copy } = useCrmLocale();
   const r = copy.rentals;
   const lintelCreate = useLintelCreateOptional();
   const liveChat = useCrmLiveChatOptional();
+
+  const [selectedRental, setSelectedRental] = useState<RentalPortfolioItem | null>(null);
+
+  const handleOpenRental = (item: RentalPortfolioItem) => {
+    setSelectedRental(item);
+    if (router.isReady) {
+      void router.replace(
+        { pathname: '/overview', query: { ...router.query, tab: 'rentals', rental: item.id } },
+        undefined,
+        { shallow: true },
+      );
+    }
+  };
+
+  const handleCloseRental = () => {
+    setSelectedRental(null);
+    if (router.isReady) {
+      const nextQuery = { ...router.query };
+      delete nextQuery.rental;
+      delete nextQuery.unit;
+      void router.replace({ pathname: '/overview', query: nextQuery }, undefined, { shallow: true });
+    }
+  };
 
   const handleCardAction = (action: RentalCardAction, item: RentalPortfolioItem) => {
     const prefill = {
@@ -88,6 +114,31 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
   const [sortOpen, setSortOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [pageLoading, setPageLoading] = useState(true);
+
+  // Deep link para abrir dossiê de locação diretamente via URL (?tab=rentals&rental=r1)
+  useEffect(() => {
+    if (!isActive || !router.isReady) return;
+    const rentalParam =
+      typeof router.query.rental === 'string'
+        ? router.query.rental
+        : typeof router.query.unit === 'string'
+          ? router.query.unit
+          : '';
+    if (rentalParam) {
+      const paramLower = rentalParam.toLowerCase();
+      const found = SAMPLE_RENTAL_PORTFOLIO.find(
+        (p) =>
+          p.id.toLowerCase() === paramLower ||
+          p.name.toLowerCase().replace(/\s+/g, '-') === paramLower ||
+          p.name.toLowerCase() === paramLower,
+      );
+      if (found) {
+        setSelectedRental(found);
+      }
+    } else {
+      setSelectedRental(null);
+    }
+  }, [isActive, router.isReady, router.query.rental, router.query.unit]);
 
   useEffect(() => {
     if (!isActive || typeof window === 'undefined') return;
@@ -285,9 +336,17 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
             enterDelayMs={idx * 50}
             lintelUniformHeight
             onAction={(action, row) => handleCardAction(action, row)}
+            onSelect={(row) => handleOpenRental(row)}
           />
         ))}
       </div>
+
+      {selectedRental && (
+        <RentalPropertyDetailModal
+          item={selectedRental}
+          onClose={handleCloseRental}
+        />
+      )}
     </div>
   );
 }
