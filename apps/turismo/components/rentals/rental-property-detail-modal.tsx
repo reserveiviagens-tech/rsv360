@@ -27,6 +27,8 @@ import { LINTEL_RENTALS_TW, LINTEL_THEME_TOKENS } from '../lintel/lintel-theme';
 import { lintelBtnGhost, lintelBtnPrimary, lintelIconBtn } from '../lintel/overview-primitives';
 import type { RentalPortfolioItem } from './rentals-data';
 import { isRentalFavorite, setRentalFavorite } from './rental-favorites';
+import { toast } from 'react-hot-toast';
+import { downloadRentalContractPreview, requestRentalSign } from '../../src/lib/rental-contract-api';
 
 export interface RentalPropertyDetailModalProps {
   item: RentalPortfolioItem;
@@ -394,6 +396,54 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                     Ativo
                   </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`${lintelBtnPrimary} text-xs`}
+                    onClick={async () => {
+                      try {
+                        const blob = await downloadRentalContractPreview({
+                          unitId: item.id,
+                          unitName: item.name,
+                          address: item.address,
+                          tenantName: 'Locatário RSV360',
+                          monthlyRent: item.rentAmount,
+                          termMonths: 12,
+                          startDate: new Date().toISOString().slice(0, 10),
+                        });
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                        toast.success('Minuta PDF gerada');
+                      } catch {
+                        toast.error('Não foi possível gerar a minuta do contrato');
+                      }
+                    }}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Gerar minuta PDF
+                  </button>
+                  <button
+                    type="button"
+                    className={`${lintelBtnGhost} text-xs`}
+                    onClick={async () => {
+                      try {
+                        const sign = await requestRentalSign({
+                          unitId: item.id,
+                          signerEmail: 'locatario@exemplo.com',
+                          signerName: 'Locatário candidato',
+                        });
+                        toast.success(
+                          `Assinatura solicitada (${sign.requestId.slice(0, 12)}…) — válida até ${new Date(sign.expiresAt).toLocaleString('pt-BR')}`,
+                        );
+                      } catch {
+                        toast.error('Falha ao solicitar assinatura eletrônica');
+                      }
+                    }}
+                  >
+                    Solicitar assinatura eletrônica
+                  </button>
                 </div>
               </div>
             )}

@@ -48,3 +48,4 @@ export * from './agentes-conhecimento';
 export * from './payments';
 export * from './partners';
 export * from './crm-lintel';
+export * from './crm-rental-sign';
