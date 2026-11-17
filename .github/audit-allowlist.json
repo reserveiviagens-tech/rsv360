@@ -61,6 +61,26 @@
       "reason": "Glob toolchain transitive; dev/build only paths",
       "expires": "2026-12-31"
     },
+    "picomatch": {
+      "severity": "high",
+      "reason": "Toolchain transitive (rollup plugins, tinyglobby); overrides at 2.3.2/4.0.4 — residual npm audit until Sentry/rollup stack bump",
+      "expires": "2026-12-31"
+    },
+    "@rollup/plugin-commonjs": {
+      "severity": "high",
+      "reason": "Sentry/next build toolchain transitive; bump with @sentry/nextjs + rollup 4.59 alignment PR",
+      "expires": "2026-12-31"
+    },
+    "@rollup/pluginutils": {
+      "severity": "high",
+      "reason": "Sentry/next build toolchain transitive; bump with @sentry/nextjs + rollup 4.59 alignment PR",
+      "expires": "2026-12-31"
+    },
+    "@sentry/nextjs": {
+      "severity": "high",
+      "reason": "Observability SDK pin; upgrade coordinated with dedicated Next.js security release and route smoke",
+      "expires": "2026-12-31"
+    },
     "multer": {
       "severity": "high",
       "reason": "Upload middleware used by anfitrião trilho/gallery; upgrade pending API-compatible release",
