@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { dealsApi } from '@/lib/deals-api';
+import { getConvertedDeals } from '@/lib/lead-to-deal';
 import { DealsKpiStrip } from '../lintel/deals-kpi-strip';
 import { useCrmLiveChatOptional } from '../lintel/crm-live-chat-provider';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
@@ -68,6 +69,19 @@ export function DealsCrmModule({
   const { copy, locale } = useCrmLocale();
   const d = copy.deals;
   const [deals, setDeals] = useState<Deal[]>(SAMPLE_DEALS);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const local = getConvertedDeals();
+    if (local.length > 0) {
+      setDeals((prev) => {
+        const existingIds = new Set(prev.map((d) => d.id));
+        const newOnes = local.filter((d) => !existingIds.has(d.id));
+        return newOnes.length > 0 ? [...newOnes, ...prev] : prev;
+      });
+    }
+  }, []);
+
   const [soldToast, setSoldToast] = useState<SoldToast | null>(null);
   const [linkCopyToast, setLinkCopyToast] = useState<string | null>(null);
   const [activeAgentIds, setActiveAgentIds] = useState<string[]>([]);
@@ -84,7 +98,8 @@ export function DealsCrmModule({
       .then((items) => {
         if (cancelled || !items || items.length === 0) return;
         setDeals((prev) => {
-          const prevMap = new Map(prev.map((d) => [d.id, d]));
+          const local = getConvertedDeals();
+          const prevMap = new Map([...local, ...prev].map((d) => [d.id, d]));
           // Atualiza ou adiciona itens da API preservando campos visuais do demo local
           const mergedApiDeals: Deal[] = items.map((apiItem) => {
             const existing = prevMap.get(apiItem.id);
@@ -98,9 +113,10 @@ export function DealsCrmModule({
             };
           });
           const apiIds = new Set(items.map((i) => i.id));
+          const localOnly = local.filter((d) => !apiIds.has(d.id));
           // Mantém itens do demo que a API não possui
-          const demoOnly = prev.filter((d) => !apiIds.has(d.id));
-          return [...mergedApiDeals, ...demoOnly];
+          const demoOnly = prev.filter((d) => !apiIds.has(d.id) && !localOnly.some((l) => l.id === d.id));
+          return [...localOnly, ...mergedApiDeals, ...demoOnly];
         });
       })
       .catch(() => {

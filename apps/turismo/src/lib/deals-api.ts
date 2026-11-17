@@ -50,11 +50,39 @@ async function parseJson<T>(res: Response): Promise<T> {
   return json as T;
 }
 
+export type CreateDealPayload = {
+  propertyName: string;
+  price?: number;
+  propertyType?: string;
+  location?: string;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  commission?: number;
+  stage?: DealsApiStage;
+  nextStep?: string;
+  notes?: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  leadId?: string;
+};
+
 export const dealsApi = {
   async list(): Promise<DealsApiDeal[]> {
     const res = await fetch(`${fase1ApiBase()}/api/v1/deals`, { headers: authHeaders() });
     const body = await parseJson<{ success: boolean; data: { items: DealsApiDeal[] } }>(res);
     return body.data?.items ?? [];
+  },
+
+  async create(payload: CreateDealPayload): Promise<DealsApiDeal> {
+    const res = await fetch(`${fase1ApiBase()}/api/v1/deals`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const body = await parseJson<{ success: boolean; data: DealsApiDeal }>(res);
+    return body.data;
   },
 
   async patchStage(dealId: string, stage: DealsApiStage): Promise<DealsApiDeal> {

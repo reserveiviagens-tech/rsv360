@@ -1,7 +1,6 @@
-'use client';
-
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import {
   Search,
   Flame,
@@ -24,6 +23,8 @@ import { LintelShellNav } from '../components/lintel/lintel-shell-nav';
 import { useCrmLocale } from '../components/lintel/crm-locale-provider';
 import { maskEmail, maskPhone } from '@/lib/pii-mask';
 import { fetchLeads, LeadPageCard } from '@/lib/overview-leads';
+import { convertLeadToDealRecord, saveConvertedDeal } from '@/lib/lead-to-deal';
+import { dealsApi } from '@/lib/deals-api';
 
 export interface LeadItem {
   id: string;
@@ -160,11 +161,13 @@ export const SAMPLE_LEADS: LeadItem[] = [
 ];
 
 function LeadsPageContent() {
+  const router = useRouter();
   const { copy } = useCrmLocale();
   const [selectedId, setSelectedId] = useState<string>('l1');
   const [filter, setFilter] = useState<'all' | 'hot' | 'new'>('all');
   const [search, setSearch] = useState('');
   const [convertedNotice, setConvertedNotice] = useState<string | null>(null);
+  const [createdDealId, setCreatedDealId] = useState<string | null>(null);
   const [leads, setLeads] = useState<LeadPageCard[]>([]);
 
   useEffect(() => {
@@ -216,12 +219,44 @@ function LeadsPageContent() {
   }, [selectedId, filteredLeads]);
 
   const handleConvertDeal = () => {
-    setConvertedNotice(
-      `Lead "${selectedLead.name}" convertido com sucesso para a esteira ativa de Deals!`
-    );
-    setTimeout(() => {
-      setConvertedNotice(null);
-    }, 4000);
+    if (!selectedLead) return;
+    try {
+      const newDeal = convertLeadToDealRecord(selectedLead as unknown as LeadItem);
+      saveConvertedDeal(newDeal);
+      setCreatedDealId(newDeal.id);
+
+      // Sincroniza em background com a API se disponível
+      void dealsApi
+        .create({
+          propertyName: newDeal.propertyName,
+          price: newDeal.price,
+          propertyType: newDeal.propertyType,
+          location: newDeal.location,
+          stage: 'viewing',
+          clientName: newDeal.clientName,
+          clientEmail: newDeal.clientEmail,
+          clientPhone: newDeal.clientPhone,
+          notes: newDeal.notes,
+          leadId: selectedLead.id,
+        })
+        .catch(() => {
+          /* Fallback offline transparente */
+        });
+
+      // Atualiza o status do lead local para "qualified"
+      setLeads((prev) =>
+        prev.map((l) => (l.id === selectedLead.id ? { ...l, status: 'qualified' as const } : l)),
+      );
+
+      setConvertedNotice(
+        `Lead "${selectedLead.name}" convertido com sucesso para a esteira ativa de Deals!`,
+      );
+      setTimeout(() => {
+        setConvertedNotice(null);
+      }, 7000);
+    } catch {
+      setConvertedNotice('Erro ao converter lead em oportunidade.');
+    }
   };
 
   return (
@@ -250,9 +285,20 @@ function LeadsPageContent() {
         </div>
 
         {convertedNotice && (
-          <div className="rounded-2xl bg-[#138a6315] border border-[#138a6340] px-4 py-3 text-xs font-bold text-[#138a63] flex items-center gap-2 animate-fade-in shadow-sm">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{convertedNotice}</span>
+          <div className="rounded-2xl bg-[#138a6315] border border-[#138a6340] px-4 py-3 text-xs font-bold text-[#138a63] flex flex-wrap items-center justify-between gap-3 animate-fade-in shadow-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{convertedNotice}</span>
+            </div>
+            {createdDealId && (
+              <button
+                type="button"
+                onClick={() => router.push(`/deals?deal=${createdDealId}`)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#138a63] px-3.5 py-1 text-xs font-bold text-white hover:bg-[#0f6b4d] transition-colors shadow-xs"
+              >
+                Ver no Kanban de Deals <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         )}
 

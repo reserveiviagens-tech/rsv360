@@ -1,4 +1,4 @@
-﻿jest.mock('../../../../server/middleware/auth.middleware', () => ({
+jest.mock('../../../../server/middleware/auth.middleware', () => ({
   authenticateJwt: (
     req: { headers: Record<string, string | undefined>; user?: unknown },
     res: { status: (n: number) => { json: (b: unknown) => void } },
@@ -81,5 +81,60 @@ describe('Deals — GET / and GET /health', () => {
     expect(first).toHaveProperty('stage');
     expect(first).toHaveProperty('price');
     expect(first).toHaveProperty('commission');
+  });
+
+  describe('POST / (Create Deal)', () => {
+    it('returns 201 and creates deal successfully for corretor', async () => {
+      const payload = {
+        propertyName: 'Residência James Thornwood',
+        price: 1_600_000,
+        propertyType: 'House',
+        location: 'La Jolla Cove',
+        stage: 'viewing',
+        clientName: 'James Thornwood',
+        notes: 'Lead VIP convertido de compra',
+      };
+
+      const res = await request(buildApp())
+        .post('/api/v1/deals')
+        .set(authHeaders('corretor', 101))
+        .send(payload);
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('id');
+      expect(res.body.data.propertyName).toBe('Residência James Thornwood');
+      expect(res.body.data.price).toBe(1_600_000);
+      expect(res.body.data.stage).toBe('viewing');
+      expect(res.body.data.status).toBe('active');
+    });
+
+    it('returns 400 when propertyName is missing', async () => {
+      const res = await request(buildApp())
+        .post('/api/v1/deals')
+        .set(authHeaders('corretor', 101))
+        .send({ price: 500_000 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe('Payload inválido');
+    });
+
+    it('returns 401 when unauthenticated', async () => {
+      const res = await request(buildApp())
+        .post('/api/v1/deals')
+        .send({ propertyName: 'Test Deal' });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 403 for unauthorized role', async () => {
+      const res = await request(buildApp())
+        .post('/api/v1/deals')
+        .set(authHeaders('guest', 99))
+        .send({ propertyName: 'Test Deal' });
+
+      expect(res.status).toBe(403);
+    });
   });
 });
