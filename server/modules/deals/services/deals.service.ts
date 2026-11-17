@@ -1,4 +1,4 @@
-import type { DealRecord, DealStage } from '../schema';
+import type { CreateDealInput, DealRecord, DealStage } from '../schema';
 
 const todayIsoDate = (): string => new Date().toISOString().slice(0, 10);
 
@@ -173,6 +173,42 @@ export function updateDealStage(
   };
   store.set(dealId, updated);
   return { ...updated };
+}
+
+export function createDeal(userId: number, role: string, input: CreateDealInput): DealRecord {
+  if (!STAFF_ROLES.has(role) && !PARCEIRO_ROLES.has(role)) {
+    throw new DealsForbiddenError('Sem permissão para criar negócio');
+  }
+
+  const id = `deal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const propertyId = input.leadId ? `prop_${input.leadId}` : `prop_${Date.now()}`;
+  const price = input.price || 1_000_000;
+  const commission = input.commission ?? Math.round(price * 0.015);
+
+  const newDeal: DealRecord = {
+    id,
+    agentId: input.agentId || `agent_${userId || 1}`,
+    agentName: input.agentName || 'Imani Brooks',
+    propertyId,
+    propertyName: input.propertyName,
+    location: input.location || 'São Paulo / Jardins',
+    propertyType: input.propertyType || 'House',
+    beds: input.beds || 3,
+    baths: input.baths || 2,
+    sqft: input.sqft || 2000,
+    price,
+    commission,
+    stage: input.stage || 'viewing',
+    nextStep: input.nextStep || 'Agendar visita inicial',
+    createdAt: todayIsoDate(),
+    updatedAt: todayIsoDate(),
+    listingSource: input.listingSource || 'direct',
+    status: 'active',
+    notes: input.notes,
+  };
+
+  store.set(id, newDeal);
+  return { ...newDeal };
 }
 
 export class DealsNotFoundError extends Error {

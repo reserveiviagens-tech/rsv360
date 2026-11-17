@@ -16,6 +16,29 @@ export const patchDealStageBodySchema = z.object({
   stage: dealStageSchema,
 });
 
+export const createDealBodySchema = z.object({
+  propertyName: z.string().min(1, 'Nome do imóvel/oportunidade é obrigatório'),
+  propertyType: z.string().optional().default('House'),
+  location: z.string().optional().default('São Paulo / Jardins'),
+  beds: z.number().optional().default(3),
+  baths: z.number().optional().default(2),
+  sqft: z.number().optional().default(2000),
+  price: z.number().positive().optional().default(1_000_000),
+  commission: z.number().optional(),
+  stage: dealStageSchema.optional().default('viewing'),
+  nextStep: z.string().optional(),
+  notes: z.string().optional(),
+  listingSource: z.enum(['zillow', 'realtor', 'direct']).optional().default('direct'),
+  clientName: z.string().optional(),
+  clientEmail: z.string().optional(),
+  clientPhone: z.string().optional(),
+  agentId: z.string().optional(),
+  agentName: z.string().optional(),
+  leadId: z.string().optional(),
+});
+
+export type CreateDealInput = z.infer<typeof createDealBodySchema>;
+
 export type DealRecord = {
   id: string;
   agentId: string;

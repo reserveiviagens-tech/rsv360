@@ -1,7 +1,8 @@
 import { Router, type Request } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
-import { patchDealStageBodySchema } from '../schema';
+import { createDealBodySchema, patchDealStageBodySchema } from '../schema';
 import {
+  createDeal,
   DealsForbiddenError,
   DealsNotFoundError,
   listDeals,
@@ -40,6 +41,29 @@ router.get('/', ...parceiroAuth, (_req, res) => {
     res.json({ success: true, data: { items: listDeals() } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/', ...parceiroAuth, (req, res) => {
+  try {
+    const parsed = createDealBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payload inválido',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const userId = requireUserId(req);
+    const role = requireRoleStr(req);
+    const created = createDeal(userId, role, parsed.data);
+    return res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    if (error instanceof DealsForbiddenError) {
+      return res.status(403).json({ success: false, error: error.message });
+    }
+    return res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 
