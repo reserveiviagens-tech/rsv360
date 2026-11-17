@@ -28,7 +28,13 @@ import { lintelBtnGhost, lintelBtnPrimary, lintelIconBtn } from '../lintel/overv
 import type { RentalPortfolioItem } from './rentals-data';
 import { isRentalFavorite, setRentalFavorite } from './rental-favorites';
 import { toast } from 'react-hot-toast';
-import { downloadRentalContractPreview, requestRentalSign } from '../../src/lib/rental-contract-api';
+import {
+  downloadRentalContractPreview,
+  fetchRentalSignRequests,
+  requestRentalSign,
+  type RentalSignListItem,
+} from '../../src/lib/rental-contract-api';
+import { RentalSignRequestModal } from './rental-sign-request-modal';
 
 export interface RentalPropertyDetailModalProps {
   item: RentalPortfolioItem;
@@ -68,6 +74,30 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
   const [fav, setFav] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'leases' | 'documents'>('overview');
+  const [signModalOpen, setSignModalOpen] = useState(false);
+  const [signBusy, setSignBusy] = useState(false);
+  const [signRequests, setSignRequests] = useState<RentalSignListItem[]>([]);
+
+  const signStatusBadge = (status: RentalSignListItem['status']) => {
+    if (status === 'signed') {
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300';
+    }
+    if (status === 'expired') {
+      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+    }
+    return 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
+  };
+
+  const signStatusLabel = (status: RentalSignListItem['status']) => {
+    if (status === 'signed') return 'Assinado';
+    if (status === 'expired') return 'Expirado';
+    return 'Pendente';
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'leases') return;
+    void fetchRentalSignRequests(item.id).then(setSignRequests).catch(() => setSignRequests([]));
+  }, [activeTab, item.id]);
 
   useEffect(() => {
     setFav(isRentalFavorite(item.id));
@@ -383,20 +413,6 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
 
             {activeTab === 'leases' && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-800/40">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400">
-                      <KeyRound className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-900 dark:text-white">Contrato Padrão 12 Meses</p>
-                      <p className="text-[10px] text-gray-500">Vigência 2026/2027 · Garantia caução</p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                    Ativo
-                  </span>
-                </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -411,6 +427,7 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
                           monthlyRent: item.rentAmount,
                           termMonths: 12,
                           startDate: new Date().toISOString().slice(0, 10),
+                          depositType: 'caucao',
                         });
                         const url = URL.createObjectURL(blob);
                         window.open(url, '_blank', 'noopener,noreferrer');
@@ -427,24 +444,39 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
                   <button
                     type="button"
                     className={`${lintelBtnGhost} text-xs`}
-                    onClick={async () => {
-                      try {
-                        const sign = await requestRentalSign({
-                          unitId: item.id,
-                          signerEmail: 'locatario@exemplo.com',
-                          signerName: 'Locatário candidato',
-                        });
-                        toast.success(
-                          `Assinatura solicitada (${sign.requestId.slice(0, 12)}…) — válida até ${new Date(sign.expiresAt).toLocaleString('pt-BR')}`,
-                        );
-                      } catch {
-                        toast.error('Falha ao solicitar assinatura eletrônica');
-                      }
-                    }}
+                    onClick={() => setSignModalOpen(true)}
                   >
                     Solicitar assinatura eletrônica
                   </button>
                 </div>
+
+                {signRequests.length > 0 ? (
+                  <section className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                      Solicitações ativas
+                    </p>
+                    {signRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-800/40"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-gray-900 dark:text-white">{req.signerName}</p>
+                          <p className="text-[10px] text-gray-500">
+                            {req.termMonths} meses · {req.depositType}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${signStatusBadge(req.status)}`}
+                        >
+                          {signStatusLabel(req.status)}
+                        </span>
+                      </div>
+                    ))}
+                  </section>
+                ) : (
+                  <p className="text-[11px] text-gray-500">Nenhuma solicitação de assinatura para esta unidade.</p>
+                )}
               </div>
             )}
 
@@ -483,6 +515,45 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
           </button>
         </div>
       </div>
+
+      {signModalOpen ? (
+        <RentalSignRequestModal
+          item={item}
+          busy={signBusy}
+          onClose={() => setSignModalOpen(false)}
+          onSubmit={async (values) => {
+            setSignBusy(true);
+            try {
+              const sign = await requestRentalSign({
+                unitId: item.id,
+                unitName: item.name,
+                address: item.address,
+                monthlyRent: item.rentAmount,
+                startDate: values.startDate,
+                signerEmail: values.signerEmail,
+                signerName: values.signerName,
+                signerCpf: values.signerCpf,
+                termMonths: values.termMonths,
+                depositType: values.depositType,
+              });
+              const link =
+                typeof window !== 'undefined'
+                  ? `${window.location.origin}${sign.publicSignUrl}`
+                  : sign.publicSignUrl;
+              if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(link);
+              }
+              toast.success('Link de assinatura copiado para envio ao locatário');
+              setSignRequests(await fetchRentalSignRequests(item.id));
+              setSignModalOpen(false);
+            } catch {
+              toast.error('Falha ao solicitar assinatura eletrônica');
+            } finally {
+              setSignBusy(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
