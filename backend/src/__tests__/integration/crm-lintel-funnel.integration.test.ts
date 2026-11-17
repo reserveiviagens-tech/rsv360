@@ -31,7 +31,7 @@ import request from 'supertest';
 import dealsRouter from '../../../../server/modules/deals/routes/index';
 import {
   __resetDealsStoreForTests,
-  listDeals,
+  listDealsAsync,
 } from '../../../../server/modules/deals/services/deals.service';
 
 function buildApp() {
@@ -141,7 +141,7 @@ describe('E2E Integration Test — Lintel CRM Funnel (Lead ➔ Deal ➔ Kanban �
     expect(toClosedRes.body.data.status).toBe('won');
 
     // Passo G: Auditoria de Win Rate pós-fechamento
-    const dealsSnapshot = listDeals();
+    const dealsSnapshot = await listDealsAsync();
     const wonCount = dealsSnapshot.filter((d) => d.status === 'won').length;
     const lostCount = dealsSnapshot.filter((d) => d.status === 'lost').length;
     const decided = wonCount + lostCount;

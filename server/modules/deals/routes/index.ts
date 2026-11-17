@@ -5,7 +5,7 @@ import {
   createDeal,
   DealsForbiddenError,
   DealsNotFoundError,
-  listDeals,
+  listDealsAsync,
   updateDealStage,
 } from '../services/deals.service';
 
@@ -36,15 +36,16 @@ router.get('/health', (_req, res) => {
   res.json({ module: 'deals', status: 'ok' });
 });
 
-router.get('/', ...parceiroAuth, (_req, res) => {
+router.get('/', ...parceiroAuth, async (_req, res) => {
   try {
-    res.json({ success: true, data: { items: listDeals() } });
+    const items = await listDealsAsync();
+    res.json({ success: true, data: { items } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 
-router.post('/', ...parceiroAuth, (req, res) => {
+router.post('/', ...parceiroAuth, async (req, res) => {
   try {
     const parsed = createDealBodySchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -57,7 +58,7 @@ router.post('/', ...parceiroAuth, (req, res) => {
 
     const userId = requireUserId(req);
     const role = requireRoleStr(req);
-    const created = createDeal(userId, role, parsed.data);
+    const created = await createDeal(userId, role, parsed.data);
     return res.status(201).json({ success: true, data: created });
   } catch (error) {
     if (error instanceof DealsForbiddenError) {
@@ -67,7 +68,7 @@ router.post('/', ...parceiroAuth, (req, res) => {
   }
 });
 
-router.patch('/:id/stage', ...parceiroAuth, (req, res) => {
+router.patch('/:id/stage', ...parceiroAuth, async (req, res) => {
   try {
     const parsed = patchDealStageBodySchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -85,7 +86,7 @@ router.patch('/:id/stage', ...parceiroAuth, (req, res) => {
 
     const userId = requireUserId(req);
     const role = requireRoleStr(req);
-    const deal = updateDealStage(userId, role, dealId, parsed.data.stage);
+    const deal = await updateDealStage(userId, role, dealId, parsed.data.stage);
     res.json({ success: true, data: deal });
   } catch (error) {
     if (error instanceof DealsNotFoundError) {

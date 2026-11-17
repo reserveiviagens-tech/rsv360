@@ -165,9 +165,11 @@ export const DealsKanban = memo(function DealsKanban({
   const handleDropOnColumn = useCallback(
     (targetStage: KanbanColumnId, dealId: string) => {
       handleDragEnd();
+      const current = deals.find((d) => d.id === dealId);
+      if (current?.stage === targetStage) return;
       onDealStageChange?.(dealId, targetStage);
     },
-    [handleDragEnd, onDealStageChange],
+    [deals, handleDragEnd, onDealStageChange],
   );
 
   const filteredDeals = useMemo(() => {
