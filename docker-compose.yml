@@ -89,6 +89,7 @@ services:
       PORT: 3002
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DEALS_PERSISTENCE: ${DEALS_PERSISTENCE:-postgres}
       REDIS_URL: redis://redis:6379
       TRUST_PROXY: ${TRUST_PROXY:-loopback}
       JWT_SECRET: ${JWT_SECRET}

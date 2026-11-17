@@ -47,3 +47,4 @@ export * from './agentes-cache-semantico';
 export * from './agentes-conhecimento';
 export * from './payments';
 export * from './partners';
+export * from './crm-lintel';

@@ -456,9 +456,13 @@ body {
 }
 
 .lintel-deal-dragging {
-  opacity: 0.5;
-  transform: scale(0.97) rotate(-1deg);
+  opacity: 0.55;
+  transform: scale(0.96) rotate(-1.5deg);
   box-shadow: 0 16px 40px rgb(47 91 234 / 0.22);
+  transition:
+    opacity 0.18s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.18s ease;
 }
 
 .lintel-deal-column-bar {
@@ -602,6 +606,10 @@ body {
   border: 1px solid var(--lintel-kanban-column-border);
   background-color: var(--lintel-deals-surface-card);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.22s ease,
+    border-color 0.2s ease;
 }
 
 .dark .lintel-deals-kanban-column {
@@ -637,9 +645,10 @@ body {
 }
 
 .lintel-deals-kanban-column.is-drop-target {
+  transform: scale(1.015);
   box-shadow:
-    0 0 0 2px rgb(var(--lintel-drop-target-ring) / 0.35),
-    0 6px 16px rgb(15 23 42 / 0.1);
+    0 0 0 2px rgb(var(--lintel-drop-target-ring) / 0.45),
+    0 8px 22px rgb(15 23 42 / 0.12);
 }
 
 .lintel-deals-kanban-column-header {

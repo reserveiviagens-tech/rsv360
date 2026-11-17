@@ -7,3 +7,5 @@ process.env.FORNECEDORES_ENCRYPTION_KEY ??=
 /** PR-04a: unit/integration tests must set a real env secret (no code fallback). */
 process.env.JWT_SECRET ??= 'ci_jwt_secret_minimum_32_chars_pr04a';
 process.env.JWT_REFRESH_SECRET ??= process.env.JWT_SECRET;
+/** Deals CRM tests use in-memory store; postgres covered via repository unit tests / manual smoke. */
+process.env.DEALS_PERSISTENCE ??= 'memory';

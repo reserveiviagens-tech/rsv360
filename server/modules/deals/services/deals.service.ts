@@ -1,214 +1,98 @@
 import type { CreateDealInput, DealRecord, DealStage } from '../schema';
-
-const todayIsoDate = (): string => new Date().toISOString().slice(0, 10);
-
-/** Demo pipeline store (Fase 2 — substituir por persistência quando CRM deals existir). */
-const SEED_DEALS: DealRecord[] = [
-  {
-    id: 'deal_001',
-    agentId: 'agent_1',
-    agentName: 'Imani Brooks',
-    propertyId: 'prop_101',
-    propertyName: 'Vista Mare House',
-    location: 'La Jolla Cove · For sale',
-    propertyType: 'House',
-    beds: 5,
-    baths: 4,
-    sqft: 3200,
-    price: 1_850_000,
-    commission: 27_750,
-    stage: 'negotiation',
-    nextStep: 'Negociando condição de fechamento',
-    createdAt: '2026-08-15',
-    updatedAt: '2026-11-05',
-    listingSource: 'realtor',
-    status: 'active',
-  },
-  {
-    id: 'deal_002',
-    agentId: 'agent_2',
-    agentName: 'Jordan Ellis',
-    propertyId: 'prop_102',
-    propertyName: 'Casa Alva',
-    location: 'Rancho Santa Fe · Sold',
-    propertyType: 'Villa',
-    beds: 6,
-    baths: 5,
-    sqft: 4100,
-    price: 2_195_000,
-    commission: 39_510,
-    stage: 'closed',
-    nextStep: 'Transferência realizada',
-    createdAt: '2026-07-20',
-    updatedAt: '2026-09-10',
-    listingSource: 'direct',
-    status: 'active',
-  },
-  {
-    id: 'deal_003',
-    agentId: 'agent_1',
-    agentName: 'Imani Brooks',
-    propertyId: 'prop_103',
-    propertyName: 'Arbor Tower',
-    location: 'Downtown · For rent',
-    propertyType: 'Apartment',
-    beds: 2,
-    baths: 2,
-    sqft: 1200,
-    price: 3_700,
-    commission: 555,
-    stage: 'viewing',
-    nextStep: 'Agendando first viewing',
-    createdAt: '2026-10-20',
-    updatedAt: '2026-11-07',
-    listingSource: 'zillow',
-    status: 'active',
-  },
-  {
-    id: 'deal_004',
-    agentId: 'agent_3',
-    agentName: 'Camila Duarte',
-    propertyId: 'prop_104',
-    propertyName: 'Cedar Ridge House',
-    location: 'Julian · For sale',
-    propertyType: 'House',
-    beds: 4,
-    baths: 3,
-    sqft: 2800,
-    price: 1_400_000,
-    commission: 21_000,
-    stage: 'offer',
-    nextStep: 'Recebendo respostas de 3 corretores',
-    createdAt: '2026-10-10',
-    updatedAt: '2026-11-06',
-    listingSource: 'zillow',
-    status: 'active',
-  },
-  {
-    id: 'deal_005',
-    agentId: 'agent_2',
-    agentName: 'Jordan Ellis',
-    propertyId: 'prop_105',
-    propertyName: 'Ocean Breeze',
-    location: 'Del Mar · For sale',
-    propertyType: 'Villa',
-    beds: 5,
-    baths: 4,
-    sqft: 3900,
-    price: 2_450_000,
-    commission: 26_950,
-    stage: 'offer',
-    nextStep: 'Submetendo proposta a $2.4M',
-    createdAt: '2026-09-05',
-    updatedAt: '2026-11-04',
-    listingSource: 'realtor',
-    status: 'active',
-  },
-  {
-    id: 'deal_006',
-    agentId: 'agent_4',
-    agentName: 'Henrik Dahl',
-    propertyId: 'prop_106',
-    propertyName: 'Hollis Modern House',
-    location: 'La Jolla · For sale',
-    propertyType: 'House',
-    beds: 4,
-    baths: 3,
-    sqft: 3100,
-    price: 1_240_000,
-    commission: 18_600,
-    stage: 'viewing',
-    nextStep: 'Primeira audiência marcada',
-    createdAt: '2026-11-01',
-    updatedAt: '2026-11-07',
-    listingSource: 'direct',
-    status: 'active',
-  },
-];
-
-const store = new Map<string, DealRecord>(
-  SEED_DEALS.map((d) => [d.id, { ...d }]),
-);
+import {
+  memoryCreateDeal,
+  memoryListDeals,
+  memoryResetForTests,
+  memoryUpdateDealStage,
+} from './deals-memory.store';
+import {
+  postgresCreateDeal,
+  postgresGetDeal,
+  postgresListDeals,
+  postgresUpdateDealStage,
+} from './deals-postgres.repository';
 
 const STAFF_ROLES = new Set(['admin', 'manager']);
 
 const PARCEIRO_ROLES = new Set(['anfitriao', 'corretor', 'agente', 'promotor']);
 
+export function dealsUsePostgres(): boolean {
+  if (process.env.JEST_WORKER_ID) return false;
+  const mode = process.env.DEALS_PERSISTENCE ?? 'postgres';
+  if (mode === 'memory') return false;
+  return mode === 'postgres' && Boolean(process.env.DATABASE_URL);
+}
+
 export function listDeals(): DealRecord[] {
-  return Array.from(store.values()).map((d) => ({ ...d }));
+  if (!dealsUsePostgres()) {
+    return memoryListDeals();
+  }
+  throw new Error('Use listDealsAsync when postgres persistence is enabled');
 }
 
-export function getDeal(id: string): DealRecord | undefined {
-  const deal = store.get(id);
-  return deal ? { ...deal } : undefined;
+export async function listDealsAsync(): Promise<DealRecord[]> {
+  if (dealsUsePostgres()) {
+    return postgresListDeals();
+  }
+  return memoryListDeals();
 }
 
-/**
- * Demo store: staff e parceiros autenticados podem mover cards do seed compartilhado.
- * Persistência real deve validar agentId / ownerUserId contra o usuário.
- */
 export function canMutateDeal(_userId: number, role: string, _deal: DealRecord): boolean {
   if (STAFF_ROLES.has(role)) return true;
   return PARCEIRO_ROLES.has(role);
 }
 
-export function updateDealStage(
+export async function createDeal(
+  userId: number,
+  role: string,
+  input: CreateDealInput,
+): Promise<DealRecord> {
+  if (!STAFF_ROLES.has(role) && !PARCEIRO_ROLES.has(role)) {
+    throw new DealsForbiddenError('Sem permissão para criar negócio');
+  }
+  if (dealsUsePostgres()) {
+    return postgresCreateDeal(userId, input);
+  }
+  return memoryCreateDeal(input, userId);
+}
+
+export async function updateDealStage(
   userId: number,
   role: string,
   dealId: string,
   stage: DealStage,
-): DealRecord {
-  const deal = store.get(dealId);
+): Promise<DealRecord> {
+  if (dealsUsePostgres()) {
+    const existing = await postgresGetDeal(dealId);
+    if (!existing) {
+      throw new DealsNotFoundError('Negócio não encontrado');
+    }
+    if (!canMutateDeal(userId, role, existing)) {
+      throw new DealsForbiddenError('Sem permissão para alterar este negócio');
+    }
+    try {
+      return await postgresUpdateDealStage(userId, dealId, stage);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'NOT_FOUND') {
+        throw new DealsNotFoundError('Negócio não encontrado');
+      }
+      throw err;
+    }
+  }
+
+  const deals = memoryListDeals();
+  const deal = deals.find((d) => d.id === dealId);
   if (!deal) {
     throw new DealsNotFoundError('Negócio não encontrado');
   }
   if (!canMutateDeal(userId, role, deal)) {
     throw new DealsForbiddenError('Sem permissão para alterar este negócio');
   }
-  const updated: DealRecord = {
-    ...deal,
-    stage,
-    updatedAt: todayIsoDate(),
-    status: stage === 'closed' ? 'won' : deal.status === 'won' ? 'active' : deal.status,
-  };
-  store.set(dealId, updated);
-  return { ...updated };
-}
-
-export function createDeal(userId: number, role: string, input: CreateDealInput): DealRecord {
-  if (!STAFF_ROLES.has(role) && !PARCEIRO_ROLES.has(role)) {
-    throw new DealsForbiddenError('Sem permissão para criar negócio');
+  try {
+    return memoryUpdateDealStage(dealId, stage);
+  } catch {
+    throw new DealsNotFoundError('Negócio não encontrado');
   }
-
-  const id = `deal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const propertyId = input.leadId ? `prop_${input.leadId}` : `prop_${Date.now()}`;
-  const price = input.price || 1_000_000;
-  const commission = input.commission ?? Math.round(price * 0.015);
-
-  const newDeal: DealRecord = {
-    id,
-    agentId: input.agentId || `agent_${userId || 1}`,
-    agentName: input.agentName || 'Imani Brooks',
-    propertyId,
-    propertyName: input.propertyName,
-    location: input.location || 'São Paulo / Jardins',
-    propertyType: input.propertyType || 'House',
-    beds: input.beds || 3,
-    baths: input.baths || 2,
-    sqft: input.sqft || 2000,
-    price,
-    commission,
-    stage: input.stage || 'viewing',
-    nextStep: input.nextStep || 'Agendar visita inicial',
-    createdAt: todayIsoDate(),
-    updatedAt: todayIsoDate(),
-    listingSource: input.listingSource || 'direct',
-    status: 'active',
-    notes: input.notes,
-  };
-
-  store.set(id, newDeal);
-  return { ...newDeal };
 }
 
 export class DealsNotFoundError extends Error {
@@ -225,8 +109,7 @@ export class DealsForbiddenError extends Error {
   }
 }
 
-/** Test-only reset */
+/** Test-only reset (memory store). */
 export function __resetDealsStoreForTests(): void {
-  store.clear();
-  SEED_DEALS.forEach((d) => store.set(d.id, { ...d }));
+  memoryResetForTests();
 }
