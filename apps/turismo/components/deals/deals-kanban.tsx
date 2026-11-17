@@ -1,6 +1,20 @@
 'use client';
 
 import React, { memo, useCallback, useMemo, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCorners,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { motion } from 'framer-motion';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import {
   Deal,
@@ -18,18 +32,61 @@ export type ListingKindFilter = 'all' | 'sale' | 'rent';
 
 export type KanbanColumnId = DealStage;
 
+function isKanbanStage(id: unknown): id is KanbanColumnId {
+  return typeof id === 'string' && (KANBAN_STAGE_ORDER as string[]).includes(id);
+}
+
+const DraggableDealCard = memo(function DraggableDealCard({
+  deal,
+  isOverlay,
+  enterDelayMs,
+  onOpen,
+  menuHandlers,
+  dimmed,
+}: {
+  deal: Deal;
+  isOverlay?: boolean;
+  enterDelayMs: number;
+  onOpen: () => void;
+  menuHandlers?: import('./deal-card-menu').DealCardMenuHandlers;
+  dimmed?: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: deal.id,
+    disabled: isOverlay,
+  });
+
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform), zIndex: isDragging ? 50 : undefined }
+    : undefined;
+
+  return (
+    <div
+      ref={isOverlay ? undefined : setNodeRef}
+      style={style}
+      className={`${dimmed ? 'opacity-35' : ''} ${isOverlay ? 'cursor-grabbing shadow-2xl ring-2 ring-[rgb(var(--lintel-drop-target-ring)/0.35)]' : ''}`}
+      {...(isOverlay ? {} : { ...listeners, ...attributes })}
+    >
+      <DealCard
+        deal={deal}
+        useNativeDrag={false}
+        isDragging={isDragging || Boolean(isOverlay)}
+        enterDelayMs={enterDelayMs}
+        onDragStart={() => undefined}
+        onOpen={onOpen}
+        menuHandlers={menuHandlers}
+      />
+    </div>
+  );
+});
+
 export interface KanbanColumnProps {
   stage: KanbanColumnId;
   deals: Deal[];
-  dragOverStage: KanbanColumnId | null;
-  draggedDealId: string | null;
+  isDropActive: boolean;
+  activeDragDealId: string | null;
   cardsBootLoading: boolean;
   registerColumnScroll: (stageId: string, el: HTMLDivElement | null) => void;
-  onDragStart: (id: string) => void;
-  onDragEnd: () => void;
-  onDragOverColumn: (stage: KanbanColumnId) => void;
-  onDragLeaveColumn: () => void;
-  onDropOnColumn: (stage: KanbanColumnId, dealId: string) => void;
   onCardClick: (deal: Deal) => void;
   buildCardMenuHandlers?: (deal: Deal) => import('./deal-card-menu').DealCardMenuHandlers;
 }
@@ -37,22 +94,18 @@ export interface KanbanColumnProps {
 export const KanbanColumn = memo(function KanbanColumn({
   stage,
   deals,
-  dragOverStage,
-  draggedDealId,
+  isDropActive,
+  activeDragDealId,
   cardsBootLoading,
   registerColumnScroll,
-  onDragStart,
-  onDragEnd,
-  onDragOverColumn,
-  onDragLeaveColumn,
-  onDropOnColumn,
   onCardClick,
   buildCardMenuHandlers,
 }: KanbanColumnProps) {
   const { copy } = useCrmLocale();
+  const { setNodeRef, isOver } = useDroppable({ id: stage });
   const stageDef = copy.deals.stages[stage];
-  const isTarget = dragOverStage === stage;
   const columnTotal = formatColumnTotal(deals);
+  const highlighted = isDropActive || isOver;
 
   const title =
     stage === 'closed' ? (
@@ -65,9 +118,12 @@ export const KanbanColumn = memo(function KanbanColumn({
     );
 
   return (
-    <div
+    <motion.div
       data-stage={stage}
-      className={`lintel-deals-kanban-column snap-start transition-shadow ${isTarget ? 'is-drop-target' : ''}`}
+      layout
+      animate={{ scale: highlighted ? 1.015 : 1 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      className={`lintel-deals-kanban-column snap-start transition-shadow ${highlighted ? 'is-drop-target' : ''}`}
     >
       <div className="lintel-deals-kanban-column-header">
         <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-800 dark:text-white">
@@ -80,20 +136,11 @@ export const KanbanColumn = memo(function KanbanColumn({
       </div>
 
       <div
-        ref={(el) => registerColumnScroll(stage, el)}
+        ref={(el) => {
+          setNodeRef(el);
+          registerColumnScroll(stage, el);
+        }}
         className="lintel-deals-kanban-column-body lintel-kanban-col-scroll"
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          onDragOverColumn(stage);
-        }}
-        onDragLeave={onDragLeaveColumn}
-        onDrop={(e) => {
-          e.preventDefault();
-          const dealId = e.dataTransfer.getData('text/plain');
-          if (dealId) onDropOnColumn(stage, dealId);
-          onDragLeaveColumn();
-        }}
       >
         {cardsBootLoading ? (
           <>
@@ -108,20 +155,18 @@ export const KanbanColumn = memo(function KanbanColumn({
           deals
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
             .map((deal, idx) => (
-              <DealCard
+              <DraggableDealCard
                 key={deal.id}
                 deal={deal}
-                isDragging={draggedDealId === deal.id}
+                dimmed={activeDragDealId === deal.id}
                 enterDelayMs={idx * 45}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
                 onOpen={() => onCardClick(deal)}
                 menuHandlers={buildCardMenuHandlers?.(deal)}
               />
             ))
         )}
       </div>
-    </div>
+    </motion.div>
   );
 });
 
@@ -145,31 +190,12 @@ export const DealsKanban = memo(function DealsKanban({
   buildCardMenuHandlers,
 }: DealsKanbanProps) {
   const { copy } = useCrmLocale();
-  const [dragOverStage, setDragOverStage] = useState<KanbanColumnId | null>(null);
-  const [draggedDealId, setDraggedDealId] = useState<string | null>(null);
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
+  const [overStage, setOverStage] = useState<KanbanColumnId | null>(null);
   const { boardRef, registerColumnScroll, onDragStart: armScroll, onDragEnd: disarmScroll } = useKanbanAutoScroll();
 
-  const handleDragStart = useCallback(
-    (id: string) => {
-      setDraggedDealId(id);
-      armScroll();
-    },
-    [armScroll],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedDealId(null);
-    disarmScroll();
-  }, [disarmScroll]);
-
-  const handleDropOnColumn = useCallback(
-    (targetStage: KanbanColumnId, dealId: string) => {
-      handleDragEnd();
-      const current = deals.find((d) => d.id === dealId);
-      if (current?.stage === targetStage) return;
-      onDealStageChange?.(dealId, targetStage);
-    },
-    [deals, handleDragEnd, onDealStageChange],
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const filteredDeals = useMemo(() => {
@@ -190,38 +216,78 @@ export const DealsKanban = memo(function DealsKanban({
     }));
   }, [filteredDeals]);
 
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const deal = filteredDeals.find((d) => d.id === event.active.id);
+      setActiveDeal(deal ?? null);
+      armScroll();
+    },
+    [armScroll, filteredDeals],
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveDeal(null);
+      setOverStage(null);
+      disarmScroll();
+      const dealId = String(event.active.id);
+      const targetStage = isKanbanStage(event.over?.id) ? event.over.id : null;
+      if (!targetStage) return;
+      const current = filteredDeals.find((d) => d.id === dealId);
+      if (!current || current.stage === targetStage) return;
+      onDealStageChange?.(dealId, targetStage);
+    },
+    [disarmScroll, filteredDeals, onDealStageChange],
+  );
+
   return (
-    <div className="flex flex-col gap-2">
-      {draggedDealId ? (
-        <p className="text-center text-[11px] font-medium text-gray-400" aria-live="polite">
-          {copy.deals.dragging}
-        </p>
-      ) : null}
-      <div className="lintel-deals-kanban-canvas">
-        <div
-          ref={boardRef}
-          className="lintel-kanban-board-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
-        >
-        {groupedByStage.map(({ stage, deals: columnDeals }) => (
-          <KanbanColumn
-            key={stage}
-            stage={stage}
-            deals={columnDeals}
-            dragOverStage={dragOverStage}
-            draggedDealId={draggedDealId}
-            cardsBootLoading={cardsBootLoading}
-            registerColumnScroll={registerColumnScroll}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOverColumn={setDragOverStage}
-            onDragLeaveColumn={() => setDragOverStage(null)}
-            onDropOnColumn={handleDropOnColumn}
-            onCardClick={onDealClick}
-            buildCardMenuHandlers={buildCardMenuHandlers}
-          />
-        ))}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={({ over }) => {
+        setOverStage(isKanbanStage(over?.id) ? over.id : null);
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        {activeDeal ? (
+          <p className="text-center text-[11px] font-medium text-gray-400" aria-live="polite">
+            {copy.deals.dragging}
+          </p>
+        ) : null}
+        <div className="lintel-deals-kanban-canvas">
+          <div
+            ref={boardRef}
+            className="lintel-kanban-board-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
+          >
+            {groupedByStage.map(({ stage, deals: columnDeals }) => (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                deals={columnDeals}
+                isDropActive={overStage === stage}
+                activeDragDealId={activeDeal?.id ?? null}
+                cardsBootLoading={cardsBootLoading}
+                registerColumnScroll={registerColumnScroll}
+                onCardClick={onDealClick}
+                buildCardMenuHandlers={buildCardMenuHandlers}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+      <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
+        {activeDeal ? (
+          <DraggableDealCard
+            deal={activeDeal}
+            isOverlay
+            enterDelayMs={0}
+            onOpen={() => onDealClick(activeDeal)}
+            menuHandlers={buildCardMenuHandlers?.(activeDeal)}
+          />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 });

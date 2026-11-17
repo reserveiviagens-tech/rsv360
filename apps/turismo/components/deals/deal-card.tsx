@@ -253,6 +253,9 @@ export type DealCardProps = {
 
   menuHandlers?: DealCardMenuHandlers;
 
+  /** Quando false, drag é controlado por @dnd-kit (sem HTML5 draggable). */
+  useNativeDrag?: boolean;
+
 };
 
 
@@ -274,6 +277,8 @@ export const DealCard = memo(function DealCard({
   onOpen,
 
   menuHandlers,
+
+  useNativeDrag = true,
 
 }: DealCardProps) {
 
@@ -333,19 +338,19 @@ export const DealCard = memo(function DealCard({
 
       style={{ animationDelay: `${enterDelayMs}ms` }}
 
-      draggable
+      draggable={useNativeDrag}
 
-      onDragStart={(e) => {
+      onDragStart={
+        useNativeDrag
+          ? (e) => {
+              onDragStart(deal.id);
+              e.dataTransfer.setData('text/plain', deal.id);
+              e.dataTransfer.effectAllowed = 'move';
+            }
+          : undefined
+      }
 
-        onDragStart(deal.id);
-
-        e.dataTransfer.setData('text/plain', deal.id);
-
-        e.dataTransfer.effectAllowed = 'move';
-
-      }}
-
-      onDragEnd={() => onDragEnd?.()}
+      onDragEnd={useNativeDrag ? () => onDragEnd?.() : undefined}
 
       onClick={() => onOpen?.()}
 
