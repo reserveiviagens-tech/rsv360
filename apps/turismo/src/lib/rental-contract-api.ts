@@ -6,6 +6,18 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export type RentalSignListItem = {
+  id: string;
+  unitId: string;
+  status: 'pending' | 'signed' | 'expired';
+  signerName: string;
+  termMonths: number;
+  depositType: string;
+  expiresAt: string;
+  createdAt: string;
+  signedAt?: string;
+};
+
 export async function downloadRentalContractPreview(body: {
   unitId: string;
   unitName: string;
@@ -14,6 +26,7 @@ export async function downloadRentalContractPreview(body: {
   monthlyRent: number;
   termMonths?: number;
   startDate: string;
+  depositType?: 'caucao' | 'fiador' | 'seguro';
 }): Promise<Blob> {
   const res = await fetch(`${fase1ApiBase()}/api/v1/rental-contracts/preview`, {
     method: 'POST',
@@ -26,9 +39,16 @@ export async function downloadRentalContractPreview(body: {
 
 export async function requestRentalSign(body: {
   unitId: string;
+  unitName: string;
+  address: string;
+  monthlyRent: number;
+  startDate: string;
   signerEmail: string;
   signerName: string;
-}): Promise<{ requestId: string; signingToken: string; expiresAt: string }> {
+  signerCpf: string;
+  termMonths: number;
+  depositType: 'caucao' | 'fiador' | 'seguro';
+}): Promise<{ requestId: string; signingToken: string; expiresAt: string; publicSignUrl: string }> {
   const res = await fetch(`${fase1ApiBase()}/api/v1/rental-contracts/sign-request`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
@@ -36,11 +56,71 @@ export async function requestRentalSign(body: {
   });
   const json = (await res.json()) as {
     success: boolean;
-    data?: { requestId: string; signingToken: string; expiresAt: string };
+    data?: {
+      requestId: string;
+      signingToken: string;
+      expiresAt: string;
+      publicSignUrl: string;
+    };
     error?: string;
   };
   if (!res.ok || !json.success || !json.data) {
     throw new Error(json.error ?? 'Falha ao solicitar assinatura');
   }
   return json.data;
+}
+
+export async function fetchRentalSignRequests(unitId: string): Promise<RentalSignListItem[]> {
+  const res = await fetch(
+    `${fase1ApiBase()}/api/v1/rental-contracts/sign-requests?unitId=${encodeURIComponent(unitId)}`,
+    { headers: authHeaders() },
+  );
+  const json = (await res.json()) as { success: boolean; data?: { items: RentalSignListItem[] } };
+  if (!res.ok || !json.success) return [];
+  return json.data?.items ?? [];
+}
+
+export async function fetchPublicSignView(
+  requestId: string,
+  token: string,
+): Promise<{
+  id: string;
+  status: string;
+  signerName: string;
+  unitName: string;
+  address: string;
+  termMonths: number;
+  depositType: string;
+  monthlyRent: number;
+  expiresAt: string;
+}> {
+  const q = new URLSearchParams({ token });
+  const res = await fetch(
+    `${fase1ApiBase()}/api/v1/rental-contracts/public/sign/${encodeURIComponent(requestId)}?${q}`,
+  );
+  const json = (await res.json()) as { success: boolean; data?: Record<string, unknown>; error?: string };
+  if (!res.ok || !json.success || !json.data) {
+    throw new Error(json.error ?? 'Link inválido');
+  }
+  return json.data as Awaited<ReturnType<typeof fetchPublicSignView>>;
+}
+
+export function publicSignPdfUrl(requestId: string, token: string): string {
+  const q = new URLSearchParams({ token });
+  return `${fase1ApiBase()}/api/v1/rental-contracts/public/sign/${encodeURIComponent(requestId)}/pdf?${q}`;
+}
+
+export async function completePublicSign(requestId: string, token: string): Promise<void> {
+  const res = await fetch(
+    `${fase1ApiBase()}/api/v1/rental-contracts/public/sign/${encodeURIComponent(requestId)}/complete`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, acceptTerms: true }),
+    },
+  );
+  const json = (await res.json()) as { success: boolean; error?: string };
+  if (!res.ok || !json.success) {
+    throw new Error(json.error ?? 'Não foi possível registrar a assinatura');
+  }
 }
