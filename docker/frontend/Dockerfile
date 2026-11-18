@@ -14,7 +14,7 @@ RUN corepack enable && corepack prepare npm@10.9.7 --activate
 
 # Monorepo workspace install — resolve @rsv360/shared via link local (não está no npm registry).
 # Stubs de todos os workspaces referenciados no lockfile (apps/*, packages/*, backend).
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
 COPY packages/shared/src ./packages/shared/src/
 COPY apps/admin/package.json apps/admin/
@@ -24,7 +24,14 @@ COPY apps/turismo/package.json apps/turismo/
 COPY backend/package.json backend/
 
 # next pode ficar nested em apps/*/node_modules (npm workspaces) — builder já copia esses paths.
-RUN npm ci --ignore-scripts \
+# Resilience: long fetches + retries (transient ETIMEDOUT on registry during Docker build).
+ENV NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ \
+    NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
+    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000 \
+    NPM_CONFIG_FETCH_TIMEOUT=600000
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts \
   && npm run build --workspace=@rsv360/shared \
   && ( test -d node_modules/next || test -d apps/site-publico/node_modules/next ) \
   && test -d node_modules/react
