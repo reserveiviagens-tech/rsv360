@@ -2,6 +2,20 @@
 
 > Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-LINTEL-2026-11-11.md`.
 
+### Atualização 17–18/11/2026 (pós #546 / #547)
+
+| Item | Estado |
+|------|--------|
+| E-sign locações (#546) | MERGED — migration **0068** |
+| Kanban `@dnd-kit` (#547) | MERGED |
+| Testes backend (`rental-sign`, `deals-*`) | 29 testes OK |
+| Build `apps/turismo` | OK |
+| Smoke API e-sign | `node scripts/smoke-crm-rental-sign.mjs` — **verde** após `docker compose exec backend npm run migrate` |
+| Turismo Docker | Imagem de **13/11** — **`docker compose build turismo`** para expor `/rentals/sign` em `:3005` |
+| Doc smoke | `docs/dev/SMOKE-CRM-ESIGN-KANBAN-2026-11-17.md` |
+
+**Próxima fatia P1:** e-mail com link de assinatura · expiração/revogação · mascaramento CPF na listagem.
+
 ---
 
 ## Estado do git (`develop`)

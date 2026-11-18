@@ -51,6 +51,7 @@
     "smoke:marketing-lab": "node tests/e2e/marketing-lab-smoke.js",
     "start:s1": "powershell -ExecutionPolicy Bypass -File ./scripts/start-s1-site-principal.ps1",
     "smoke:auctions": "node tests/e2e/auctions-smoke.js",
+    "smoke:crm-rental-sign": "node scripts/smoke-crm-rental-sign.mjs",
     "seed:auctions": "node backend/scripts/seed-auctions.js",
     "test:e2e:auth-v1": "playwright test --config=tests/e2e/playwright.auth-v1.config.ts",
     "test:e2e:auth-oauth-mock": "playwright test --config=tests/e2e/playwright.auth-oauth-mock.config.ts",
