@@ -10,11 +10,15 @@
 | Kanban `@dnd-kit` (#547) | MERGED |
 | Testes backend (`rental-sign`, `deals-*`) | 29 testes OK |
 | Build `apps/turismo` | OK |
-| Smoke API e-sign | `node scripts/smoke-crm-rental-sign.mjs` — **verde** após `docker compose exec backend npm run migrate` |
-| Turismo Docker | Imagem de **13/11** — **`docker compose build turismo`** para expor `/rentals/sign` em `:3005` |
+| Smoke e-sign | `npm run smoke:crm-rental-sign` — **verde** (API + `/rentals/sign`) |
+| Turismo Docker | Imagem **17/11** reconstruída; smoke HTML OK |
 | Doc smoke | `docs/dev/SMOKE-CRM-ESIGN-KANBAN-2026-11-17.md` |
+| **PR #548** (aberta) | Docker npm ci + smoke script/docs — ver **`PAUSA-CRM-2026-11-18.md`** |
+| Branch local ao pausar | `chore/docker-npm-ci-and-esign-smoke` (WT limpa) |
 
 **Próxima fatia P1:** e-mail com link de assinatura · expiração/revogação · mascaramento CPF na listagem.
+
+**Pausa sessão:** `docs/dev/PAUSA-CRM-2026-11-18.md` (18 nov 2026).
 
 ---
 
