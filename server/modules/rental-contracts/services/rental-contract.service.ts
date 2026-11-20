@@ -7,6 +7,7 @@ import {
   memoryGetContractForToken,
   memoryGetPublicSignView,
   memoryListSignRequestsByUnit,
+  memoryRevokeSignRequest,
   __resetSignStoreForTests,
 } from './rental-sign-memory.store';
 import {
@@ -15,6 +16,7 @@ import {
   postgresGetContractForToken,
   postgresGetPublicSignView,
   postgresListSignRequestsByUnit,
+  postgresRevokeSignRequest,
 } from './rental-sign-postgres.repository';
 
 export type { SignRequestRecord } from './rental-contract.types';
@@ -86,6 +88,14 @@ export async function completeSignRequest(
 export async function listSignRequestsByUnit(unitId: string): Promise<SignRequestListItem[]> {
   if (rentalSignUsePostgres()) return postgresListSignRequestsByUnit(unitId);
   return memoryListSignRequestsByUnit(unitId);
+}
+
+export async function revokeSignRequest(
+  requestId: string,
+  unitId: string,
+): Promise<SignRequestRecord | null> {
+  if (rentalSignUsePostgres()) return postgresRevokeSignRequest(requestId, unitId);
+  return memoryRevokeSignRequest(requestId, unitId);
 }
 
 export function buildPublicSignPath(requestId: string, token: string): string {

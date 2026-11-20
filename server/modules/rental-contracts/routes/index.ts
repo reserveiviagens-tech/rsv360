@@ -14,6 +14,7 @@ import {
   getContractPdfForToken,
   getPublicSignView,
   listSignRequestsByUnit,
+  revokeSignRequest,
 } from '../services/rental-contract.service';
 import { sendRentalSignInviteEmail } from '../services/rental-sign-email.service';
 
@@ -38,6 +39,23 @@ function tokenFromQuery(req: Request): string {
 
 router.get('/health', (_req, res) => {
   res.json({ module: 'rental-contracts', status: 'ok' });
+});
+
+router.post('/sign/:requestId/revoke', ...parceiroAuth, async (req, res) => {
+  const requestId = String(req.params.requestId ?? '').trim();
+  const unitId = String(req.query.unitId ?? '').trim();
+  if (!requestId || !unitId) {
+    return res.status(400).json({ success: false, error: 'requestId e unitId obrigatórios' });
+  }
+  try {
+    const result = await revokeSignRequest(requestId, unitId);
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Solicitação inválida ou não revogável' });
+    }
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: (error as Error).message });
+  }
 });
 
 router.get('/sign-requests', ...parceiroAuth, async (req, res) => {

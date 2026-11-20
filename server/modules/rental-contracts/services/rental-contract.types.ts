@@ -1,6 +1,6 @@
 import type { RentalContractPreviewInput } from '../schema';
 
-export type SignRequestStatus = 'pending' | 'signed' | 'expired';
+export type SignRequestStatus = 'pending' | 'signed' | 'expired' | 'revoked';
 
 export type SignRequestRecord = {
   id: string;
@@ -38,11 +38,13 @@ export type SignRequestListItem = {
   expiresAt: string;
   createdAt: string;
   signedAt?: string;
+  signerCpfMasked?: string;
 };
 
 export type StoredSignRequest = SignRequestRecord & {
   tokenHash: string;
   emailHash: string;
   cpfHash: string;
+  signerCpfMasked?: string;
   contract: RentalContractPreviewInput;
 };

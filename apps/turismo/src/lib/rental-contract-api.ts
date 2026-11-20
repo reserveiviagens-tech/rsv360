@@ -9,8 +9,9 @@ function authHeaders(): HeadersInit {
 export type RentalSignListItem = {
   id: string;
   unitId: string;
-  status: 'pending' | 'signed' | 'expired';
+  status: 'pending' | 'signed' | 'expired' | 'revoked';
   signerName: string;
+  signerCpfMasked?: string;
   termMonths: number;
   depositType: string;
   expiresAt: string;
@@ -75,6 +76,15 @@ export async function requestRentalSign(body: {
     throw new Error(json.error ?? 'Falha ao solicitar assinatura');
   }
   return json.data;
+}
+
+export async function revokeRentalSignRequest(requestId: string, unitId: string): Promise<void> {
+  const res = await fetch(
+    `${fase1ApiBase()}/api/v1/rental-contracts/sign/${encodeURIComponent(requestId)}/revoke?unitId=${encodeURIComponent(unitId)}`,
+    { method: 'POST', headers: authHeaders() },
+  );
+  const json = (await res.json()) as { success: boolean };
+  if (!res.ok || !json.success) throw new Error('Não foi possível revogar a solicitação');
 }
 
 export async function fetchRentalSignRequests(unitId: string): Promise<RentalSignListItem[]> {
