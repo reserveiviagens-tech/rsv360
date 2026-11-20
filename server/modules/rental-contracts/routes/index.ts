@@ -15,6 +15,7 @@ import {
   getPublicSignView,
   listSignRequestsByUnit,
 } from '../services/rental-contract.service';
+import { sendRentalSignInviteEmail } from '../services/rental-sign-email.service';
 
 const router = Router();
 
@@ -84,6 +85,14 @@ router.post('/sign-request', ...parceiroAuth, async (req, res) => {
   try {
     const created = await createSignRequest(parsed.data);
     const signingToken = created.signingToken ?? '';
+    const emailInvite = await sendRentalSignInviteEmail({
+      destinatarioEmail: parsed.data.signerEmail,
+      signerName: parsed.data.signerName,
+      unitName: parsed.data.unitName,
+      requestId: created.id,
+      signingToken,
+      expiresAtIso: created.expiresAt,
+    });
     return res.status(201).json({
       success: true,
       data: {
@@ -93,6 +102,10 @@ router.post('/sign-request', ...parceiroAuth, async (req, res) => {
         expiresAt: created.expiresAt,
         signingToken,
         publicSignUrl: buildPublicSignPath(created.id, signingToken),
+        emailInvite: {
+          sent: emailInvite.ok,
+          skipped: emailInvite.skipped ?? false,
+        },
       },
     });
   } catch (error) {
