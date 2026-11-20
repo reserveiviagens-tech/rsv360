@@ -25,6 +25,7 @@ import { maskEmail, maskPhone } from '@/lib/pii-mask';
 import { fetchLeads, LeadPageCard } from '@/lib/overview-leads';
 import { convertLeadToDealRecord, saveConvertedDeal } from '@/lib/lead-to-deal';
 import { dealsApi } from '@/lib/deals-api';
+import { leadsApi } from '@/lib/leads-api';
 
 export interface LeadItem {
   id: string;
@@ -239,14 +240,21 @@ function LeadsPageContent() {
           notes: newDeal.notes,
           leadId: selectedLead.id,
         })
+        .then((deal) => {
+          setLeads((prev) =>
+            prev.map((l) =>
+              l.id === selectedLead.id
+                ? { ...l, status: 'qualified' as const, dealId: deal.id }
+                : l,
+            ),
+          );
+          return leadsApi.patchStatus(selectedLead.id, 'qualified').catch(() => undefined);
+        })
         .catch(() => {
-          /* Fallback offline transparente */
+          setLeads((prev) =>
+            prev.map((l) => (l.id === selectedLead.id ? { ...l, status: 'qualified' as const } : l)),
+          );
         });
-
-      // Atualiza o status do lead local para "qualified"
-      setLeads((prev) =>
-        prev.map((l) => (l.id === selectedLead.id ? { ...l, status: 'qualified' as const } : l)),
-      );
 
       setConvertedNotice(
         `Lead "${selectedLead.name}" convertido com sucesso para a esteira ativa de Deals!`,
@@ -510,10 +518,20 @@ function LeadsPageContent() {
             )}
 
             {/* CTA ACTION */}
-            <div className="pt-2 border-t border-[#12172212] dark:border-white/10">
+            <div className="pt-2 border-t border-[#12172212] dark:border-white/10 space-y-2">
+              {(selectedLead.dealId || createdDealId) && (
+                <button
+                  type="button"
+                  onClick={() => router.push('/deals')}
+                  className="w-full h-10 rounded-full border border-[#2f5bea]/30 text-[#2f5bea] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#2f5bea]/5 transition-colors"
+                >
+                  <ArrowUpRight className="w-4 h-4" /> Ver pipeline de Deals
+                </button>
+              )}
               <button
                 onClick={handleConvertDeal}
-                className="w-full h-11 rounded-full bg-[#2f5bea] text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#254bc2] transition-colors shadow-sm"
+                disabled={selectedLead.status === 'qualified'}
+                className="w-full h-11 rounded-full bg-[#2f5bea] text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#254bc2] transition-colors shadow-sm disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ArrowUpRight className="w-4 h-4" /> Converter em Negócio Ativo (Deal)
               </button>
