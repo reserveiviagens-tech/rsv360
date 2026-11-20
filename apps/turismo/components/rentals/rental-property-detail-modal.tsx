@@ -543,7 +543,13 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
               if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(link);
               }
-              toast.success('Link de assinatura copiado para envio ao locatário');
+              if (sign.emailInvite?.sent) {
+                toast.success('Convite enviado por e-mail; link também copiado para a área de transferência');
+              } else if (sign.emailInvite?.skipped) {
+                toast.success('Link copiado — configure SMTP/SendGrid no backend para envio automático');
+              } else {
+                toast.success('Link copiado. Falha ao enviar e-mail — envie o link manualmente ao locatário');
+              }
               setSignRequests(await fetchRentalSignRequests(item.id));
               setSignModalOpen(false);
             } catch {

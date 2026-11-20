@@ -48,7 +48,13 @@ export async function requestRentalSign(body: {
   signerCpf: string;
   termMonths: number;
   depositType: 'caucao' | 'fiador' | 'seguro';
-}): Promise<{ requestId: string; signingToken: string; expiresAt: string; publicSignUrl: string }> {
+}): Promise<{
+  requestId: string;
+  signingToken: string;
+  expiresAt: string;
+  publicSignUrl: string;
+  emailInvite?: { sent: boolean; skipped: boolean };
+}> {
   const res = await fetch(`${fase1ApiBase()}/api/v1/rental-contracts/sign-request`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
@@ -61,6 +67,7 @@ export async function requestRentalSign(body: {
       signingToken: string;
       expiresAt: string;
       publicSignUrl: string;
+      emailInvite?: { sent: boolean; skipped: boolean };
     };
     error?: string;
   };
