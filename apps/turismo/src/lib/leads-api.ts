@@ -22,11 +22,29 @@ async function parseJson<T>(res: Response): Promise<T> {
   return json as T;
 }
 
+export type CreateLeadPayload = {
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  source?: string;
+  notes?: string;
+};
+
 export const leadsApi = {
   async list(signal?: AbortSignal): Promise<LeadApiRow[]> {
     const res = await fetch(`${fase1ApiBase()}/api/v1/leads`, { headers: authHeaders(), signal });
     const body = await parseJson<{ success: boolean; data: { items: LeadApiRow[] } }>(res);
     return body.data?.items ?? [];
+  },
+
+  async create(payload: CreateLeadPayload): Promise<LeadApiRow> {
+    const res = await fetch(`${fase1ApiBase()}/api/v1/leads`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const body = await parseJson<{ success: boolean; data: LeadApiRow }>(res);
+    return body.data;
   },
 
   async patchStatus(id: string, status: 'new' | 'contacted' | 'qualified'): Promise<LeadApiRow> {

@@ -2,7 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { db } from '../../../../backend/src/db/drizzle';
 import { crmDeals, crmLeads } from '../../../../backend/src/db/schema/crm-lintel';
 import { apiStatusToDb, rowToLeadApiRow } from '../crm-leads-mapper';
-import type { LeadApiRow, LeadApiStatus } from '../schema';
+import type { CreateLeadInput, LeadApiRow, LeadApiStatus } from '../schema';
 import { SEED_LEADS } from './crm-leads-memory.store';
 
 let demoSeedPromise: Promise<void> | null = null;
@@ -48,6 +48,27 @@ export async function postgresListLeads(): Promise<LeadApiRow[]> {
     .orderBy(asc(crmLeads.createdAt));
 
   return rows.map(({ lead, dealId }) => rowToLeadApiRow(lead, dealId));
+}
+
+export async function postgresCreateLead(userId: number, input: CreateLeadInput): Promise<LeadApiRow> {
+  const id = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const now = new Date();
+
+  await db.insert(crmLeads).values({
+    id,
+    clientName: input.clientName,
+    clientEmail: input.clientEmail ?? null,
+    clientPhone: input.clientPhone ?? null,
+    source: input.source ?? 'manual',
+    status: 'novo',
+    notes: input.notes ?? null,
+    assignedUserId: userId,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const [row] = await db.select().from(crmLeads).where(eq(crmLeads.id, id)).limit(1);
+  return rowToLeadApiRow(row);
 }
 
 export async function postgresUpdateLeadStatus(

@@ -1,5 +1,5 @@
 import { apiStatusToDb, memoryRecordToRow, type MemoryLeadRecord } from '../crm-leads-mapper';
-import type { LeadApiRow, LeadApiStatus } from '../schema';
+import type { CreateLeadInput, LeadApiRow, LeadApiStatus } from '../schema';
 
 const now = new Date();
 const ago = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
@@ -57,6 +57,23 @@ export function memoryUpdateLeadStatus(id: string, status: LeadApiStatus): LeadA
     updatedAt: new Date().toISOString(),
   };
   return memoryRecordToRow(store[idx]);
+}
+
+export function memoryCreateLead(input: CreateLeadInput): LeadApiRow {
+  const ts = new Date().toISOString();
+  const rec: MemoryLeadRecord = {
+    id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    clientName: input.clientName,
+    clientEmail: input.clientEmail ?? null,
+    clientPhone: input.clientPhone ?? null,
+    source: input.source ?? 'manual',
+    status: 'novo',
+    notes: input.notes ?? null,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  store.unshift(rec);
+  return memoryRecordToRow(rec);
 }
 
 export function memoryResetForTests(): void {

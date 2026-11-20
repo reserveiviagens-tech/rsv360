@@ -1,6 +1,15 @@
-import type { LeadApiRow, LeadApiStatus } from '../schema';
-import { memoryListLeads, memoryResetForTests, memoryUpdateLeadStatus } from './crm-leads-memory.store';
-import { postgresListLeads, postgresUpdateLeadStatus } from './crm-leads-postgres.repository';
+import type { CreateLeadInput, LeadApiRow, LeadApiStatus } from '../schema';
+import {
+  memoryCreateLead,
+  memoryListLeads,
+  memoryResetForTests,
+  memoryUpdateLeadStatus,
+} from './crm-leads-memory.store';
+import {
+  postgresCreateLead,
+  postgresListLeads,
+  postgresUpdateLeadStatus,
+} from './crm-leads-postgres.repository';
 
 export class CrmLeadsNotFoundError extends Error {
   constructor(message = 'Lead não encontrado') {
@@ -21,6 +30,13 @@ export async function listLeadsAsync(): Promise<LeadApiRow[]> {
     return postgresListLeads();
   }
   return memoryListLeads();
+}
+
+export async function createLead(userId: number, input: CreateLeadInput): Promise<LeadApiRow> {
+  if (crmLeadsUsePostgres()) {
+    return postgresCreateLead(userId, input);
+  }
+  return memoryCreateLead(input);
 }
 
 export async function updateLeadStatus(id: string, status: LeadApiStatus): Promise<LeadApiRow> {

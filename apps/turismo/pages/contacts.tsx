@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useOverviewCarteiraVinculos } from '@/hooks/useAnfitriao';
 import {
@@ -27,6 +28,12 @@ import { LintelPrimaryActions } from '../components/lintel/lintel-primary-action
 import { LintelShellNav } from '../components/lintel/lintel-shell-nav';
 import { useCrmLocale } from '../components/lintel/crm-locale-provider';
 import { maskEmail, maskPhone } from '@/lib/pii-mask';
+import { leadsApi } from '@/lib/leads-api';
+import {
+  indexLeadsByName,
+  resolvePipelineForContact,
+} from '@/lib/crm-contact-pipeline';
+import { leadApiRowToPageCard, type LeadApiRow } from '@/lib/overview-leads';
 
 export interface Contact {
   id: string;
@@ -38,6 +45,27 @@ export interface Contact {
   areas: string[];
   starred: boolean;
   avatarInitials?: string;
+  leadId?: string;
+  dealId?: string;
+}
+
+type PipelineFilter = 'all' | 'starred' | 'linked' | 'unlinked';
+
+function leadRowToContact(row: LeadApiRow, role: Contact['role']): Contact {
+  const card = leadApiRowToPageCard(row);
+  return {
+    id: `lead-${row.id}`,
+    name: card.name,
+    role,
+    email: card.email,
+    phone: card.phone,
+    budgetOrUnits: card.budget,
+    areas: [row.source],
+    starred: false,
+    avatarInitials: card.avatarInitials,
+    leadId: row.id,
+    dealId: row.dealId,
+  };
 }
 
 /** Demo fallback só quando carteira vazia e sem API (dev visual). */
@@ -138,6 +166,22 @@ function ContactsPageContent() {
   const role = String(user?.role ?? '');
   const { data: carteiraData, isLoading, isError } = useOverviewCarteiraVinculos();
   const [localContacts, setLocalContacts] = useState<Contact[]>([]);
+  const [crmLeads, setCrmLeads] = useState<LeadApiRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void leadsApi
+      .list()
+      .then((items) => {
+        if (!cancelled) setCrmLeads(items);
+      })
+      .catch(() => {
+        if (!cancelled) setCrmLeads([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const apiContacts = useMemo(() => {
     const items = carteiraData?.data?.items ?? [];
@@ -161,6 +205,7 @@ function ContactsPageContent() {
   }, [apiContacts, localContacts, useDemoFallback, starOverrides]);
 
   const [filter, setFilter] = useState<'all' | 'buyer' | 'seller' | 'tenant' | 'landlord' | 'investor'>('all');
+  const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>('all');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [newContactName, setNewContactName] = useState('');
@@ -172,9 +217,25 @@ function ContactsPageContent() {
     setStarOverrides((prev) => ({ ...prev, [id]: !current }));
   };
 
+  const contactsWithPipeline = useMemo(() => {
+    const byName = indexLeadsByName(crmLeads);
+    return contacts.map((c) => {
+      const link = resolvePipelineForContact(c.name, byName);
+      return {
+        ...c,
+        leadId: c.leadId ?? link.leadId,
+        dealId: c.dealId ?? link.dealId,
+      };
+    });
+  }, [contacts, crmLeads]);
+
   const filtered = useMemo(() => {
-    return contacts.filter((c) => {
+    return contactsWithPipeline.filter((c) => {
       if (filter !== 'all' && c.role !== filter) return false;
+      const linked = Boolean(c.leadId || c.dealId);
+      if (pipelineFilter === 'starred' && !c.starred) return false;
+      if (pipelineFilter === 'linked' && !linked) return false;
+      if (pipelineFilter === 'unlinked' && linked) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
@@ -184,29 +245,48 @@ function ContactsPageContent() {
         c.areas.some((a) => a.toLowerCase().includes(q))
       );
     });
-  }, [contacts, filter, search]);
+  }, [contactsWithPipeline, filter, pipelineFilter, search]);
 
-  const handleAddContact = (e: React.FormEvent) => {
+  const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newContactName.trim()) return;
-    const initials = newContactName
-      .split(' ')
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-    const created: Contact = {
-      id: `c_${Date.now()}`,
-      name: newContactName.trim(),
-      email: newContactEmail.trim() || 'contato@rsv360.com.br',
-      phone: '+55 (11) 99999-0000',
-      role: newContactRole,
-      budgetOrUnits: 'Novo relacionamento VIP',
-      areas: ['São Paulo - SP'],
-      starred: false,
-      avatarInitials: initials,
-    };
-    setLocalContacts((prev) => [created, ...prev]);
+
+    const role = newContactRole;
+    const name = newContactName.trim();
+    const email = newContactEmail.trim();
+
+    try {
+      const row = await leadsApi.create({
+        clientName: name,
+        clientEmail: email || undefined,
+        source: 'contacts',
+        notes: `Contato VIP — papel ${role}`,
+      });
+      setCrmLeads((prev) => [row, ...prev.filter((l) => l.id !== row.id)]);
+      setLocalContacts((prev) => [leadRowToContact(row, role), ...prev]);
+    } catch {
+      const initials = name
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+      setLocalContacts((prev) => [
+        {
+          id: `c_${Date.now()}`,
+          name,
+          email: email || 'contato@rsv360.com.br',
+          phone: '+55 (11) 99999-0000',
+          role,
+          budgetOrUnits: 'Novo relacionamento VIP',
+          areas: ['São Paulo - SP'],
+          starred: false,
+          avatarInitials: initials,
+        },
+        ...prev,
+      ]);
+    }
+
     setNewContactName('');
     setNewContactEmail('');
     setModalOpen(false);
@@ -292,6 +372,31 @@ function ContactsPageContent() {
               </button>
             ))}
           </div>
+
+          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#8a92a1] shrink-0" />
+            {(
+              [
+                ['all', 'Pipeline: todos'],
+                ['starred', 'Favoritos'],
+                ['linked', 'Com lead/deal'],
+                ['unlinked', 'Sem vínculo'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPipelineFilter(key)}
+                className={`h-8 px-3 rounded-full text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-all ${
+                  pipelineFilter === key
+                    ? 'bg-[#2f5bea] text-white shadow-sm'
+                    : 'bg-white/70 dark:bg-white/10 border border-[#12172216] dark:border-white/10 text-[#5f6878]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* CONTACTS CARD GRID (Lintel repeat(auto-fill, minmax(240px, 1fr))) */}
@@ -361,6 +466,27 @@ function ContactsPageContent() {
                     {contact.budgetOrUnits}
                   </div>
                 </div>
+
+                {(contact.leadId || contact.dealId) && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {contact.leadId && (
+                      <Link
+                        href={`/leads?lead=${encodeURIComponent(contact.leadId)}`}
+                        className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#2f5bea1f] text-[#2f5bea] hover:opacity-90"
+                      >
+                        Ver lead
+                      </Link>
+                    )}
+                    {contact.dealId && (
+                      <Link
+                        href={`/deals?deal=${encodeURIComponent(contact.dealId)}`}
+                        className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#138a631f] text-[#138a63] hover:opacity-90"
+                      >
+                        Ver deal
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* ACTION FOOTER */}

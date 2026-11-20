@@ -83,6 +83,33 @@ describe('CRM leads — GET / and PATCH /:id/status', () => {
     expect(first).not.toHaveProperty('clientEmail');
   });
 
+  it('POST / creates lead with masked PII for corretor', async () => {
+    const res = await request(buildApp())
+      .post('/api/v1/leads')
+      .set(authHeaders('corretor', 42))
+      .send({
+        clientName: 'Novo Lead Teste',
+        clientEmail: 'novo.lead@example.com',
+        clientPhone: '+55 11 90000-1111',
+        source: 'manual',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.name).toBe('Novo Lead Teste');
+    expect(String(res.body.data.email)).toContain('•');
+    expect(res.body.data.status).toBe('new');
+  });
+
+  it('POST / returns 400 without clientName', async () => {
+    const res = await request(buildApp())
+      .post('/api/v1/leads')
+      .set(authHeaders('corretor', 42))
+      .send({ clientEmail: 'a@b.com' });
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
   it('PATCH /:id/status updates lead status', async () => {
     const list = await request(buildApp())
       .get('/api/v1/leads')
