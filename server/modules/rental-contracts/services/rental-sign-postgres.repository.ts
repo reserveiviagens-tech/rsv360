@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { desc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { db } from '../../../../backend/src/db/drizzle';
 import { crmRentalSignEvents, crmRentalSignRequests } from '../../../../backend/src/db/schema/crm-rental-sign';
 import type { RentalSignRequestInput } from '../schema';
@@ -13,6 +13,7 @@ import {
   isSignPastExpiry,
   maskSignerCpf,
 } from './rental-sign-lifecycle.util';
+import { maskClientIp } from './rental-sign-audit.util';
 
 function hashValue(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -154,6 +155,7 @@ export async function postgresGetContractForToken(requestId: string, token: stri
 export async function postgresCompleteSignRequest(
   requestId: string,
   token: string,
+  audit?: { clientIp?: string },
 ): Promise<SignRequestRecord | null> {
   const row = await getRow(requestId);
   if (!row) return null;
@@ -193,7 +195,13 @@ export async function postgresCompleteSignRequest(
       id: eventId(),
       signRequestId: requestId,
       eventType: 'signed',
-      metadata: { signedAt: signedAt.toISOString() },
+      metadata: {
+        signedAt: signedAt.toISOString(),
+        actor: 'locatario',
+        ...(audit?.clientIp
+          ? { clientIp: maskClientIp(audit.clientIp) ?? '***' }
+          : {}),
+      },
     });
   });
 
@@ -256,4 +264,32 @@ export async function postgresRevokeSignRequest(
     status: 'revoked',
     expiresAt: row.expiresAt.toISOString(),
   };
+}
+
+export async function postgresRecordSignRequestEvent(
+  requestId: string,
+  unitId: string,
+  eventType: string,
+  metadata?: Record<string, unknown>,
+): Promise<boolean> {
+  const row = await getRow(requestId);
+  if (!row || row.unitId !== unitId) return false;
+  await appendEvent(requestId, eventType, metadata);
+  return true;
+}
+
+export async function postgresListSignRequestEvents(requestId: string, unitId: string) {
+  const row = await getRow(requestId);
+  if (!row || row.unitId !== unitId) return null;
+  const rows = await db
+    .select()
+    .from(crmRentalSignEvents)
+    .where(eq(crmRentalSignEvents.signRequestId, requestId))
+    .orderBy(asc(crmRentalSignEvents.createdAt));
+  return rows.map((e) => ({
+    id: e.id,
+    eventType: e.eventType,
+    occurredAt: e.createdAt.toISOString(),
+    metadata: (e.metadata as Record<string, unknown> | null) ?? undefined,
+  }));
 }

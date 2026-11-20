@@ -14,8 +14,11 @@ import {
   getContractPdfForToken,
   getPublicSignView,
   listSignRequestsByUnit,
+  listSignRequestEvents,
+  recordSignRequestEvent,
   revokeSignRequest,
 } from '../services/rental-contract.service';
+import { maskClientIp } from '../services/rental-sign-audit.util';
 import { sendRentalSignInviteEmail } from '../services/rental-sign-email.service';
 
 const router = Router();
@@ -37,6 +40,20 @@ function tokenFromQuery(req: Request): string {
   return String(req.query.token ?? '').trim();
 }
 
+function requestClientIp(req: Request): string | undefined {
+  const forwarded = req.headers['x-forwarded-for'];
+  const raw =
+    typeof forwarded === 'string'
+      ? forwarded.split(',')[0].trim()
+      : req.socket.remoteAddress ?? undefined;
+  return maskClientIp(raw);
+}
+
+function partnerActor(req: Request): string {
+  const user = (req as Request & { user?: { role?: string } }).user;
+  return String(user?.role ?? 'parceiro');
+}
+
 router.get('/health', (_req, res) => {
   res.json({ module: 'rental-contracts', status: 'ok' });
 });
@@ -53,6 +70,23 @@ router.post('/sign/:requestId/revoke', ...parceiroAuth, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Solicitação inválida ou não revogável' });
     }
     return res.json({ success: true, data: result });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/sign-requests/:requestId/events', ...parceiroAuth, async (req, res) => {
+  const requestId = String(req.params.requestId ?? '').trim();
+  const unitId = String(req.query.unitId ?? '').trim();
+  if (!requestId || !unitId) {
+    return res.status(400).json({ success: false, error: 'requestId e unitId obrigatórios' });
+  }
+  try {
+    const items = await listSignRequestEvents(requestId, unitId);
+    if (!items) {
+      return res.status(404).json({ success: false, error: 'Solicitação não encontrada' });
+    }
+    return res.json({ success: true, data: { items } });
   } catch (error) {
     return res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -111,6 +145,15 @@ router.post('/sign-request', ...parceiroAuth, async (req, res) => {
       signingToken,
       expiresAtIso: created.expiresAt,
     });
+    if (emailInvite.ok) {
+      await recordSignRequestEvent(created.id, created.unitId, 'email_sent', {
+        actor: partnerActor(req),
+      });
+    } else if (emailInvite.skipped) {
+      await recordSignRequestEvent(created.id, created.unitId, 'email_skipped', {
+        actor: partnerActor(req),
+      });
+    }
     return res.status(201).json({
       success: true,
       data: {
@@ -166,7 +209,9 @@ router.post('/public/sign/:requestId/complete', publicSignLimiter, async (req, r
     return res.status(400).json({ success: false, error: 'Dados inválidos' });
   }
 
-  const result = await completeSignRequest(requestId, parsed.data.token);
+  const result = await completeSignRequest(requestId, parsed.data.token, {
+    clientIp: requestClientIp(req),
+  });
   if (!result) {
     return res.status(404).json({ success: false, error: 'Solicitação inválida' });
   }
@@ -181,7 +226,9 @@ router.post('/sign/:requestId/complete', ...parceiroAuth, async (req: Request, r
     return res.status(400).json({ success: false, error: 'requestId e token obrigatórios' });
   }
 
-  const result = await completeSignRequest(requestId, token);
+  const result = await completeSignRequest(requestId, token, {
+    clientIp: requestClientIp(req),
+  });
   if (!result) {
     return res.status(404).json({ success: false, error: 'Solicitação inválida' });
   }
