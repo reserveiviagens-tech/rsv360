@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   Building2,
   CheckCircle2,
+  Upload,
 } from 'lucide-react';
 import AnfitriaoRoleGuard from '../components/AnfitriaoRoleGuard';
 import { RsvCrmShell } from '../components/lintel/rsv-crm-shell';
@@ -208,9 +209,16 @@ function ContactsPageContent() {
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>('all');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [newContactName, setNewContactName] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
   const [newContactRole, setNewContactRole] = useState<'buyer' | 'seller' | 'tenant' | 'landlord' | 'investor'>('buyer');
+  const [bulkJson, setBulkJson] = useState(
+    '[\n  { "clientName": "Nome VIP", "clientEmail": "vip@dominio.com", "source": "contacts" }\n]',
+  );
+  const [bulkIdempotencyKey, setBulkIdempotencyKey] = useState('');
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
 
   const toggleStarred = (id: string) => {
     const current = contacts.find((c) => c.id === id)?.starred ?? false;
@@ -292,6 +300,66 @@ function ContactsPageContent() {
     setModalOpen(false);
   };
 
+  const openBulkModal = () => {
+    setBulkError(null);
+    setBulkNotice(null);
+    const key =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `bulk_${Date.now()}`;
+    setBulkIdempotencyKey(key);
+    setBulkModalOpen(true);
+  };
+
+  const handleBulkImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBulkError(null);
+    setBulkNotice(null);
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bulkJson);
+    } catch {
+      setBulkError('JSON inválido. Use um array de objetos com clientName.');
+      return;
+    }
+
+    const items = Array.isArray(parsed)
+      ? parsed
+      : (parsed as { items?: unknown }).items;
+    if (!Array.isArray(items) || items.length === 0) {
+      setBulkError('Informe entre 1 e 25 leads (array JSON ou { "items": [...] }).');
+      return;
+    }
+    if (items.length > 25) {
+      setBulkError('Máximo de 25 leads por importação.');
+      return;
+    }
+
+    try {
+      const result = await leadsApi.bulkCreate({
+        items: items as Parameters<typeof leadsApi.bulkCreate>[0]['items'],
+        idempotencyKey: bulkIdempotencyKey,
+      });
+      setCrmLeads((prev) => {
+        const ids = new Set(result.items.map((l) => l.id));
+        return [...result.items, ...prev.filter((l) => !ids.has(l.id))];
+      });
+      setLocalContacts((prev) => [
+        ...result.items.map((row) => leadRowToContact(row, 'buyer')),
+        ...prev,
+      ]);
+      setBulkNotice(
+        result.idempotentReplay
+          ? `Importação idempotente — ${result.count} lead(s) já processado(s).`
+          : `${result.count} lead(s) importado(s) com sucesso.`,
+      );
+      setTimeout(() => setBulkModalOpen(false), 1200);
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : 'Falha ao importar lote.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 dark:bg-[#0f1116] dark:text-slate-100">
       {/* GLOBAL LINTEL CRM HEADER */}
@@ -324,6 +392,13 @@ function ContactsPageContent() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openBulkModal}
+              className="h-10 px-4 rounded-full border border-[#12172216] dark:border-white/10 bg-white/70 dark:bg-white/10 font-bold text-xs flex items-center gap-2 hover:bg-white transition-all"
+            >
+              <Upload className="w-4 h-4" /> Importar lote
+            </button>
             <button
               onClick={() => setModalOpen(true)}
               className="h-10 px-5 rounded-full bg-[#121722] dark:bg-white text-white dark:text-[#121722] font-bold text-xs flex items-center gap-2 hover:opacity-90 shadow-sm transition-all"
@@ -572,6 +647,51 @@ function ContactsPageContent() {
                     className="px-5 py-2 rounded-full bg-[#2f5bea] text-white text-xs font-bold hover:bg-[#254bc2]"
                   >
                     Salvar Contato
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {bulkModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+            <div className="w-full max-w-lg rounded-[24px] bg-white p-6 shadow-xl dark:bg-[#121722] border border-slate-200 dark:border-slate-800 space-y-3">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                Importar lote de leads (máx. 25)
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Cole um array JSON ou objeto com <code className="text-[10px]">items</code>. Cada
+                entrada usa os mesmos campos do cadastro unitário (
+                <code className="text-[10px]">clientName</code> obrigatório).
+              </p>
+              <form onSubmit={handleBulkImport} className="space-y-3">
+                <textarea
+                  value={bulkJson}
+                  onChange={(e) => setBulkJson(e.target.value)}
+                  rows={8}
+                  className="w-full font-mono text-[11px] rounded-xl border border-slate-200 p-3 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  spellCheck={false}
+                />
+                {bulkError && (
+                  <p className="text-xs font-semibold text-red-600 dark:text-red-400">{bulkError}</p>
+                )}
+                {bulkNotice && (
+                  <p className="text-xs font-semibold text-[#138a63]">{bulkNotice}</p>
+                )}
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setBulkModalOpen(false)}
+                    className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-full bg-[#138a63] text-white text-xs font-bold hover:opacity-90"
+                  >
+                    Importar
                   </button>
                 </div>
               </form>

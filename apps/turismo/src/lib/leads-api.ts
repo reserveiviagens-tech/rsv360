@@ -37,6 +37,22 @@ export const leadsApi = {
     return body.data?.items ?? [];
   },
 
+  async bulkCreate(payload: {
+    items: CreateLeadPayload[];
+    idempotencyKey?: string;
+  }): Promise<{ items: LeadApiRow[]; idempotentReplay: boolean; count: number }> {
+    const res = await fetch(`${fase1ApiBase()}/api/v1/leads/bulk`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const body = await parseJson<{
+      success: boolean;
+      data: { items: LeadApiRow[]; idempotentReplay: boolean; count: number };
+    }>(res);
+    return body.data;
+  },
+
   async create(payload: CreateLeadPayload): Promise<LeadApiRow> {
     const res = await fetch(`${fase1ApiBase()}/api/v1/leads`, {
       method: 'POST',

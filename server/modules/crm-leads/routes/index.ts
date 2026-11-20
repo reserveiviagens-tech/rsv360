@@ -1,8 +1,9 @@
 import { Router, type Request } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
-import { createLeadBodySchema, patchLeadStatusBodySchema } from '../schema';
+import { bulkCreateLeadsBodySchema, createLeadBodySchema, patchLeadStatusBodySchema } from '../schema';
 import {
   CrmLeadsNotFoundError,
+  bulkCreateLeads,
   createLead,
   listLeadsAsync,
   updateLeadStatus,
@@ -33,6 +34,33 @@ router.get('/', ...parceiroAuth, async (_req, res) => {
     res.json({ success: true, data: { items } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/bulk', ...parceiroAuth, async (req, res) => {
+  try {
+    const parsed = bulkCreateLeadsBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payload inválido',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const userId = requireUserId(req);
+    const result = await bulkCreateLeads(userId, parsed.data.items, parsed.data.idempotencyKey);
+    const status = result.idempotentReplay ? 200 : 201;
+    return res.status(status).json({
+      success: true,
+      data: {
+        items: result.items,
+        idempotentReplay: result.idempotentReplay,
+        count: result.items.length,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 

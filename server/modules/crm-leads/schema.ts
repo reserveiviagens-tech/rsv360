@@ -46,3 +46,12 @@ export const createLeadBodySchema = z.object({
 });
 
 export type CreateLeadInput = z.infer<typeof createLeadBodySchema>;
+
+export const BULK_LEADS_MAX_ITEMS = 25;
+
+export const bulkCreateLeadsBodySchema = z.object({
+  items: z.array(createLeadBodySchema).min(1).max(BULK_LEADS_MAX_ITEMS),
+  idempotencyKey: z.string().min(8).max(128).optional(),
+});
+
+export type BulkCreateLeadsInput = z.infer<typeof bulkCreateLeadsBodySchema>;

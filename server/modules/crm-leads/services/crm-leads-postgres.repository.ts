@@ -50,6 +50,37 @@ export async function postgresListLeads(): Promise<LeadApiRow[]> {
   return rows.map(({ lead, dealId }) => rowToLeadApiRow(lead, dealId));
 }
 
+export async function postgresBulkCreateLeads(
+  userId: number,
+  items: CreateLeadInput[],
+): Promise<LeadApiRow[]> {
+  return db.transaction(async (tx) => {
+    const created: LeadApiRow[] = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const input = items[i];
+      const id = `lead_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+      const now = new Date();
+
+      await tx.insert(crmLeads).values({
+        id,
+        clientName: input.clientName,
+        clientEmail: input.clientEmail ?? null,
+        clientPhone: input.clientPhone ?? null,
+        source: input.source ?? 'bulk',
+        status: 'novo',
+        notes: input.notes ?? null,
+        assignedUserId: userId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const [row] = await tx.select().from(crmLeads).where(eq(crmLeads.id, id)).limit(1);
+      if (row) created.push(rowToLeadApiRow(row));
+    }
+    return created;
+  });
+}
+
 export async function postgresCreateLead(userId: number, input: CreateLeadInput): Promise<LeadApiRow> {
   const id = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const now = new Date();
