@@ -21,6 +21,7 @@ import { registerAgentesModule } from './modules/agentes';
 import { registerHomeModule } from './modules/home';
 import { registerDealsModule } from './modules/deals';
 import { registerRentalContractsModule } from './modules/rental-contracts';
+import { registerCrmLeadsModule } from './modules/crm-leads';
 
 /**
  * Registra os 7 módulos backend da Fase 1 (migração Sistema A → B).
@@ -47,6 +48,7 @@ export function registerMigracaoFase1Modules(app: Express, io?: Server) {
   registerAgentesModule(app);
   registerHomeModule(app);
   registerDealsModule(app);
+  registerCrmLeadsModule(app);
   registerRentalContractsModule(app);
   console.log(
     '[BOOT] Módulos Fase 1 (7/7) + Fornecedores Hub + Acomodações + Cotação Pública + Configurações + Analytics Roteiro + Mapa Roteiro + Comissões + Partners + CMS Vitrine + Agentes + Home sections registrados ✓',

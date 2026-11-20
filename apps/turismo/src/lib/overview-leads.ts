@@ -22,6 +22,7 @@ export type LeadApiRow = {
   fitFactors: LeadFitFactors;
   notes?: string;
   createdAt?: string | null;
+  dealId?: string;
 };
 
 export type LeadPageCard = {
@@ -38,6 +39,7 @@ export type LeadPageCard = {
   fitFactors: LeadFitFactors;
   notes?: string;
   avatarInitials?: string;
+  dealId?: string;
 };
 
 export type CarteiraUser = {
@@ -63,6 +65,7 @@ export function leadApiRowToPageCard(row: LeadApiRow): LeadPageCard {
     fitFactors: row.fitFactors,
     notes: row.notes,
     avatarInitials: initialsFromName(row.name),
+    dealId: row.dealId,
   };
 }
 
@@ -111,31 +114,19 @@ export function maskLeadPhone(phone: string): string {
   return '•••• •••• ' + digits.slice(-4);
 }
 
-/** Busca leads da API com fallback resiliente para SAMPLE_LEADS (fallback de demo). */
+/** Busca leads autenticados; em falha de rede/auth usa fallback de demo do caller. */
 export async function fetchLeads({
   sampleDeals,
-  apiBase,
   signal,
 }: {
   sampleDeals: LeadPageCard[];
-  apiBase?: string;
   signal?: AbortSignal;
 }): Promise<LeadPageCard[]> {
   try {
-    const base = apiBase ?? (typeof window !== 'undefined' ? (window as any).RSV_API_BASE ?? '' : '');
-    const url = base ? `${base.replace(/\/$/, '')}/api/v1/leads` : '';
-    if (!url) throw new Error('sem API base configurada');
-
-    const res = await fetch(url, { signal, headers: { 'Content-Type': 'application/json' } });
-    if (!res.ok) throw new Error(`API ${res.status}`);
-
-    const body = (await res.json()) as { success?: boolean; data?: LeadApiRow[] | LeadApiRow };
-    const items = Array.isArray(body?.data) ? body.data : body?.data ? [body.data] : [];
-    if (items.length === 0) throw new Error('API retornou vazio');
-
+    const { leadsApi } = await import('./leads-api');
+    const items = await leadsApi.list(signal);
     return items.map(leadApiRowToPageCard);
   } catch {
-    // Fallback silencioso: mantém SAMPLE_LEADS (demo visual ininterrupta)
     return sampleDeals;
   }
 }
