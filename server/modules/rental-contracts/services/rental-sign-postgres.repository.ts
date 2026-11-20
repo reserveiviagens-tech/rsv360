@@ -8,6 +8,11 @@ import type {
   SignRequestPublicView,
   SignRequestRecord,
 } from './rental-contract.types';
+import {
+  effectiveSignStatus,
+  isSignPastExpiry,
+  maskSignerCpf,
+} from './rental-sign-lifecycle.util';
 
 function hashValue(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -56,6 +61,7 @@ export async function postgresCreateSignRequest(
       signerEmailHash: hashValue(input.signerEmail.toLowerCase()),
       signerName: input.signerName,
       signerCpfHash: hashValue(input.signerCpf),
+      signerCpfMasked: maskSignerCpf(input.signerCpf),
       termMonths: input.termMonths,
       depositType: input.depositType,
       contractJson: contract,
@@ -91,12 +97,35 @@ async function getRow(requestId: string) {
   return row;
 }
 
+async function postgresMarkExpiredIfNeeded(
+  requestId: string,
+  row: NonNullable<Awaited<ReturnType<typeof getRow>>>,
+): Promise<void> {
+  if (row.status !== 'pending' || !isSignPastExpiry(row.expiresAt)) return;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(crmRentalSignRequests)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(eq(crmRentalSignRequests.id, requestId));
+    await tx.insert(crmRentalSignEvents).values({
+      id: eventId(),
+      signRequestId: requestId,
+      eventType: 'expired',
+    });
+  });
+  row.status = 'expired';
+}
+
 export async function postgresGetPublicSignView(
   requestId: string,
   token: string,
 ): Promise<SignRequestPublicView | null> {
   const row = await getRow(requestId);
   if (!row || row.tokenHash !== hashValue(token)) return null;
+  if (row.status === 'revoked') return null;
+  if (row.status === 'pending') await postgresMarkExpiredIfNeeded(requestId, row);
+  if (row.status === 'expired') return null;
+  if (row.status !== 'pending' && row.status !== 'signed') return null;
   const contract = row.contractJson;
   if (!contract) return null;
   await appendEvent(requestId, 'viewed');
@@ -116,6 +145,9 @@ export async function postgresGetPublicSignView(
 export async function postgresGetContractForToken(requestId: string, token: string) {
   const row = await getRow(requestId);
   if (!row || row.tokenHash !== hashValue(token)) return null;
+  if (row.status === 'revoked') return null;
+  if (row.status === 'pending') await postgresMarkExpiredIfNeeded(requestId, row);
+  if (row.status !== 'pending') return null;
   return row.contractJson ?? null;
 }
 
@@ -127,6 +159,8 @@ export async function postgresCompleteSignRequest(
   if (!row) return null;
   if (row.status !== 'pending') return null;
   if (row.tokenHash !== hashValue(token)) return null;
+  if (row.status === 'pending') await postgresMarkExpiredIfNeeded(requestId, row);
+  if (row.status !== 'pending') return null;
 
   const expiresMs = row.expiresAt.getTime();
   if (expiresMs < Date.now()) {
@@ -182,12 +216,44 @@ export async function postgresListSignRequestsByUnit(unitId: string): Promise<Si
   return rows.map((row) => ({
     id: row.id,
     unitId: row.unitId,
-    status: row.status as SignRequestListItem['status'],
+    status: effectiveSignStatus(row.status as SignRequestListItem['status'], row.expiresAt),
     signerName: row.signerName,
+    signerCpfMasked: row.signerCpfMasked ?? undefined,
     termMonths: row.termMonths,
     depositType: row.depositType,
     expiresAt: row.expiresAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
     signedAt: row.signedAt?.toISOString(),
   }));
+}
+
+export async function postgresRevokeSignRequest(
+  requestId: string,
+  unitId: string,
+): Promise<SignRequestRecord | null> {
+  const row = await getRow(requestId);
+  if (!row || row.unitId !== unitId) return null;
+  if (row.status !== 'pending') return null;
+  if (row.status === 'pending') await postgresMarkExpiredIfNeeded(requestId, row);
+  if (row.status !== 'pending') return null;
+
+  const at = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(crmRentalSignRequests)
+      .set({ status: 'revoked', updatedAt: at })
+      .where(eq(crmRentalSignRequests.id, requestId));
+    await tx.insert(crmRentalSignEvents).values({
+      id: eventId(),
+      signRequestId: requestId,
+      eventType: 'revoked',
+    });
+  });
+
+  return {
+    id: row.id,
+    unitId: row.unitId,
+    status: 'revoked',
+    expiresAt: row.expiresAt.toISOString(),
+  };
 }

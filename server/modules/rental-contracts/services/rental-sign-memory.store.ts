@@ -6,6 +6,11 @@ import type {
   SignRequestRecord,
   StoredSignRequest,
 } from './rental-contract.types';
+import {
+  effectiveSignStatus,
+  isSignPastExpiry,
+  maskSignerCpf,
+} from './rental-sign-lifecycle.util';
 
 const signStore = new Map<string, StoredSignRequest>();
 const eventsStore = new Map<string, Array<{ id: string; eventType: string; at: string }>>();
@@ -48,6 +53,7 @@ export function memoryCreateSignRequest(input: RentalSignRequestInput): SignRequ
     tokenHash: hashValue(signingToken),
     emailHash: hashValue(input.signerEmail.toLowerCase()),
     cpfHash: hashValue(input.signerCpf),
+    signerCpfMasked: maskSignerCpf(input.signerCpf),
     signerName: input.signerName,
     termMonths: input.termMonths,
     depositType: input.depositType,
@@ -72,10 +78,20 @@ export function memoryCreateSignRequest(input: RentalSignRequestInput): SignRequ
   };
 }
 
+function memoryMarkExpiredIfNeeded(row: StoredSignRequest): void {
+  if (row.status !== 'pending' || !isSignPastExpiry(row.expiresAt)) return;
+  row.status = 'expired';
+  pushEvent(row.id, 'expired');
+}
+
 export function memoryGetPublicSignView(requestId: string, token: string): SignRequestPublicView | null {
   const row = signStore.get(requestId);
   if (!row) return null;
   if (row.tokenHash !== hashValue(token)) return null;
+  if (row.status === 'revoked') return null;
+  if (row.status === 'pending') memoryMarkExpiredIfNeeded(row);
+  if (row.status === 'expired') return null;
+  if (row.status !== 'pending' && row.status !== 'signed') return null;
   pushEvent(requestId, 'viewed');
   return {
     id: row.id,
@@ -96,6 +112,9 @@ export function memoryGetContractForToken(
 ): StoredSignRequest['contract'] | null {
   const row = signStore.get(requestId);
   if (!row || row.tokenHash !== hashValue(token)) return null;
+  if (row.status === 'revoked') return null;
+  memoryMarkExpiredIfNeeded(row);
+  if (row.status !== 'pending') return null;
   return row.contract;
 }
 
@@ -104,6 +123,8 @@ export function memoryCompleteSignRequest(requestId: string, token: string): Sig
   if (!row) return null;
   if (row.status !== 'pending') return null;
   if (row.tokenHash !== hashValue(token)) return null;
+  memoryMarkExpiredIfNeeded(row);
+  if (row.status !== 'pending') return null;
   if (new Date(row.expiresAt).getTime() < Date.now()) {
     row.status = 'expired';
     pushEvent(requestId, 'expired');
@@ -129,14 +150,31 @@ export function memoryListSignRequestsByUnit(unitId: string): SignRequestListIte
     .map((r) => ({
       id: r.id,
       unitId: r.unitId,
-      status: r.status,
+      status: effectiveSignStatus(r.status, r.expiresAt),
       signerName: r.signerName ?? '—',
+      signerCpfMasked: r.signerCpfMasked,
       termMonths: r.termMonths ?? 12,
       depositType: r.depositType ?? 'caucao',
       expiresAt: r.expiresAt,
       createdAt: r.createdAt ?? r.expiresAt,
       signedAt: r.signedAt,
     }));
+}
+
+export function memoryRevokeSignRequest(requestId: string, unitId: string): SignRequestRecord | null {
+  const row = signStore.get(requestId);
+  if (!row || row.unitId !== unitId) return null;
+  if (row.status !== 'pending') return null;
+  memoryMarkExpiredIfNeeded(row);
+  if (row.status !== 'pending') return null;
+  row.status = 'revoked';
+  pushEvent(requestId, 'revoked');
+  return {
+    id: row.id,
+    unitId: row.unitId,
+    status: 'revoked',
+    expiresAt: row.expiresAt,
+  };
 }
 
 export function __resetSignStoreForTests(): void {

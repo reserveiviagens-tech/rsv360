@@ -20,6 +20,7 @@ export const crmRentalSignRequests = pgTable(
     signerEmailHash: varchar('signer_email_hash', { length: 128 }).notNull(),
     signerName: varchar('signer_name', { length: 120 }).notNull(),
     signerCpfHash: varchar('signer_cpf_hash', { length: 128 }),
+    signerCpfMasked: varchar('signer_cpf_masked', { length: 20 }),
     termMonths: integer('term_months').notNull().default(12),
     depositType: varchar('deposit_type', { length: 32 }).notNull().default('caucao'),
     contractJson: jsonb('contract_json').$type<RentalContractJson>(),

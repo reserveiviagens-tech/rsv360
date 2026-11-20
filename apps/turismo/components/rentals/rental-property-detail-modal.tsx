@@ -31,6 +31,7 @@ import { toast } from 'react-hot-toast';
 import {
   downloadRentalContractPreview,
   fetchRentalSignRequests,
+  revokeRentalSignRequest,
   requestRentalSign,
   type RentalSignListItem,
 } from '../../src/lib/rental-contract-api';
@@ -85,12 +86,16 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
     if (status === 'expired') {
       return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
     }
+    if (status === 'revoked') {
+      return 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300';
+    }
     return 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
   };
 
   const signStatusLabel = (status: RentalSignListItem['status']) => {
     if (status === 'signed') return 'Assinado';
     if (status === 'expired') return 'Expirado';
+    if (status === 'revoked') return 'Revogado';
     return 'Pendente';
   };
 
@@ -458,19 +463,37 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
                     {signRequests.map((req) => (
                       <div
                         key={req.id}
-                        className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-800/40"
+                        className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-800/40"
                       >
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold text-gray-900 dark:text-white">{req.signerName}</p>
                           <p className="text-[10px] text-gray-500">
+                            {req.signerCpfMasked ? `CPF ${req.signerCpfMasked} · ` : ''}
                             {req.termMonths} meses · {req.depositType}
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${signStatusBadge(req.status)}`}
-                        >
-                          {signStatusLabel(req.status)}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {req.status === 'pending' ? (
+                            <button
+                              type="button"
+                              className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                              onClick={() => {
+                                void revokeRentalSignRequest(req.id, item.id)
+                                  .then(() => fetchRentalSignRequests(item.id))
+                                  .then(setSignRequests)
+                                  .then(() => toast.success('Solicitação revogada'))
+                                  .catch(() => toast.error('Não foi possível revogar'));
+                              }}
+                            >
+                              Revogar
+                            </button>
+                          ) : null}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${signStatusBadge(req.status)}`}
+                          >
+                            {signStatusLabel(req.status)}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </section>
