@@ -6,10 +6,18 @@ import {
   memoryUpdateLeadStatus,
 } from './crm-leads-memory.store';
 import {
+  postgresBulkCreateLeads,
   postgresCreateLead,
   postgresListLeads,
   postgresUpdateLeadStatus,
 } from './crm-leads-postgres.repository';
+
+export type BulkCreateLeadsResult = {
+  items: LeadApiRow[];
+  idempotentReplay: boolean;
+};
+
+const bulkIdempotencyCache = new Map<string, LeadApiRow[]>();
 
 export class CrmLeadsNotFoundError extends Error {
   constructor(message = 'Lead não encontrado') {
@@ -39,6 +47,32 @@ export async function createLead(userId: number, input: CreateLeadInput): Promis
   return memoryCreateLead(input);
 }
 
+export async function bulkCreateLeads(
+  userId: number,
+  items: CreateLeadInput[],
+  idempotencyKey?: string,
+): Promise<BulkCreateLeadsResult> {
+  if (idempotencyKey) {
+    const cached = bulkIdempotencyCache.get(idempotencyKey);
+    if (cached) {
+      return { items: cached, idempotentReplay: true };
+    }
+  }
+
+  let created: LeadApiRow[];
+  if (crmLeadsUsePostgres()) {
+    created = await postgresBulkCreateLeads(userId, items);
+  } else {
+    created = items.map((input) => memoryCreateLead(input));
+  }
+
+  if (idempotencyKey) {
+    bulkIdempotencyCache.set(idempotencyKey, created);
+  }
+
+  return { items: created, idempotentReplay: false };
+}
+
 export async function updateLeadStatus(id: string, status: LeadApiStatus): Promise<LeadApiRow> {
   let updated: LeadApiRow | undefined;
   if (crmLeadsUsePostgres()) {
@@ -54,4 +88,5 @@ export async function updateLeadStatus(id: string, status: LeadApiStatus): Promi
 
 export function __resetCrmLeadsStoreForTests(): void {
   memoryResetForTests();
+  bulkIdempotencyCache.clear();
 }

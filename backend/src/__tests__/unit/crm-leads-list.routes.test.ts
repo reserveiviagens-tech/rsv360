@@ -110,6 +110,57 @@ describe('CRM leads — GET / and PATCH /:id/status', () => {
     expect(res.body.success).toBe(false);
   });
 
+  it('POST /bulk creates up to 25 leads', async () => {
+    const res = await request(buildApp())
+      .post('/api/v1/leads/bulk')
+      .set(authHeaders('corretor', 42))
+      .send({
+        items: [
+          { clientName: 'Bulk Um', source: 'bulk' },
+          { clientName: 'Bulk Dois', clientEmail: 'bulk.dois@example.com' },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.count).toBe(2);
+    expect(res.body.data.idempotentReplay).toBe(false);
+    expect(res.body.data.items[0].email).toBeDefined();
+    expect(String(res.body.data.items[1].email)).toContain('•');
+  });
+
+  it('POST /bulk replays with idempotencyKey', async () => {
+    const key = 'test-idem-key-12345678';
+    const payload = {
+      idempotencyKey: key,
+      items: [{ clientName: 'Idem Lead', source: 'bulk' }],
+    };
+
+    const first = await request(buildApp())
+      .post('/api/v1/leads/bulk')
+      .set(authHeaders('corretor', 42))
+      .send(payload);
+    const second = await request(buildApp())
+      .post('/api/v1/leads/bulk')
+      .set(authHeaders('corretor', 42))
+      .send(payload);
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(200);
+    expect(second.body.data.idempotentReplay).toBe(true);
+    expect(second.body.data.items[0].id).toBe(first.body.data.items[0].id);
+  });
+
+  it('POST /bulk returns 400 when items exceed 25', async () => {
+    const items = Array.from({ length: 26 }, (_, i) => ({
+      clientName: `Lead ${i}`,
+    }));
+    const res = await request(buildApp())
+      .post('/api/v1/leads/bulk')
+      .set(authHeaders('corretor', 42))
+      .send({ items });
+    expect(res.status).toBe(400);
+  });
+
   it('PATCH /:id/status updates lead status', async () => {
     const list = await request(buildApp())
       .get('/api/v1/leads')
