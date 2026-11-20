@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
-import { patchLeadStatusBodySchema } from '../schema';
+import { createLeadBodySchema, patchLeadStatusBodySchema } from '../schema';
 import {
   CrmLeadsNotFoundError,
+  createLead,
   listLeadsAsync,
   updateLeadStatus,
 } from '../services/crm-leads.service';
@@ -14,6 +15,14 @@ const parceiroAuth = [
   requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
 ];
 
+function requireUserId(req: Request): number {
+  const userId = req.user?.id;
+  if (typeof userId !== 'number') {
+    throw new Error('Usuário não autenticado');
+  }
+  return userId;
+}
+
 router.get('/health', (_req, res) => {
   res.json({ module: 'crm-leads', status: 'ok' });
 });
@@ -24,6 +33,25 @@ router.get('/', ...parceiroAuth, async (_req, res) => {
     res.json({ success: true, data: { items } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/', ...parceiroAuth, async (req, res) => {
+  try {
+    const parsed = createLeadBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payload inválido',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const userId = requireUserId(req);
+    const created = await createLead(userId, parsed.data);
+    return res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 

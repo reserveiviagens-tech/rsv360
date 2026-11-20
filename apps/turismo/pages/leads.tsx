@@ -164,7 +164,7 @@ export const SAMPLE_LEADS: LeadItem[] = [
 function LeadsPageContent() {
   const router = useRouter();
   const { copy } = useCrmLocale();
-  const [selectedId, setSelectedId] = useState<string>('l1');
+  const [selectedId, setSelectedId] = useState<string>('');
   const [filter, setFilter] = useState<'all' | 'hot' | 'new'>('all');
   const [search, setSearch] = useState('');
   const [convertedNotice, setConvertedNotice] = useState<string | null>(null);
@@ -189,12 +189,23 @@ function LeadsPageContent() {
         notes: l.notes,
       })),
     }).then((loaded) => {
-      if (!cancelled) setLeads(loaded);
+      if (!cancelled) {
+        setLeads(loaded);
+        setSelectedId((prev) => prev || loaded[0]?.id || '');
+      }
     });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = router.query.lead;
+    if (typeof q === 'string' && q.trim()) {
+      setSelectedId(q);
+    }
+  }, [router.isReady, router.query.lead]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -522,10 +533,17 @@ function LeadsPageContent() {
               {(selectedLead.dealId || createdDealId) && (
                 <button
                   type="button"
-                  onClick={() => router.push('/deals')}
+                  onClick={() => {
+                    const dealKey = selectedLead.dealId || createdDealId;
+                    if (!dealKey) return;
+                    void router.push({
+                      pathname: '/deals',
+                      query: { deal: dealKey },
+                    });
+                  }}
                   className="w-full h-10 rounded-full border border-[#2f5bea]/30 text-[#2f5bea] font-bold text-xs flex items-center justify-center gap-2 hover:bg-[#2f5bea]/5 transition-colors"
                 >
-                  <ArrowUpRight className="w-4 h-4" /> Ver pipeline de Deals
+                  <ArrowUpRight className="w-4 h-4" /> Ver deal no pipeline
                 </button>
               )}
               <button
