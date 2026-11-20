@@ -78,6 +78,29 @@ export async function requestRentalSign(body: {
   return json.data;
 }
 
+export type RentalSignAuditEvent = {
+  id: string;
+  eventType: string;
+  label: string;
+  occurredAt: string;
+  actor?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export async function fetchRentalSignEvents(
+  requestId: string,
+  unitId: string,
+): Promise<RentalSignAuditEvent[]> {
+  const q = new URLSearchParams({ unitId });
+  const res = await fetch(
+    `${fase1ApiBase()}/api/v1/rental-contracts/sign-requests/${encodeURIComponent(requestId)}/events?${q}`,
+    { headers: authHeaders() },
+  );
+  const json = (await res.json()) as { success: boolean; data?: { items: RentalSignAuditEvent[] } };
+  if (!res.ok || !json.success) throw new Error('Falha ao carregar auditoria');
+  return json.data?.items ?? [];
+}
+
 export async function revokeRentalSignRequest(requestId: string, unitId: string): Promise<void> {
   const res = await fetch(
     `${fase1ApiBase()}/api/v1/rental-contracts/sign/${encodeURIComponent(requestId)}/revoke?unitId=${encodeURIComponent(unitId)}`,

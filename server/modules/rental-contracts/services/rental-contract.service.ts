@@ -6,7 +6,9 @@ import {
   memoryCreateSignRequest,
   memoryGetContractForToken,
   memoryGetPublicSignView,
+  memoryListSignRequestEvents,
   memoryListSignRequestsByUnit,
+  memoryRecordSignEvent,
   memoryRevokeSignRequest,
   __resetSignStoreForTests,
 } from './rental-sign-memory.store';
@@ -15,9 +17,12 @@ import {
   postgresCreateSignRequest,
   postgresGetContractForToken,
   postgresGetPublicSignView,
+  postgresListSignRequestEvents,
   postgresListSignRequestsByUnit,
+  postgresRecordSignRequestEvent,
   postgresRevokeSignRequest,
 } from './rental-sign-postgres.repository';
+import { toSignAuditEvent, type SignAuditEventDto } from './rental-sign-audit.util';
 
 export type { SignRequestRecord } from './rental-contract.types';
 export { __resetSignStoreForTests };
@@ -80,9 +85,10 @@ export async function getContractPdfForToken(requestId: string, token: string): 
 export async function completeSignRequest(
   requestId: string,
   token: string,
+  audit?: { clientIp?: string },
 ): Promise<SignRequestRecord | null> {
-  if (rentalSignUsePostgres()) return postgresCompleteSignRequest(requestId, token);
-  return memoryCompleteSignRequest(requestId, token);
+  if (rentalSignUsePostgres()) return postgresCompleteSignRequest(requestId, token, audit);
+  return memoryCompleteSignRequest(requestId, token, audit);
 }
 
 export async function listSignRequestsByUnit(unitId: string): Promise<SignRequestListItem[]> {
@@ -97,6 +103,31 @@ export async function revokeSignRequest(
   if (rentalSignUsePostgres()) return postgresRevokeSignRequest(requestId, unitId);
   return memoryRevokeSignRequest(requestId, unitId);
 }
+
+export async function recordSignRequestEvent(
+  requestId: string,
+  unitId: string,
+  eventType: string,
+  metadata?: Record<string, unknown>,
+): Promise<boolean> {
+  if (rentalSignUsePostgres()) {
+    return postgresRecordSignRequestEvent(requestId, unitId, eventType, metadata);
+  }
+  return memoryRecordSignEvent(requestId, unitId, eventType, metadata);
+}
+
+export async function listSignRequestEvents(
+  requestId: string,
+  unitId: string,
+): Promise<SignAuditEventDto[] | null> {
+  const rows = rentalSignUsePostgres()
+    ? await postgresListSignRequestEvents(requestId, unitId)
+    : memoryListSignRequestEvents(requestId, unitId);
+  if (!rows) return null;
+  return rows.map((row) => toSignAuditEvent(row));
+}
+
+export type { SignAuditEventDto } from './rental-sign-audit.util';
 
 export function buildPublicSignPath(requestId: string, token: string): string {
   const q = new URLSearchParams({ requestId, token }).toString();

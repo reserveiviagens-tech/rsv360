@@ -32,6 +32,7 @@ Cobre: health → `POST sign-request` → GET público view/PDF → `POST comple
 | E3 | Abrir link em aba anônima | Página pública, PDF visível, checkbox aceite |
 | E4 | Assinar | Estado **signed**; volta ao cockpit com badge |
 | E5 | Tentar link de novo | Mensagem de já assinado ou view `signed` |
+| E6 | Botão **Histórico** na solicitação | Timeline: created, email_skipped/sent, viewed, signed (IP mascarado) |
 
 ## Manual — Deals Kanban (DnD)
 

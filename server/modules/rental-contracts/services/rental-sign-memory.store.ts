@@ -11,16 +11,29 @@ import {
   isSignPastExpiry,
   maskSignerCpf,
 } from './rental-sign-lifecycle.util';
+import { maskClientIp } from './rental-sign-audit.util';
 
 const signStore = new Map<string, StoredSignRequest>();
-const eventsStore = new Map<string, Array<{ id: string; eventType: string; at: string }>>();
+type MemoryAuditRow = {
+  id: string;
+  eventType: string;
+  at: string;
+  metadata?: Record<string, unknown>;
+};
+
+const eventsStore = new Map<string, MemoryAuditRow[]>();
 
 function hashValue(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function pushEvent(requestId: string, eventType: string): void {
-  const row = { id: `rsev_${Date.now()}`, eventType, at: new Date().toISOString() };
+function pushEvent(requestId: string, eventType: string, metadata?: Record<string, unknown>): void {
+  const row: MemoryAuditRow = {
+    id: `rsev_${Date.now()}_${randomBytes(3).toString('hex')}`,
+    eventType,
+    at: new Date().toISOString(),
+    metadata,
+  };
   const list = eventsStore.get(requestId) ?? [];
   list.push(row);
   eventsStore.set(requestId, list);
@@ -118,7 +131,11 @@ export function memoryGetContractForToken(
   return row.contract;
 }
 
-export function memoryCompleteSignRequest(requestId: string, token: string): SignRequestRecord | null {
+export function memoryCompleteSignRequest(
+  requestId: string,
+  token: string,
+  audit?: { clientIp?: string },
+): SignRequestRecord | null {
   const row = signStore.get(requestId);
   if (!row) return null;
   if (row.status !== 'pending') return null;
@@ -133,7 +150,11 @@ export function memoryCompleteSignRequest(requestId: string, token: string): Sig
 
   row.status = 'signed';
   row.signedAt = new Date().toISOString();
-  pushEvent(requestId, 'signed');
+  const maskedIp = audit?.clientIp ? maskClientIp(audit.clientIp) : undefined;
+  pushEvent(requestId, 'signed', {
+    actor: 'locatario',
+    ...(maskedIp ? { clientIp: maskedIp } : {}),
+  });
   return {
     id: row.id,
     unitId: row.unitId,
@@ -175,6 +196,33 @@ export function memoryRevokeSignRequest(requestId: string, unitId: string): Sign
     status: 'revoked',
     expiresAt: row.expiresAt,
   };
+}
+
+export function memoryRecordSignEvent(
+  requestId: string,
+  unitId: string,
+  eventType: string,
+  metadata?: Record<string, unknown>,
+): boolean {
+  const row = signStore.get(requestId);
+  if (!row || row.unitId !== unitId) return false;
+  pushEvent(requestId, eventType, metadata);
+  return true;
+}
+
+export function memoryListSignRequestEvents(requestId: string, unitId: string) {
+  const row = signStore.get(requestId);
+  if (!row || row.unitId !== unitId) return null;
+  const list = eventsStore.get(requestId) ?? [];
+  return list
+    .slice()
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .map((e) => ({
+      id: e.id,
+      eventType: e.eventType,
+      occurredAt: e.at,
+      metadata: e.metadata,
+    }));
 }
 
 export function __resetSignStoreForTests(): void {

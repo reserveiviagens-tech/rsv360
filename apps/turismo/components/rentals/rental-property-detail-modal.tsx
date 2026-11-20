@@ -36,6 +36,7 @@ import {
   type RentalSignListItem,
 } from '../../src/lib/rental-contract-api';
 import { RentalSignRequestModal } from './rental-sign-request-modal';
+import { RentalSignAuditPanel } from './rental-sign-audit-panel';
 
 export interface RentalPropertyDetailModalProps {
   item: RentalPortfolioItem;
@@ -78,6 +79,7 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
   const [signModalOpen, setSignModalOpen] = useState(false);
   const [signBusy, setSignBusy] = useState(false);
   const [signRequests, setSignRequests] = useState<RentalSignListItem[]>([]);
+  const [auditTarget, setAuditTarget] = useState<RentalSignListItem | null>(null);
 
   const signStatusBadge = (status: RentalSignListItem['status']) => {
     if (status === 'signed') {
@@ -473,6 +475,13 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                            onClick={() => setAuditTarget(req)}
+                          >
+                            Histórico
+                          </button>
                           {req.status === 'pending' ? (
                             <button
                               type="button"
@@ -538,6 +547,15 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
           </button>
         </div>
       </div>
+
+      {auditTarget ? (
+        <RentalSignAuditPanel
+          requestId={auditTarget.id}
+          unitId={item.id}
+          signerName={auditTarget.signerName}
+          onClose={() => setAuditTarget(null)}
+        />
+      ) : null}
 
       {signModalOpen ? (
         <RentalSignRequestModal
