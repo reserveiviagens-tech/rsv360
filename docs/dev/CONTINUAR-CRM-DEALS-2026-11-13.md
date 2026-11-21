@@ -2,6 +2,16 @@
 
 > Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-LINTEL-2026-11-11.md`.
 
+### Atualização 21/11/2026 (pós #561 — e-sign C export admin)
+
+| Item | Estado |
+|------|--------|
+| `develop` | `0a4d2b95` |
+| **#561** | Export auditoria admin CSV/JSON + UI Histórico |
+| Testes | `rental-sign` **19/19** |
+| Smoke | E8 em `SMOKE-CRM-ESIGN-KANBAN-2026-11-17.md` |
+| **Próximo** | Overview hub · ver PAUSA |
+
 ### Atualização 21/11/2026 (pós #559 — e-sign B webhook)
 
 | Item | Estado |
