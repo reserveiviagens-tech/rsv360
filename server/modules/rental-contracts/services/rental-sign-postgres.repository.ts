@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { db } from '../../../../backend/src/db/drizzle';
 import { crmRentalSignEvents, crmRentalSignRequests } from '../../../../backend/src/db/schema/crm-rental-sign';
 import type { RentalSignRequestInput } from '../schema';
@@ -14,6 +14,11 @@ import {
   maskSignerCpf,
 } from './rental-sign-lifecycle.util';
 import { maskClientIp } from './rental-sign-audit.util';
+import {
+  mapRawEventToExportRow,
+  SIGN_AUDIT_EXPORT_MAX_ROWS,
+  type SignAuditExportRow,
+} from './rental-sign-audit-export.util';
 
 function hashValue(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -276,6 +281,39 @@ export async function postgresRecordSignRequestEvent(
   if (!row || row.unitId !== unitId) return false;
   await appendEvent(requestId, eventType, metadata);
   return true;
+}
+
+export async function postgresExportSignAuditEvents(filters: {
+  unitId?: string;
+  requestId?: string;
+}): Promise<SignAuditExportRow[]> {
+  const conditions = [];
+  if (filters.unitId) {
+    conditions.push(eq(crmRentalSignRequests.unitId, filters.unitId));
+  }
+  if (filters.requestId) {
+    conditions.push(eq(crmRentalSignEvents.signRequestId, filters.requestId));
+  }
+
+  const rows = await db
+    .select({
+      event: crmRentalSignEvents,
+      unitId: crmRentalSignRequests.unitId,
+    })
+    .from(crmRentalSignEvents)
+    .innerJoin(crmRentalSignRequests, eq(crmRentalSignEvents.signRequestId, crmRentalSignRequests.id))
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(asc(crmRentalSignEvents.createdAt))
+    .limit(SIGN_AUDIT_EXPORT_MAX_ROWS);
+
+  return rows.map(({ event, unitId }) =>
+    mapRawEventToExportRow(event.signRequestId, unitId, {
+      id: event.id,
+      eventType: event.eventType,
+      occurredAt: event.createdAt.toISOString(),
+      metadata: (event.metadata as Record<string, unknown> | null) ?? undefined,
+    }),
+  );
 }
 
 export async function postgresListSignRequestEvents(requestId: string, unitId: string) {

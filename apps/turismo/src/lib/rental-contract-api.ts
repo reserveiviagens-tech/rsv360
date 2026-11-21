@@ -87,6 +87,21 @@ export type RentalSignAuditEvent = {
   metadata?: Record<string, unknown>;
 };
 
+export async function downloadRentalSignAuditExport(params: {
+  format: 'csv' | 'json';
+  unitId: string;
+  requestId?: string;
+}): Promise<Blob> {
+  const q = new URLSearchParams({ format: params.format, unitId: params.unitId });
+  if (params.requestId) q.set('requestId', params.requestId);
+  const res = await fetch(
+    `${fase1ApiBase()}/api/v1/rental-contracts/admin/sign-audit/export?${q}`,
+    { headers: authHeaders() },
+  );
+  if (!res.ok) throw new Error('Exportação indisponível ou sem permissão');
+  return res.blob();
+}
+
 export async function fetchRentalSignEvents(
   requestId: string,
   unitId: string,

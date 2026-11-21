@@ -14,10 +14,12 @@ import {
   getContractPdfForToken,
   getPublicSignView,
   listSignRequestsByUnit,
+  exportSignAuditForAdmin,
   listSignRequestEvents,
   recordSignRequestEvent,
   revokeSignRequest,
 } from '../services/rental-contract.service';
+import { signAuditRowsToCsv } from '../services/rental-sign-audit-export.util';
 import { maskClientIp } from '../services/rental-sign-audit.util';
 import { sendRentalSignInviteEmail } from '../services/rental-sign-email.service';
 import {
@@ -31,6 +33,8 @@ const parceiroAuth = [
   authenticateJwt,
   requireRole('anfitriao', 'corretor', 'agente', 'promotor', 'admin', 'manager'),
 ];
+
+const adminAuth = [authenticateJwt, requireRole('admin', 'manager')];
 
 const publicSignLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -60,6 +64,29 @@ function partnerActor(req: Request): string {
 
 router.get('/health', (_req, res) => {
   res.json({ module: 'rental-contracts', status: 'ok' });
+});
+
+router.get('/admin/sign-audit/export', ...adminAuth, async (req, res) => {
+  const format = String(req.query.format ?? 'json').toLowerCase() === 'csv' ? 'csv' : 'json';
+  const unitId = String(req.query.unitId ?? '').trim() || undefined;
+  const requestId = String(req.query.requestId ?? '').trim() || undefined;
+
+  try {
+    const items = await exportSignAuditForAdmin({ unitId, requestId });
+    if (format === 'csv') {
+      const csv = signAuditRowsToCsv(items);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        'attachment; filename="rental-sign-audit.csv"',
+      );
+      return res.status(200).send(csv);
+    }
+
+    return res.json({ success: true, data: { items, count: items.length } });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: (error as Error).message });
+  }
 });
 
 router.post('/sign/:requestId/revoke', ...parceiroAuth, async (req, res) => {
