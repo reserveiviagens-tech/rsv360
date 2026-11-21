@@ -47,8 +47,15 @@ function authHeaders(role: string, userId: number) {
 }
 
 describe('Rental sign audit export (admin)', () => {
+  const prevRateMax = process.env.RENTAL_SIGN_AUDIT_EXPORT_RATE_MAX;
+
   beforeEach(() => {
     __resetSignStoreForTests();
+    delete process.env.RENTAL_SIGN_AUDIT_EXPORT_RATE_MAX;
+  });
+
+  afterEach(() => {
+    process.env.RENTAL_SIGN_AUDIT_EXPORT_RATE_MAX = prevRateMax;
   });
 
   it('returns 403 for corretor', async () => {
@@ -107,5 +114,38 @@ describe('Rental sign audit export (admin)', () => {
     expect(res.headers['content-type']).toMatch(/text\/csv/);
     expect(res.text).toContain('event_id');
     expect(res.text).toContain('created');
+  });
+
+  it('returns 429 when export rate limit exceeded', async () => {
+    process.env.RENTAL_SIGN_AUDIT_EXPORT_RATE_MAX = '2';
+    const app = buildApp();
+    const headers = authHeaders('admin', 77);
+
+    expect((await request(app).get('/api/v1/rental-contracts/admin/sign-audit/export').set(headers)).status).toBe(200);
+    expect((await request(app).get('/api/v1/rental-contracts/admin/sign-audit/export').set(headers)).status).toBe(200);
+    const third = await request(app).get('/api/v1/rental-contracts/admin/sign-audit/export').set(headers);
+    expect(third.status).toBe(429);
+    expect(third.body.success).toBe(false);
+  });
+});
+
+describe('Rental sign webhook metrics (admin)', () => {
+  it('returns 403 for corretor', async () => {
+    const res = await request(buildApp())
+      .get('/api/v1/rental-contracts/admin/sign-webhook/metrics')
+      .set(authHeaders('corretor', 1));
+    expect(res.status).toBe(403);
+  });
+
+  it('returns counters for admin', async () => {
+    const res = await request(buildApp())
+      .get('/api/v1/rental-contracts/admin/sign-webhook/metrics')
+      .set(authHeaders('admin', 1));
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toMatchObject({
+      delivered: expect.any(Number),
+      failed: expect.any(Number),
+    });
   });
 });

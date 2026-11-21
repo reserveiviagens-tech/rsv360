@@ -35,6 +35,8 @@ Cobre: health → `POST sign-request` → GET público view/PDF → `POST comple
 | E6 | Botão **Histórico** na solicitação | Timeline: created, email_skipped/sent, viewed, signed (IP mascarado) |
 | E7 | Webhook pós-assinatura | Com `RENTAL_SIGN_WEBHOOK_URL` + `RENTAL_SIGN_WEBHOOK_SECRET` no backend; após E4 evento **webhook_delivered** ou replay `POST …/sign-requests/:id/webhook/replay?unitId=` |
 | E8 | Export auditoria (admin) | Login **admin/manager** → Histórico → **Exportar CSV/JSON** ou `GET …/admin/sign-audit/export?unitId=&requestId=` |
+| E8b | Rate limit export | Acima do teto (`RENTAL_SIGN_AUDIT_EXPORT_RATE_MAX`, default 30/15min por user) → **429** |
+| E7b | Métricas webhook | `GET …/admin/sign-webhook/metrics` (admin/manager) — contadores delivered/failed/skipped |
 
 Variáveis (backend, **não** commitar valores):
 

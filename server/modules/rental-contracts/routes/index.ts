@@ -1,5 +1,5 @@
 import { Router, type Request } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { authenticateJwt, requireRole } from '../../../middleware/auth.middleware';
 import {
   rentalContractPreviewSchema,
@@ -26,6 +26,7 @@ import {
   deliverRentalSignCompletedWebhook,
   enqueueRentalSignCompletedWebhook,
 } from '../services/rental-sign-webhook.service';
+import { getRentalSignWebhookMetrics } from '../services/rental-sign-webhook.metrics';
 
 const router = Router();
 
@@ -35,6 +36,28 @@ const parceiroAuth = [
 ];
 
 const adminAuth = [authenticateJwt, requireRole('admin', 'manager')];
+
+function adminExportRateMax(): number {
+  const raw = process.env.RENTAL_SIGN_AUDIT_EXPORT_RATE_MAX?.trim();
+  const n = raw ? Number.parseInt(raw, 10) : 30;
+  return Number.isFinite(n) && n > 0 ? n : 30;
+}
+
+const adminSignAuditExportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: () => adminExportRateMax(),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const user = (req as Request & { user?: { id?: number } }).user;
+    if (user?.id != null) return `audit-export:user:${user.id}`;
+    return `audit-export:${ipKeyGenerator(req.ip ?? '', 56)}`;
+  },
+  message: {
+    success: false,
+    error: 'Limite de exportações atingido. Tente novamente em instantes.',
+  },
+});
 
 const publicSignLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -66,7 +89,11 @@ router.get('/health', (_req, res) => {
   res.json({ module: 'rental-contracts', status: 'ok' });
 });
 
-router.get('/admin/sign-audit/export', ...adminAuth, async (req, res) => {
+router.get('/admin/sign-webhook/metrics', ...adminAuth, (_req, res) => {
+  return res.json({ success: true, data: getRentalSignWebhookMetrics() });
+});
+
+router.get('/admin/sign-audit/export', ...adminAuth, adminSignAuditExportLimiter, async (req, res) => {
   const format = String(req.query.format ?? 'json').toLowerCase() === 'csv' ? 'csv' : 'json';
   const unitId = String(req.query.unitId ?? '').trim() || undefined;
   const requestId = String(req.query.requestId ?? '').trim() || undefined;
