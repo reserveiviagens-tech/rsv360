@@ -9,6 +9,10 @@ import {
   deliverRentalSignCompletedWebhook,
   signRentalSignWebhookBody,
 } from '../../../../server/modules/rental-contracts/services/rental-sign-webhook.service';
+import {
+  __resetRentalSignWebhookMetricsForTests,
+  getRentalSignWebhookMetrics,
+} from '../../../../server/modules/rental-contracts/services/rental-sign-webhook.metrics';
 
 describe('rental sign webhook (outbound)', () => {
   const prevUrl = process.env.RENTAL_SIGN_WEBHOOK_URL;
@@ -16,6 +20,7 @@ describe('rental sign webhook (outbound)', () => {
 
   beforeEach(() => {
     __resetSignStoreForTests();
+    __resetRentalSignWebhookMetricsForTests();
     process.env.RENTAL_SIGN_WEBHOOK_URL = 'https://hooks.example.test/rental-sign';
     process.env.RENTAL_SIGN_WEBHOOK_SECRET = 'test-secret-32-chars-minimum!!';
   });
@@ -80,6 +85,10 @@ describe('rental sign webhook (outbound)', () => {
 
     const events = await listSignRequestEvents(created.id, 'r-webhook');
     expect(events?.some((e) => e.eventType === 'webhook_delivered')).toBe(true);
+
+    const metrics = getRentalSignWebhookMetrics();
+    expect(metrics.delivered).toBe(1);
+    expect(metrics.skipped_idempotent).toBe(1);
   });
 
   it('retries until success', async () => {

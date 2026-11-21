@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import type { SignRequestRecord } from './rental-contract.types';
 import { listSignRequestEvents, recordSignRequestEvent } from './rental-contract.service';
+import { recordRentalSignWebhookMetric } from './rental-sign-webhook.metrics';
 
 const MAX_ATTEMPTS = 3;
 
@@ -78,17 +79,20 @@ export async function deliverRentalSignCompletedWebhook(
   options?: { force?: boolean },
 ): Promise<DeliverWebhookResult> {
   if (record.status !== 'signed') {
+    recordRentalSignWebhookMetric('skipped_not_signed');
     return { delivered: false, skipped: 'not_signed' };
   }
 
   const config = getRentalSignWebhookConfig();
   if (!config) {
+    recordRentalSignWebhookMetric('skipped_webhook_disabled');
     return { delivered: false, skipped: 'webhook_disabled' };
   }
 
   if (!options?.force) {
     const already = await wasWebhookDelivered(record.id, record.unitId);
     if (already) {
+      recordRentalSignWebhookMetric('skipped_idempotent');
       return { delivered: true, skipped: 'idempotent' };
     }
   }
@@ -116,6 +120,7 @@ export async function deliverRentalSignCompletedWebhook(
           deliveryId: payload.id,
           attempt,
         });
+        recordRentalSignWebhookMetric('delivered');
         return { delivered: true };
       }
     } catch {
@@ -140,6 +145,7 @@ export async function deliverRentalSignCompletedWebhook(
     final: true,
   });
 
+  recordRentalSignWebhookMetric('failed');
   return { delivered: false };
 }
 
