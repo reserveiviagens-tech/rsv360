@@ -55,19 +55,23 @@ export function mapLeadPageCardToInbox(lead: LeadPageCard): OverviewInboxLead {
 
 export type OverviewLeadsLoadResult = {
   items: OverviewInboxLead[];
+  cards: LeadPageCard[];
   source: 'api' | 'demo';
 };
 
 export async function loadOverviewLeadsInbox(signal?: AbortSignal): Promise<OverviewLeadsLoadResult> {
   try {
     const { leadsApi } = await import('./leads-api');
-    const items = await leadsApi.list(signal);
+    const rows = await leadsApi.list(signal);
+    const cards = rows.map((row) => leadApiRowToPageCard(row));
     return {
-      items: items.map((row) => mapLeadPageCardToInbox(leadApiRowToPageCard(row))),
+      cards,
+      items: cards.map(mapLeadPageCardToInbox),
       source: 'api',
     };
   } catch {
     return {
+      cards: DEMO_FALLBACK,
       items: DEMO_FALLBACK.map(mapLeadPageCardToInbox),
       source: 'demo',
     };

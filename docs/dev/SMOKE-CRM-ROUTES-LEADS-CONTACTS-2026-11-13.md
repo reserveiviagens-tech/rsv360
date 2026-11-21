@@ -13,6 +13,7 @@
 | H5b | `/overview?tab=leads&lead=<id>` | Destaque no card do lead da API (`?lead=` alinhado a `GET /api/v1/leads`) |
 | H6 | `/overview?tab=contacts` | Carteira via overview; chips **Ver lead** / **Ver deal** quando pipeline associa nome → lead |
 | H6b | `/overview?tab=contacts&contact=<id>` | Aba contacts + destaque no card (`carteira-*` id) |
+| H7 | `/overview?tab=leads` → selecionar lead API → **Converter em deal** | Oportunidade criada; link **Ver no Kanban** → `tab=deals&deal=` |
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |
 | L1c | `/leads?lead=<id>` | Painel seleciona o lead correspondente |

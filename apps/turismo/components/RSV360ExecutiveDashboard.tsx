@@ -123,6 +123,8 @@ import {
   OVERVIEW_LEAD_STATUS_CHIPS,
   type OverviewInboxLead,
 } from '@/lib/overview-leads-inbox';
+import type { LeadPageCard } from '@/lib/overview-leads';
+import { convertOverviewLeadToDeal } from '@/lib/overview-lead-convert';
 import { buildOverviewHubPath } from '@/lib/overview-hub-links';
 import Link from 'next/link';
 import { SalesCrmModule } from './sales/sales-crm-module';
@@ -237,11 +239,58 @@ export default memo(function RSV360ExecutiveDashboard({
   const highlightedLeadId =
     typeof router.query.lead === 'string' ? router.query.lead : '';
 
+  const selectedOverviewLead = useMemo(() => {
+    const id = selectedOverviewLeadId || highlightedLeadId;
+    return leadPageCards.find((l) => l.id === id) ?? leadPageCards[0];
+  }, [leadPageCards, selectedOverviewLeadId, highlightedLeadId]);
+
+  const handleOverviewLeadConvert = async () => {
+    if (!selectedOverviewLead || overviewLeadConverting) return;
+    if (leadsInboxSource === 'demo') {
+      setOverviewLeadConvertNotice('Conecte o backend e faça login parceiro para converter leads reais.');
+      return;
+    }
+    setOverviewLeadConverting(true);
+    setOverviewLeadConvertNotice(null);
+    try {
+      const result = await convertOverviewLeadToDeal(selectedOverviewLead);
+      const dealId = result.apiDealId ?? result.localDealId;
+      setOverviewCreatedDealId(dealId);
+      setLeadPageCards((prev) =>
+        prev.map((l) =>
+          l.id === selectedOverviewLead.id
+            ? { ...l, status: 'qualified' as const, dealId }
+            : l,
+        ),
+      );
+      setLeadsInbox((prev) =>
+        prev.map((l) =>
+          l.id === selectedOverviewLead.id ? { ...l, status: 'qualified', dealId } : l,
+        ),
+      );
+      setOverviewLeadConvertNotice(
+        `Lead "${selectedOverviewLead.name}" convertido — oportunidade criada no pipeline de deals.`,
+      );
+      window.setTimeout(() => setOverviewLeadConvertNotice(null), 7_000);
+    } catch {
+      setOverviewLeadConvertNotice('Não foi possível converter o lead. Tente novamente.');
+    } finally {
+      setOverviewLeadConverting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const lead = typeof router.query.lead === 'string' ? router.query.lead.trim() : '';
+    if (lead) setSelectedOverviewLeadId(lead);
+  }, [router.isReady, router.query.lead]);
+
   useEffect(() => {
     if (activeTab !== 'leads') return;
     const controller = new AbortController();
     setLeadsInboxLoading(true);
     void loadOverviewLeadsInbox(controller.signal).then((result) => {
+      setLeadPageCards(result.cards);
       setLeadsInbox(result.items);
       setLeadsInboxSource(result.source);
       setLeadsInboxLoading(false);
@@ -377,8 +426,13 @@ export default memo(function RSV360ExecutiveDashboard({
   const [leadStatus, setLeadStatus] = useState<'all' | 'new' | 'contacted' | 'qualified'>('all');
   const [leadSearch, setLeadSearch] = useState('');
   const [leadsInbox, setLeadsInbox] = useState<OverviewInboxLead[]>([]);
+  const [leadPageCards, setLeadPageCards] = useState<LeadPageCard[]>([]);
   const [leadsInboxLoading, setLeadsInboxLoading] = useState(false);
   const [leadsInboxSource, setLeadsInboxSource] = useState<'api' | 'demo' | 'idle'>('idle');
+  const [selectedOverviewLeadId, setSelectedOverviewLeadId] = useState('');
+  const [overviewLeadConvertNotice, setOverviewLeadConvertNotice] = useState<string | null>(null);
+  const [overviewCreatedDealId, setOverviewCreatedDealId] = useState<string | null>(null);
+  const [overviewLeadConverting, setOverviewLeadConverting] = useState(false);
 
   // Filtros de Deals (Kanban)
   const [dealType, setDealType] = useState<'all' | 'sale' | 'rent'>('all');
@@ -1948,6 +2002,22 @@ export default memo(function RSV360ExecutiveDashboard({
         {/* ========================================================================= */}
         {activeTab === 'leads' && (
           <div className="flex flex-col gap-5">
+            {overviewLeadConvertNotice && (
+              <div className="rounded-2xl bg-[#138a6315] border border-[#138a6340] px-4 py-3 text-xs font-bold text-[#138a63] flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden />
+                  {overviewLeadConvertNotice}
+                </span>
+                {overviewCreatedDealId && (
+                  <Link
+                    href={buildOverviewHubPath({ tab: 'deals', deal: overviewCreatedDealId })}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#138a63] px-3.5 py-1 text-xs font-bold text-white hover:bg-[#0f6b4d] transition-colors shadow-xs"
+                  >
+                    Ver no Kanban <ArrowUpRight className="w-3.5 h-3.5" aria-hidden />
+                  </Link>
+                )}
+              </div>
+            )}
             {/* Header da aba Leads */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white leading-none">
@@ -2034,6 +2104,19 @@ export default memo(function RSV360ExecutiveDashboard({
                       Mais recentes <ChevronDown className="w-3 h-3" />
                     </button>
                     <button
+                      type="button"
+                      disabled={
+                        overviewLeadConverting ||
+                        leadsInboxSource === 'demo' ||
+                        !selectedOverviewLead ||
+                        Boolean(selectedOverviewLead.dealId)
+                      }
+                      onClick={() => void handleOverviewLeadConvert()}
+                      className="px-4 py-1.5 rounded-full border border-[#138a63] text-[#138a63] text-xs font-bold flex items-center gap-1 hover:bg-[#138a63]/10 disabled:opacity-40 transition-all"
+                    >
+                      {overviewLeadConverting ? 'Convertendo…' : 'Converter em deal'}
+                    </button>
+                    <button
                       onClick={() => {
                         setNewContactForm(prev => ({ ...prev, kind: 'buyer' }));
                         setShowNewContactModal(true);
@@ -2108,8 +2191,14 @@ export default memo(function RSV360ExecutiveDashboard({
                     filteredLeads.map((lead) => (
                     <div
                       key={lead.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedOverviewLeadId(lead.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') setSelectedOverviewLeadId(lead.id);
+                      }}
                       className={`p-3.5 rounded-2xl bg-white/80 dark:bg-[#1d222c] border transition-all flex items-center gap-3.5 shadow-2xs group cursor-pointer ${
-                        highlightedLeadId === lead.id
+                        highlightedLeadId === lead.id || selectedOverviewLeadId === lead.id
                           ? 'border-[#2f5bea] ring-2 ring-[#2f5bea]/30'
                           : 'border-gray-100 dark:border-white/5 hover:border-[#2f5bea]/40'
                       }`}
