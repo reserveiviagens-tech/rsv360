@@ -26,6 +26,7 @@ import { fetchLeads, LeadPageCard } from '@/lib/overview-leads';
 import { convertLeadToDealRecord, saveConvertedDeal } from '@/lib/lead-to-deal';
 import { dealsApi } from '@/lib/deals-api';
 import { leadsApi } from '@/lib/leads-api';
+import { useOverviewHubRedirect } from '@/lib/use-overview-hub-redirect';
 
 export interface LeadItem {
   id: string;
@@ -164,6 +165,7 @@ export const SAMPLE_LEADS: LeadItem[] = [
 function LeadsPageContent() {
   const router = useRouter();
   const { copy } = useCrmLocale();
+  const redirecting = useOverviewHubRedirect('leads');
   const [selectedId, setSelectedId] = useState<string>('');
   const [filter, setFilter] = useState<'all' | 'hot' | 'new'>('all');
   const [search, setSearch] = useState('');
@@ -277,6 +279,10 @@ function LeadsPageContent() {
       setConvertedNotice('Erro ao converter lead em oportunidade.');
     }
   };
+
+  if (redirecting) {
+    return <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0f1116]" aria-busy="true" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 dark:bg-[#0f1116] dark:text-slate-100">

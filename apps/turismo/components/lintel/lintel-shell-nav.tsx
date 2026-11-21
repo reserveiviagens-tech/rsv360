@@ -15,9 +15,9 @@ export const LintelShellNav = React.memo(function LintelShellNav() {
     { href: '/overview', label: copy.nav.overview },
     { href: '/overview?tab=rentals', label: copy.nav.rentals },
     { href: '/overview?tab=sales', label: copy.nav.sales },
-    { href: '/deals', label: copy.nav.deals },
-    { href: '/leads', label: copy.nav.leads, badge: 4 as const },
-    { href: '/contacts', label: copy.nav.contacts },
+    { href: '/overview?tab=deals', label: copy.nav.deals },
+    { href: '/overview?tab=leads', label: copy.nav.leads, badge: 4 as const },
+    { href: '/overview?tab=contacts', label: copy.nav.contacts },
   ] as const;
 
   const isActive = (href: string) => {
@@ -26,7 +26,12 @@ export const LintelShellNav = React.memo(function LintelShellNav() {
       return path === '/rentals' || (path === '/overview' && router.query.tab === 'rentals');
     if (href.includes('tab=sales'))
       return path === '/sales' || (path === '/overview' && router.query.tab === 'sales');
-    if (href === '/contacts') return path === '/contacts' || (path === '/overview' && router.query.tab === 'contacts');
+    if (href.includes('tab=deals'))
+      return path === '/deals' || (path === '/overview' && router.query.tab === 'deals');
+    if (href.includes('tab=leads'))
+      return path === '/leads' || (path === '/overview' && router.query.tab === 'leads');
+    if (href.includes('tab=contacts'))
+      return path === '/contacts' || (path === '/overview' && router.query.tab === 'contacts');
     return path === href;
   };
 

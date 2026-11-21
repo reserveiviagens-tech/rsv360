@@ -116,6 +116,7 @@ import { LintelSemiCircularPriceGauge } from './lintel/price-gauge';
 import { RentalsCrmModule } from './rentals/rentals-crm-module';
 import { OverviewKpiStrip } from './lintel/overview-kpi-strip';
 import { DealsCrmModule } from './deals/deals-crm-module';
+import { OverviewHubCrossNav } from './lintel/overview-hub-cross-nav';
 import { SalesCrmModule } from './sales/sales-crm-module';
 import {
   findSalesListingBySlug,
@@ -196,6 +197,30 @@ export default memo(function RSV360ExecutiveDashboard({
     const deal = typeof router.query.deal === 'string' ? router.query.deal : '';
     if (deal) setActiveTab('deals');
   }, [router.isReady, router.query.deal]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const lead = typeof router.query.lead === 'string' ? router.query.lead : '';
+    if (lead) setActiveTab('leads');
+  }, [router.isReady, router.query.lead]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const rental = typeof router.query.rental === 'string' ? router.query.rental : '';
+    if (rental) setActiveTab('rentals');
+  }, [router.isReady, router.query.rental]);
+
+  const hubDeepLinkContext = useMemo(() => {
+    const q = router.query;
+    return {
+      dealId: typeof q.deal === 'string' ? q.deal : undefined,
+      leadId: typeof q.lead === 'string' ? q.lead : undefined,
+      rentalId: typeof q.rental === 'string' ? q.rental : undefined,
+    };
+  }, [router.query.deal, router.query.lead, router.query.rental]);
+
+  const highlightedLeadId =
+    typeof router.query.lead === 'string' ? router.query.lead : '';
 
   const selectCrmTab = (id: CrmShellTab) => {
     setActiveTab(id);
@@ -1883,6 +1908,19 @@ export default memo(function RSV360ExecutiveDashboard({
 
         {!viewingPropertyDetail && (
           <>
+        {(activeTab === 'deals' ||
+          activeTab === 'leads' ||
+          activeTab === 'contacts' ||
+          activeTab === 'rentals') && (
+          <div className="mb-5">
+            <OverviewHubCrossNav
+              activeTab={activeTab}
+              dealId={hubDeepLinkContext.dealId}
+              leadId={hubDeepLinkContext.leadId}
+              rentalId={hubDeepLinkContext.rentalId}
+            />
+          </div>
+        )}
         {/* ========================================================================= */}
         {/* ABA: LEADS (Lead Inbox - 100% Funcional e com todos os 14 leads)           */}
         {/* ========================================================================= */}
@@ -2028,7 +2066,11 @@ export default memo(function RSV360ExecutiveDashboard({
                   {filteredLeads.map(lead => (
                     <div
                       key={lead.id}
-                      className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#1d222c] border border-gray-100 dark:border-white/5 hover:border-[#2f5bea]/40 transition-all flex items-center gap-3.5 shadow-2xs group cursor-pointer"
+                      className={`p-3.5 rounded-2xl bg-white/80 dark:bg-[#1d222c] border transition-all flex items-center gap-3.5 shadow-2xs group cursor-pointer ${
+                        highlightedLeadId === lead.id
+                          ? 'border-[#2f5bea] ring-2 ring-[#2f5bea]/30'
+                          : 'border-gray-100 dark:border-white/5 hover:border-[#2f5bea]/40'
+                      }`}
                     >
                       {/* Avatar / Inicial */}
                       <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 text-gray-800 dark:text-white font-black flex items-center justify-center text-xs flex-none shadow-xs">

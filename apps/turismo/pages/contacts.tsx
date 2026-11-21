@@ -35,6 +35,7 @@ import {
   resolvePipelineForContact,
 } from '@/lib/crm-contact-pipeline';
 import { leadApiRowToPageCard, type LeadApiRow } from '@/lib/overview-leads';
+import { useOverviewHubRedirect } from '@/lib/use-overview-hub-redirect';
 
 export interface Contact {
   id: string;
@@ -163,6 +164,7 @@ export const INITIAL_CONTACTS: Contact[] = [
 
 function ContactsPageContent() {
   const { copy } = useCrmLocale();
+  const redirecting = useOverviewHubRedirect('contacts');
   const { user } = useAuth();
   const role = String(user?.role ?? '');
   const { data: carteiraData, isLoading, isError } = useOverviewCarteiraVinculos();
@@ -359,6 +361,10 @@ function ContactsPageContent() {
       setBulkError(err instanceof Error ? err.message : 'Falha ao importar lote.');
     }
   };
+
+  if (redirecting) {
+    return <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0f1116]" aria-busy="true" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 dark:bg-[#0f1116] dark:text-slate-100">
