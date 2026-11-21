@@ -2,6 +2,16 @@
 
 > Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-LINTEL-2026-11-11.md`.
 
+### Atualização 21/11/2026 (pós #557 — Leads A2 bulk)
+
+| Item | Estado |
+|------|--------|
+| `develop` | `c39cba74` |
+| **#557** | `POST /api/v1/leads/bulk`, modal Importar lote em `/contacts` |
+| Testes | `crm-leads-list` **10/10** |
+| Checkpoint | `docs/dev/PAUSA-CRM-2026-11-18.md` (A2 fechado) |
+| **Próximo** | **B** webhook pós-assinatura · ver PAUSA |
+
 ### Atualização 20/11/2026 (pós #554 / #555 — Leads & Contatos A1)
 
 | Item | Estado |
