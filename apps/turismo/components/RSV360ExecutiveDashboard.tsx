@@ -117,6 +117,14 @@ import { RentalsCrmModule } from './rentals/rentals-crm-module';
 import { OverviewKpiStrip } from './lintel/overview-kpi-strip';
 import { DealsCrmModule } from './deals/deals-crm-module';
 import { OverviewHubCrossNav } from './lintel/overview-hub-cross-nav';
+import {
+  countLeadsByStatus,
+  loadOverviewLeadsInbox,
+  OVERVIEW_LEAD_STATUS_CHIPS,
+  type OverviewInboxLead,
+} from '@/lib/overview-leads-inbox';
+import { buildOverviewHubPath } from '@/lib/overview-hub-links';
+import Link from 'next/link';
 import { SalesCrmModule } from './sales/sales-crm-module';
 import {
   findSalesListingBySlug,
@@ -221,6 +229,20 @@ export default memo(function RSV360ExecutiveDashboard({
 
   const highlightedLeadId =
     typeof router.query.lead === 'string' ? router.query.lead : '';
+
+  useEffect(() => {
+    if (activeTab !== 'leads') return;
+    const controller = new AbortController();
+    setLeadsInboxLoading(true);
+    void loadOverviewLeadsInbox(controller.signal).then((result) => {
+      setLeadsInbox(result.items);
+      setLeadsInboxSource(result.source);
+      setLeadsInboxLoading(false);
+    });
+    return () => {
+      controller.abort();
+    };
+  }, [activeTab]);
 
   const selectCrmTab = (id: CrmShellTab) => {
     setActiveTab(id);
@@ -345,8 +367,11 @@ export default memo(function RSV360ExecutiveDashboard({
 
   // Filtros de Leads
   const [leadIntent, setLeadIntent] = useState<'all' | 'buy' | 'rent' | 'sell'>('all');
-  const [leadStatus, setLeadStatus] = useState<'all' | 'new' | 'contacted' | 'qualified' | 'viewing' | 'converted' | 'lost'>('all');
+  const [leadStatus, setLeadStatus] = useState<'all' | 'new' | 'contacted' | 'qualified'>('all');
   const [leadSearch, setLeadSearch] = useState('');
+  const [leadsInbox, setLeadsInbox] = useState<OverviewInboxLead[]>([]);
+  const [leadsInboxLoading, setLeadsInboxLoading] = useState(false);
+  const [leadsInboxSource, setLeadsInboxSource] = useState<'api' | 'demo' | 'idle'>('idle');
 
   // Filtros de Deals (Kanban)
   const [dealType, setDealType] = useState<'all' | 'sale' | 'rent'>('all');
@@ -736,31 +761,21 @@ export default memo(function RSV360ExecutiveDashboard({
     { name: 'Henrik', action: 'fechou venda de Linden Long House por $1.56M', prop: 'Linden Long House', time: '4 d ago', avImg: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=60&q=80' }
   ];
 
-  // 5. LISTA COMPLETA DOS 14 LEADS (Inclusão fiel com todas as métricas)
-  const leadsData = [
-    { id: 'l1', name: 'Nadia Petrova', status: 'new', intent: 'buy', amount: '$1.25M', area: 'La Jolla', beds: '4 bd', msg: 'Saw Hollis on your site — is the garden south-facing?', src: 'Website', time: '34 min ago', score: 65, thumb: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=120&q=80', initials: 'NP' },
-    { id: 'l2', name: 'Chris Navarro', status: 'new', intent: 'buy', amount: '$780K', area: 'Julian', beds: '2 bd', msg: 'Is Mistfield Cabin still available? Could view Sunday.', src: 'Listing portal', time: '1 h ago', score: 81, thumb: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=120&q=80', initials: 'CN' },
-    { id: 'l6', name: 'Fatima Zahra', status: 'new', intent: 'sell', amount: '$2M', area: 'Del Mar', beds: '4 bd', msg: 'Thinking of selling our place on Camino Del Mar this year.', src: 'Website', time: '2 h ago', score: 74, initials: 'FZ' },
-    { id: 'l12', name: 'Isabel Duarte', status: 'new', intent: 'rent', amount: '$4,500/mo', area: 'Downtown', beds: '2 bd', msg: 'Is the Northbank loft with the mezzanine still open?', src: 'Listing portal', time: '4 h ago', score: 72, thumb: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=120&q=80', initials: 'ID' },
-    { id: 'l9', name: 'Tomás Silva', status: 'viewing', intent: 'rent', amount: '$6,800/mo', area: 'Rancho Santa Fe', beds: '3 bd', msg: 'Furnished for a year while we build.', src: 'Walk-in', time: '1 d ago', score: 84, thumb: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=120&q=80', initials: 'TS' },
-    { id: 'l8', name: 'Mei Lin', status: 'qualified', intent: 'buy', amount: '$3.4M', area: 'Del Mar', beds: '4 bd', msg: 'Referred by Omar Saleh. Wants ocean, nothing else.', src: 'Referral', time: '4 d ago', score: 72, thumb: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=120&q=80', initials: 'ML' },
-    { id: 'l14', name: 'Ama Owusu', status: 'qualified', intent: 'sell', amount: '$1.1M', area: 'North Park', beds: '3 bd', msg: 'Valuation for a craftsman bungalow on 30th Street.', src: 'Website', time: 'Oct 21', score: 77, initials: 'AO' },
-    { id: 'l7', name: 'Oliver Grant', status: 'contacted', intent: 'rent', amount: '$3,300/mo', area: 'North Park', beds: '1 bd', msg: 'Can I bring a small dog to Quayside?', src: 'Listing portal', time: 'Oct 17', score: 95, thumb: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=120&q=80', initials: 'OG' },
-    { id: 'l10', name: 'Hannah Cole', status: 'lost', intent: 'buy', amount: '$900K', area: 'Encinitas', beds: '2 bd', msg: 'Bought elsewhere — thanks!', src: 'Instagram', time: 'Oct 16', score: 15, initials: 'HC' },
-    { id: 'l11', name: 'Kofi Mensah', status: 'converted', intent: 'buy', amount: '$1.4M', area: 'Julian', beds: '3 bd', msg: 'Loved Cedar Ridge — let’s talk numbers.', src: 'Website', time: 'Oct 15', score: 72, initials: 'KM' },
-    { id: 'l3', name: 'Yuki Mori', status: 'contacted', intent: 'rent', amount: '$4,200/mo', area: 'Little Italy', beds: '2 bd', msg: 'Relocating from Tokyo with my company in July.', src: 'Referral', time: 'Oct 12', score: 56, initials: 'YM' },
-    { id: 'l5', name: 'Jonas Becker', status: 'viewing', intent: 'buy', amount: '$1.15M', area: 'Encinitas', beds: '3 bd', msg: 'Came to Larchwood on Sunday, want a second look.', src: 'Open house', time: 'Oct 13', score: 78, thumb: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=120&q=80', initials: 'JB' },
-    { id: 'l4', name: 'Elena Rossi', status: 'qualified', intent: 'buy', amount: '$1.7M', area: 'Palm Springs', beds: '3 bd', msg: 'The desert villa reel stopped me scrolling. Pool size?', src: 'Instagram', time: 'Oct 5', score: 91, thumb: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=120&q=80', initials: 'ER' },
-    { id: 'l13', name: 'Sam Whitaker', status: 'contacted', intent: 'buy', amount: '$1.3M', area: 'La Jolla', beds: '3 bd', msg: 'Liked Hollis but the upstairs felt small. Plans?', src: 'Open house', time: 'Oct 4', score: 55, thumb: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=120&q=80', initials: 'SW' }
-  ];
-
-  // Filtragem dinâmica dos leads
-  const filteredLeads = leadsData.filter(l => {
-    if (leadIntent !== 'all' && l.intent !== leadIntent) return false;
-    if (leadStatus !== 'all' && l.status !== leadStatus) return false;
-    if (leadSearch && !l.name.toLowerCase().includes(leadSearch.toLowerCase()) && !l.msg.toLowerCase().includes(leadSearch.toLowerCase())) return false;
-    return true;
-  });
+  const filteredLeads = useMemo(() => {
+    return leadsInbox.filter((l) => {
+      if (leadIntent !== 'all' && l.intent !== leadIntent) return false;
+      if (leadStatus !== 'all' && l.status !== leadStatus) return false;
+      if (
+        leadSearch &&
+        !l.name.toLowerCase().includes(leadSearch.toLowerCase()) &&
+        !l.msg.toLowerCase().includes(leadSearch.toLowerCase()) &&
+        !l.src.toLowerCase().includes(leadSearch.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [leadsInbox, leadIntent, leadStatus, leadSearch]);
 
   // 7. DATASETS DE RENTALS
   // 9. DATASETS DE CONTACTS
@@ -1989,9 +2004,23 @@ export default memo(function RSV360ExecutiveDashboard({
               
               {/* Inbox de Leads (8 Colunas) */}
               <div className="lg:col-span-8 rounded-[26px] bg-white/70 dark:bg-[#171b23]/80 border border-white/80 dark:border-white/10 backdrop-blur-md p-5 shadow-xs flex flex-col gap-4">
+                {leadsInboxSource === 'demo' && (
+                  <div
+                    className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-100"
+                    role="status"
+                  >
+                    Dados de demonstração — faça login parceiro com backend ativo para listar leads reais.
+                  </div>
+                )}
                 <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
                   <h2 className="text-sm font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                    <Mail className="w-4 h-4 text-gray-500" /> Inbox <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{filteredLeads.length}</span>
+                    <Mail className="w-4 h-4 text-gray-500" /> Inbox{' '}
+                    <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                      {leadsInboxLoading ? '…' : filteredLeads.length}
+                    </span>
+                    {leadsInboxSource === 'api' && (
+                      <span className="text-[10px] font-bold uppercase text-[#138a63]">API</span>
+                    )}
                   </h2>
                   <div className="flex items-center gap-2">
                     <button className="px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center gap-1">
@@ -2038,32 +2067,38 @@ export default memo(function RSV360ExecutiveDashboard({
 
                 {/* Chips de Status */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold">
-                  {[
-                    { id: 'all', label: 'All', count: 14 },
-                    { id: 'new', label: 'New', count: 4 },
-                    { id: 'contacted', label: 'Contacted', count: 3 },
-                    { id: 'qualified', label: 'Qualified', count: 3 },
-                    { id: 'viewing', label: 'Viewing booked', count: 2 },
-                    { id: 'converted', label: 'Converted', count: 1 },
-                    { id: 'lost', label: 'Lost', count: 1 }
-                  ].map(st => (
+                  {OVERVIEW_LEAD_STATUS_CHIPS.map((st) => (
                     <button
                       key={st.id}
-                      onClick={() => setLeadStatus(st.id as any)}
+                      onClick={() => setLeadStatus(st.id)}
                       className={`px-3 py-1 rounded-full border transition-all flex items-center gap-1.5 whitespace-nowrap ${
                         leadStatus === st.id
                           ? 'bg-[#121722] text-white dark:bg-white dark:text-[#121722] border-transparent'
                           : 'bg-white/60 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
                       }`}
                     >
-                      {st.label} <span className="opacity-70 text-[10px]">{st.count}</span>
+                      {st.label}{' '}
+                      <span className="opacity-70 text-[10px]">
+                        {leadsInboxLoading ? '…' : countLeadsByStatus(leadsInbox, st.id)}
+                      </span>
                     </button>
                   ))}
                 </div>
 
                 {/* Lista Completa dos Leads Renderizados */}
                 <div className="flex flex-col gap-2.5">
-                  {filteredLeads.map(lead => (
+                  {leadsInboxLoading && (
+                    <p className="text-xs text-gray-500 font-semibold py-6 text-center" role="status">
+                      Carregando leads…
+                    </p>
+                  )}
+                  {!leadsInboxLoading && filteredLeads.length === 0 && (
+                    <p className="text-xs text-gray-500 font-semibold py-6 text-center">
+                      Nenhum lead encontrado para os filtros atuais.
+                    </p>
+                  )}
+                  {!leadsInboxLoading &&
+                    filteredLeads.map((lead) => (
                     <div
                       key={lead.id}
                       className={`p-3.5 rounded-2xl bg-white/80 dark:bg-[#1d222c] border transition-all flex items-center gap-3.5 shadow-2xs group cursor-pointer ${
@@ -2081,14 +2116,25 @@ export default memo(function RSV360ExecutiveDashboard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="font-bold text-xs text-gray-900 dark:text-white truncate">{lead.name}</span>
-                          <span className={`text-[10px] font-black px-2 py-0.2 rounded-full uppercase ${
-                            lead.status === 'new' ? 'bg-[#ff8a3d]/15 text-[#ff8a3d]' :
-                            lead.status === 'qualified' ? 'bg-[#2f5bea]/15 text-[#2f5bea]' :
-                            lead.status === 'viewing' ? 'bg-[#121722] text-white dark:bg-white dark:text-[#121722]' :
-                            lead.status === 'converted' ? 'bg-[#138a63]/15 text-[#138a63]' : 'bg-gray-200 text-gray-600'
-                          }`}>
+                          <span
+                            className={`text-[10px] font-black px-2 py-0.2 rounded-full uppercase ${
+                              lead.status === 'new'
+                                ? 'bg-[#ff8a3d]/15 text-[#ff8a3d]'
+                                : lead.status === 'qualified'
+                                  ? 'bg-[#2f5bea]/15 text-[#2f5bea]'
+                                  : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
                             {lead.status}
                           </span>
+                          {lead.dealId && (
+                            <Link
+                              href={buildOverviewHubPath({ tab: 'deals', deal: lead.dealId })}
+                              className="text-[10px] font-bold text-[#2f5bea] hover:underline"
+                            >
+                              Ver deal
+                            </Link>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-gray-500 font-semibold">
                           <span className="uppercase text-[#2f5bea] font-bold">{lead.intent}</span>
@@ -2109,11 +2155,6 @@ export default memo(function RSV360ExecutiveDashboard({
                         </span>
                         <span>{lead.time}</span>
                       </div>
-
-                      {/* Foto da propriedade associada (se houver) */}
-                      {lead.thumb && (
-                        <img src={lead.thumb} alt="" className="w-10 h-10 rounded-xl object-cover flex-none border border-gray-200 dark:border-gray-700" />
-                      )}
 
                       {/* Score Circular do Lead */}
                       <div className="relative w-10 h-10 flex items-center justify-center flex-none">

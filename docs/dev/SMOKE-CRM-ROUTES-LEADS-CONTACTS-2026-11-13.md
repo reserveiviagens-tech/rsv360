@@ -9,6 +9,8 @@
 | H2 | `/overview?tab=leads&lead=l1` | Aba leads + card `l1` com destaque (ring) |
 | H3 | `/deals?deal=<id>` | Redirect → `/overview?tab=deals&deal=<id>` |
 | H4 | Nav Lintel Deals/Leads/Contatos | Href `/overview?tab=…` (não rotas órfãs) |
+| H5 | `/overview?tab=leads` + login parceiro | Lista via API; badge **API**; PII mascarada; fallback demo se backend/auth falhar |
+| H5b | `/overview?tab=leads&lead=<id>` | Destaque no card do lead da API (`?lead=` alinhado a `GET /api/v1/leads`) |
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |
 | L1c | `/leads?lead=<id>` | Painel seleciona o lead correspondente |
