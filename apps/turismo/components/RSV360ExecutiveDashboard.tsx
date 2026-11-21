@@ -133,6 +133,7 @@ import {
 } from './sales/sales-data';
 import type { PortfolioMapPin } from './lintel/portfolio-map';
 import type { OverviewContactRow } from '@/lib/overview-contacts';
+import { OverviewContactsHubPanel } from '@/lib/overview-contacts-hub';
 import type { OverviewHeroListing } from '@/lib/overview-portfolio';
 
 export type OverviewListingKpis = {
@@ -211,6 +212,12 @@ export default memo(function RSV360ExecutiveDashboard({
     const lead = typeof router.query.lead === 'string' ? router.query.lead : '';
     if (lead) setActiveTab('leads');
   }, [router.isReady, router.query.lead]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const contact = typeof router.query.contact === 'string' ? router.query.contact : '';
+    if (contact) setActiveTab('contacts');
+  }, [router.isReady, router.query.contact]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -2386,81 +2393,15 @@ export default memo(function RSV360ExecutiveDashboard({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {carteiraContactsLoading && (
-                <p className="text-sm text-gray-500 col-span-full py-8 text-center lintel-shimmer">
-                  Carregando carteira…
-                </p>
-              )}
-              {!carteiraContactsLoading &&
-              effectiveContacts
-                .filter(c => contactsKindFilter === 'all' || c.kind === contactsKindFilter)
-                .filter(c => !contactsSearch || c.name.toLowerCase().includes(contactsSearch.toLowerCase()) || c.city.toLowerCase().includes(contactsSearch.toLowerCase()))
-                .map(c => (
-                  <div key={c.id} className="rounded-[22px] bg-white/70 dark:bg-[#171b23]/80 border border-white/80 dark:border-white/10 backdrop-blur-md p-4 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
-                    <div>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#2f5bea] to-[#7192ff] text-white flex items-center justify-center font-black text-sm shadow-sm">
-                            {c.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{c.name}</h4>
-                            <span className="text-[11px] text-gray-400">{c.city} · {c.agent}</span>
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full capitalize ${
-                          c.kind === 'buyer' ? 'bg-[#2f5bea]/15 text-[#2f5bea]' :
-                          c.kind === 'seller' || c.kind === 'landlord' ? 'bg-[#ff8a3d]/15 text-[#ff8a3d]' : 'bg-[#138a63]/15 text-[#138a63]'
-                        }`}>
-                          {c.kind}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5 text-xs text-gray-600 dark:text-gray-300 py-2 border-y border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5 text-gray-400" />
-                          <span className="truncate">{c.email}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{c.phone}</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3">
-                        <span className="text-[10px] text-gray-400 block font-bold uppercase">Orçamento / Pretensão</span>
-                        <b className="text-xs font-bold text-gray-900 dark:text-white">{c.budget}</b>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100 dark:border-gray-800 text-xs">
-                      <span className="text-gray-400 text-[10px]">Último contato: {c.lastContact}</span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => setCallingContact(c)}
-                          title={`Ligar para ${c.name} (${c.phone})`}
-                          className="p-1.5 rounded-full hover:bg-[#138a63]/15 text-[#138a63] dark:text-[#2feaa8] transition-all hover:scale-110"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setSelectedContactForProfile(c)}
-                          className="px-3 py-1 rounded-full bg-[#121722] text-white dark:bg-white dark:text-[#121722] font-black text-xs hover:scale-105 transition-all shadow-xs"
-                        >
-                          Profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              {!carteiraContactsLoading &&
-                effectiveContacts.length === 0 &&
-                carteiraContacts != null && (
-                  <p className="col-span-full text-center text-sm text-gray-500 py-10">
-                    Nenhum vínculo na carteira. Staff pode atribuir em{' '}
-                    <span className="font-semibold">/anfitriao/admin/carteira-corretor</span>.
-                  </p>
-                )}
+              <OverviewContactsHubPanel
+                contacts={effectiveContacts}
+                loading={carteiraContactsLoading}
+                search={contactsSearch}
+                kindFilter={contactsKindFilter}
+                fromCarteiraApi={carteiraContacts != null && carteiraContacts.length > 0}
+                onCallContact={(c) => setCallingContact(c)}
+                onOpenProfile={(c) => setSelectedContactForProfile(c)}
+              />
             </div>
           </div>
         )}

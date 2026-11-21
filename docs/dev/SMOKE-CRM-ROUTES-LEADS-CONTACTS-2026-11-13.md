@@ -11,6 +11,8 @@
 | H4 | Nav Lintel Deals/Leads/Contatos | Href `/overview?tab=…` (não rotas órfãs) |
 | H5 | `/overview?tab=leads` + login parceiro | Lista via API; badge **API**; PII mascarada; fallback demo se backend/auth falhar |
 | H5b | `/overview?tab=leads&lead=<id>` | Destaque no card do lead da API (`?lead=` alinhado a `GET /api/v1/leads`) |
+| H6 | `/overview?tab=contacts` | Carteira via overview; chips **Ver lead** / **Ver deal** quando pipeline associa nome → lead |
+| H6b | `/overview?tab=contacts&contact=<id>` | Aba contacts + destaque no card (`carteira-*` id) |
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |
 | L1c | `/leads?lead=<id>` | Painel seleciona o lead correspondente |
