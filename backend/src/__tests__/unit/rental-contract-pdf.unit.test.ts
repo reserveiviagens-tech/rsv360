@@ -10,6 +10,7 @@ describe('rental contract PDF', () => {
       monthlyRent: 4500,
       termMonths: 12,
       startDate: '2026-11-17',
+      depositType: 'caucao',
     });
 
     const head = pdf.subarray(0, 8).toString('utf8');
