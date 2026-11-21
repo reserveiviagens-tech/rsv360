@@ -20,6 +20,10 @@ import {
 } from '../services/rental-contract.service';
 import { maskClientIp } from '../services/rental-sign-audit.util';
 import { sendRentalSignInviteEmail } from '../services/rental-sign-email.service';
+import {
+  deliverRentalSignCompletedWebhook,
+  enqueueRentalSignCompletedWebhook,
+} from '../services/rental-sign-webhook.service';
 
 const router = Router();
 
@@ -215,6 +219,9 @@ router.post('/public/sign/:requestId/complete', publicSignLimiter, async (req, r
   if (!result) {
     return res.status(404).json({ success: false, error: 'Solicitação inválida' });
   }
+  if (result.status === 'signed') {
+    enqueueRentalSignCompletedWebhook(result);
+  }
   return res.json({ success: true, data: result });
 });
 
@@ -232,8 +239,40 @@ router.post('/sign/:requestId/complete', ...parceiroAuth, async (req: Request, r
   if (!result) {
     return res.status(404).json({ success: false, error: 'Solicitação inválida' });
   }
+  if (result.status === 'signed') {
+    enqueueRentalSignCompletedWebhook(result);
+  }
 
   return res.json({ success: true, data: result });
+});
+
+router.post('/sign-requests/:requestId/webhook/replay', ...parceiroAuth, async (req, res) => {
+  const requestId = String(req.params.requestId ?? '').trim();
+  const unitId = String(req.query.unitId ?? '').trim();
+  if (!requestId || !unitId) {
+    return res.status(400).json({ success: false, error: 'requestId e unitId obrigatórios' });
+  }
+
+  try {
+    const items = await listSignRequestsByUnit(unitId);
+    const item = items.find((row) => row.id === requestId);
+    if (!item || item.status !== 'signed') {
+      return res.status(404).json({ success: false, error: 'Assinatura concluída não encontrada' });
+    }
+
+    const record = {
+      id: item.id,
+      unitId: item.unitId,
+      status: 'signed' as const,
+      expiresAt: item.expiresAt,
+      signedAt: item.signedAt,
+    };
+
+    const delivery = await deliverRentalSignCompletedWebhook(record, { force: true });
+    return res.json({ success: true, data: delivery });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: (error as Error).message });
+  }
 });
 
 export default router;

@@ -33,6 +33,12 @@ Cobre: health → `POST sign-request` → GET público view/PDF → `POST comple
 | E4 | Assinar | Estado **signed**; volta ao cockpit com badge |
 | E5 | Tentar link de novo | Mensagem de já assinado ou view `signed` |
 | E6 | Botão **Histórico** na solicitação | Timeline: created, email_skipped/sent, viewed, signed (IP mascarado) |
+| E7 | Webhook pós-assinatura | Com `RENTAL_SIGN_WEBHOOK_URL` + `RENTAL_SIGN_WEBHOOK_SECRET` no backend; após E4 evento **webhook_delivered** ou replay `POST …/sign-requests/:id/webhook/replay?unitId=` |
+
+Variáveis (backend, **não** commitar valores):
+
+- `RENTAL_SIGN_WEBHOOK_URL` — HTTPS do receptor (ex.: request bin de lab)
+- `RENTAL_SIGN_WEBHOOK_SECRET` — HMAC SHA-256 (`X-RSV-Timestamp` + `X-RSV-Signature: v1=…`)
 
 ## Manual — Deals Kanban (DnD)
 

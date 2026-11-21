@@ -15,6 +15,8 @@ const EVENT_LABELS: Record<string, string> = {
   signed: 'Assinatura concluída',
   expired: 'Prazo expirado',
   revoked: 'Solicitação revogada',
+  webhook_delivered: 'Webhook pós-assinatura entregue',
+  webhook_failed: 'Falha ao entregar webhook (retry)',
 };
 
 function isForbiddenMetadataKey(key: string): boolean {
