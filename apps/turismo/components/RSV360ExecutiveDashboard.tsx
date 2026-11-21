@@ -133,6 +133,9 @@ import {
 } from './sales/sales-data';
 import type { PortfolioMapPin } from './lintel/portfolio-map';
 import type { OverviewContactRow } from '@/lib/overview-contacts';
+import type { OverviewHubTab } from '@/lib/overview-hub-links';
+import { useOverviewContactsHub } from '@/lib/overview-contacts-hub';
+import { OverviewContactsHubPanel } from '@/lib/overview-contacts-hub';
 import type { OverviewHeroListing } from '@/lib/overview-portfolio';
 
 export type OverviewListingKpis = {
