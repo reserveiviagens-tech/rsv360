@@ -82,7 +82,10 @@ export async function getContractPdfForToken(requestId: string, token: string): 
     ? await postgresGetContractForToken(requestId, token)
     : memoryGetContractForToken(requestId, token);
   if (!contract) return null;
-  return buildRentalContractPdf(contract);
+  return buildRentalContractPdf({
+    ...contract,
+    depositType: contract.depositType ?? 'caucao',
+  });
 }
 
 export async function completeSignRequest(

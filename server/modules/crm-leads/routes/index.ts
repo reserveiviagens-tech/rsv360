@@ -94,7 +94,11 @@ router.patch('/:id/status', ...parceiroAuth, async (req, res) => {
       });
     }
 
-    const updated = await updateLeadStatus(req.params.id, parsed.data.status);
+    const leadId = String(req.params.id ?? '').trim();
+    if (!leadId) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+    const updated = await updateLeadStatus(leadId, parsed.data.status);
     return res.json({ success: true, data: updated });
   } catch (error) {
     if (error instanceof CrmLeadsNotFoundError) {

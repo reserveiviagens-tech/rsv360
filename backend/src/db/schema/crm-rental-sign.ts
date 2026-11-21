@@ -8,6 +8,7 @@ export type RentalContractJson = {
   monthlyRent: number;
   termMonths: number;
   startDate: string;
+  depositType?: 'caucao' | 'fiador' | 'seguro';
 };
 
 export const crmRentalSignRequests = pgTable(
