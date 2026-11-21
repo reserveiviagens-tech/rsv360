@@ -9,6 +9,7 @@ import { LintelHeaderActions } from '../components/lintel/lintel-header-actions'
 import { LintelShellNav } from '../components/lintel/lintel-shell-nav';
 import { CrmBrandMark } from '../components/lintel/crm-brand-mark';
 import { useCrmLocale } from '../components/lintel/crm-locale-provider';
+import { useOverviewHubRedirect } from '@/lib/use-overview-hub-redirect';
 
 function DealsPageHead() {
   const { copy } = useCrmLocale();
@@ -25,6 +26,11 @@ function DealsPageHead() {
 function DealsPageContent() {
   const { copy } = useCrmLocale();
   const d = copy.deals;
+  const redirecting = useOverviewHubRedirect('deals');
+
+  if (redirecting) {
+    return <div className="min-h-screen bg-slate-50 dark:bg-[#0f1116]" aria-busy="true" />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0f1116]">
