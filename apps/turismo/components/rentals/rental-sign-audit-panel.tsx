@@ -2,7 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { History, Loader2, X } from 'lucide-react';
-import { fetchRentalSignEvents, type RentalSignAuditEvent } from '../../src/lib/rental-contract-api';
+import { useAuth } from '@/context/AuthContext';
+import {
+  downloadRentalSignAuditExport,
+  fetchRentalSignEvents,
+  type RentalSignAuditEvent,
+} from '../../src/lib/rental-contract-api';
 
 type Props = {
   requestId: string;
@@ -20,9 +25,33 @@ function formatWhen(iso: string): string {
 }
 
 export function RentalSignAuditPanel({ requestId, unitId, signerName, onClose }: Props) {
+  const { user } = useAuth();
+  const canExport = user?.role === 'admin' || user?.role === 'manager';
   const [items, setItems] = useState<RentalSignAuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<'csv' | 'json' | null>(null);
+
+  const handleExport = async (format: 'csv' | 'json') => {
+    setExporting(format);
+    try {
+      const blob = await downloadRentalSignAuditExport({
+        format,
+        unitId,
+        requestId,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rental-sign-audit-${requestId}.${format === 'csv' ? 'csv' : 'json'}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Falha ao exportar auditoria.');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   useEffect(() => {
     void fetchRentalSignEvents(requestId, unitId)
@@ -84,6 +113,26 @@ export function RentalSignAuditPanel({ requestId, unitId, signerName, onClose }:
             ))}
           </ol>
         </section>
+        {canExport ? (
+          <footer className="flex gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+            <button
+              type="button"
+              disabled={exporting !== null}
+              onClick={() => void handleExport('csv')}
+              className="flex-1 rounded-lg border border-gray-200 py-1.5 text-[10px] font-bold uppercase text-gray-700 dark:border-gray-700 dark:text-gray-200"
+            >
+              {exporting === 'csv' ? 'Exportando…' : 'Exportar CSV'}
+            </button>
+            <button
+              type="button"
+              disabled={exporting !== null}
+              onClick={() => void handleExport('json')}
+              className="flex-1 rounded-lg bg-gray-900 py-1.5 text-[10px] font-bold uppercase text-white dark:bg-white dark:text-gray-900"
+            >
+              {exporting === 'json' ? 'Exportando…' : 'Exportar JSON'}
+            </button>
+          </footer>
+        ) : null}
       </div>
     </div>
   );

@@ -12,6 +12,11 @@ import {
   maskSignerCpf,
 } from './rental-sign-lifecycle.util';
 import { maskClientIp } from './rental-sign-audit.util';
+import {
+  mapRawEventToExportRow,
+  SIGN_AUDIT_EXPORT_MAX_ROWS,
+  type SignAuditExportRow,
+} from './rental-sign-audit-export.util';
 
 const signStore = new Map<string, StoredSignRequest>();
 type MemoryAuditRow = {
@@ -223,6 +228,32 @@ export function memoryListSignRequestEvents(requestId: string, unitId: string) {
       occurredAt: e.at,
       metadata: e.metadata,
     }));
+}
+
+export function memoryExportSignAuditEvents(filters: {
+  unitId?: string;
+  requestId?: string;
+}): SignAuditExportRow[] {
+  const rows: SignAuditExportRow[] = [];
+  for (const [requestId, events] of eventsStore) {
+    const req = signStore.get(requestId);
+    if (!req) continue;
+    if (filters.unitId && req.unitId !== filters.unitId) continue;
+    if (filters.requestId && requestId !== filters.requestId) continue;
+    for (const event of events) {
+      rows.push(
+        mapRawEventToExportRow(requestId, req.unitId, {
+          id: event.id,
+          eventType: event.eventType,
+          occurredAt: event.at,
+          metadata: event.metadata,
+        }),
+      );
+    }
+  }
+  return rows
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+    .slice(0, SIGN_AUDIT_EXPORT_MAX_ROWS);
 }
 
 export function __resetSignStoreForTests(): void {

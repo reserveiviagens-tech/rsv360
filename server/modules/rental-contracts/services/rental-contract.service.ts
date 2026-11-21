@@ -6,6 +6,7 @@ import {
   memoryCreateSignRequest,
   memoryGetContractForToken,
   memoryGetPublicSignView,
+  memoryExportSignAuditEvents,
   memoryListSignRequestEvents,
   memoryListSignRequestsByUnit,
   memoryRecordSignEvent,
@@ -15,6 +16,7 @@ import {
 import {
   postgresCompleteSignRequest,
   postgresCreateSignRequest,
+  postgresExportSignAuditEvents,
   postgresGetContractForToken,
   postgresGetPublicSignView,
   postgresListSignRequestEvents,
@@ -23,6 +25,7 @@ import {
   postgresRevokeSignRequest,
 } from './rental-sign-postgres.repository';
 import { toSignAuditEvent, type SignAuditEventDto } from './rental-sign-audit.util';
+import type { SignAuditExportRow } from './rental-sign-audit-export.util';
 
 export type { SignRequestRecord } from './rental-contract.types';
 export { __resetSignStoreForTests };
@@ -133,3 +136,15 @@ export function buildPublicSignPath(requestId: string, token: string): string {
   const q = new URLSearchParams({ requestId, token }).toString();
   return `/rentals/sign?${q}`;
 }
+
+export async function exportSignAuditForAdmin(filters: {
+  unitId?: string;
+  requestId?: string;
+}): Promise<SignAuditExportRow[]> {
+  if (rentalSignUsePostgres()) {
+    return postgresExportSignAuditEvents(filters);
+  }
+  return memoryExportSignAuditEvents(filters);
+}
+
+export type { SignAuditExportRow } from './rental-sign-audit-export.util';
