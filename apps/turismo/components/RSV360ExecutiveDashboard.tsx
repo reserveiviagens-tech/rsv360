@@ -256,6 +256,7 @@ export default memo(function RSV360ExecutiveDashboard({
       const result = await convertOverviewLeadToDeal(selectedOverviewLead);
       const dealId = result.apiDealId ?? result.localDealId;
       setOverviewCreatedDealId(dealId);
+      setOverviewDealsListRefreshKey((key) => key + 1);
       setLeadPageCards((prev) =>
         prev.map((l) =>
           l.id === selectedOverviewLead.id
@@ -432,6 +433,7 @@ export default memo(function RSV360ExecutiveDashboard({
   const [selectedOverviewLeadId, setSelectedOverviewLeadId] = useState('');
   const [overviewLeadConvertNotice, setOverviewLeadConvertNotice] = useState<string | null>(null);
   const [overviewCreatedDealId, setOverviewCreatedDealId] = useState<string | null>(null);
+  const [overviewDealsListRefreshKey, setOverviewDealsListRefreshKey] = useState(0);
   const [overviewLeadConverting, setOverviewLeadConverting] = useState(false);
 
   // Filtros de Deals (Kanban)
@@ -2382,6 +2384,10 @@ export default memo(function RSV360ExecutiveDashboard({
             isActive={activeTab === 'deals'}
             bootOnActivate
             deepLinkContext="overview"
+            listRefreshKey={overviewDealsListRefreshKey}
+            highlightDealId={
+              typeof router.query.deal === 'string' ? router.query.deal : overviewCreatedDealId
+            }
           />
         )}
 

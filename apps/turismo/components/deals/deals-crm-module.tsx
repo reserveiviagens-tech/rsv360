@@ -52,6 +52,10 @@ export type DealsCrmModuleProps = {
   bootOnActivate?: boolean;
   /** Where this module is mounted — drives query params on /deals vs /overview */
   deepLinkContext?: DealsDeepLinkContext;
+  /** Incrementa para forçar nova leitura da API (ex.: convert lead→deal no hub). */
+  listRefreshKey?: number;
+  /** Id ou slug deep-link para ring no Kanban (hub H7b). */
+  highlightDealId?: string | null;
 };
 
 type SoldToast = {
@@ -63,6 +67,8 @@ export function DealsCrmModule({
   isActive = true,
   bootOnActivate = true,
   deepLinkContext = 'deals-page',
+  listRefreshKey = 0,
+  highlightDealId = null,
 }: DealsCrmModuleProps) {
   const router = useRouter();
   const liveChat = useCrmLiveChatOptional();
@@ -96,7 +102,18 @@ export function DealsCrmModule({
     void dealsApi
       .list()
       .then((items) => {
-        if (cancelled || !items || items.length === 0) return;
+        if (cancelled) return;
+        const local = getConvertedDeals();
+        if (!items || items.length === 0) {
+          if (local.length > 0) {
+            setDeals((prev) => {
+              const apiIds = new Set(local.map((d) => d.id));
+              const demoOnly = prev.filter((d) => !apiIds.has(d.id));
+              return [...local, ...demoOnly];
+            });
+          }
+          return;
+        }
         setDeals((prev) => {
           const local = getConvertedDeals();
           const prevMap = new Map([...local, ...prev].map((d) => [d.id, d]));
@@ -125,7 +142,7 @@ export function DealsCrmModule({
     return () => {
       cancelled = true;
     };
-  }, [isActive]);
+  }, [isActive, listRefreshKey]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -343,6 +360,12 @@ export function DealsCrmModule({
   }, [isActive, router.isReady, router.query.deal, router.query.tab, deals, deepLinkContext, router]);
 
   useEffect(() => {
+    if (!isActive || !highlightDealId) return;
+    const match = findDealByDeepLink(highlightDealId, deals);
+    if (match) setSelectedDeal(match);
+  }, [isActive, highlightDealId, deals]);
+
+  useEffect(() => {
     if (!isActive || typeof window === 'undefined') return;
     const onHash = () => {
       const key = readDealKeyFromHash();
@@ -452,6 +475,7 @@ export function DealsCrmModule({
         onDealClick={openDealDetail}
         onDealStageChange={handleStageChange}
         buildCardMenuHandlers={buildCardMenuHandlers}
+        highlightDealId={highlightDealId ?? (typeof router.query.deal === 'string' ? router.query.deal : null)}
       />
 
       {linkCopyToast ? (

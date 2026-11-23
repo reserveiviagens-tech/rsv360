@@ -51,6 +51,18 @@ export async function convertOverviewLeadToDeal(card: LeadPageCard): Promise<Ove
       notes: newDeal.notes,
       leadId: card.id,
     });
+    const persistedDeal = {
+      ...newDeal,
+      id: deal.id,
+      stage: deal.stage,
+      price: deal.price,
+      propertyName: deal.propertyName,
+      location: deal.location,
+      propertyType: deal.propertyType,
+      commission: deal.commission,
+      updatedAt: deal.updatedAt.slice(0, 10),
+    };
+    saveConvertedDeal(persistedDeal);
     await leadsApi.patchStatus(card.id, 'qualified').catch(() => undefined);
     return { localDealId: newDeal.id, apiDealId: deal.id };
   } catch {
