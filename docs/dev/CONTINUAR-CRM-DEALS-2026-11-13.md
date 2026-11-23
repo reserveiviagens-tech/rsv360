@@ -2,6 +2,16 @@
 
 > Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-LINTEL-2026-11-11.md`.
 
+### Atualização 23/11/2026 (pós hub + K3–K4 + H7b)
+
+| Item | Estado |
+|------|--------|
+| `develop` | `783b463c` |
+| **Overview hub** | #563–#572 — leads API, contacts, convert deal |
+| **#576–#579** | Drizzle journal · smoke K3a/K4 · H7b Kanban |
+| Smoke | H1–**H7b** (`SMOKE-CRM-ROUTES-*`) · K1–**K4b** (`SMOKE-CRM-ESIGN-KANBAN-*`) |
+| **Próximo** | `BRIEF-NPM-AUDIT-LOCKFILE-2026-11-13.md` · Anfitrião P2 (`BRIEF-OVERVIEW-ANFITRIAO`) |
+
 ### Atualização 21/11/2026 (pós #561 — e-sign C export admin)
 
 | Item | Estado |

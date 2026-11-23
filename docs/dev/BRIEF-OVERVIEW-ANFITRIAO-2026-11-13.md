@@ -17,7 +17,7 @@
 
 ## P1 (esta fatia)
 
-1. **Resiliência:** banner de erro no Overview quando carteira/portfolio API falha (sem vazar PII).
+1. **Resiliência:** banner de erro no Overview quando carteira/portfolio API falha (sem vazar PII). — **Implementado** em `pages/overview.tsx` (`role="alert"`, mensagem genérica; oculto em demo comissão Lintel).
 2. **Demo vs real:** manter `shouldUseLintelCommissionDemo` — não regressão Lintel vídeo.
 3. **Próximo backlog P2:** API leads/contacts reais; substituir demo nas abas do dashboard.
 
