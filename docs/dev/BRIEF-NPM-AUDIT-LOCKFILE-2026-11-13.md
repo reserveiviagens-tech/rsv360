@@ -5,6 +5,8 @@
 
 **Atualização 13/11 (noite):** **#522** mergeado (lockfile). Gate **NPM Audit** ainda vermelho por CVE — fatia seguinte = allowlist/renovações em PR dedicada (`chore/audit-allowlist-renew-2026-11`), **sem** CRM Lintel.
 
+**Atualização 23/11/2026:** `develop` @ `c8b4a242` — **Security Scan / NPM Audit verde** (allowlist ativa). Lockfiles: `check-lockfiles.sh` OK. Repro local: `npm run audit:gate`.
+
 ---
 
 ## Como o CI decide
@@ -51,7 +53,7 @@ Workflow: `.github/workflows/security-scan.yml` (job `NPM Audit`).
 bash .github/scripts/check-lockfiles.sh . backend
 
 npm ci
-npm audit --omit=dev
+npm run audit:gate
 ```
 
 Backend:
