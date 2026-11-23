@@ -53,6 +53,7 @@
     "smoke:auctions": "node tests/e2e/auctions-smoke.js",
     "smoke:crm-rental-sign": "node scripts/smoke-crm-rental-sign.mjs",
     "smoke:crm-deals-persistence": "node scripts/smoke-crm-deals-persistence.mjs",
+    "smoke:crm-deals-persistence:k4": "node scripts/smoke-crm-deals-persistence.mjs --k4-verify",
     "seed:auctions": "node backend/scripts/seed-auctions.js",
     "test:e2e:auth-v1": "playwright test --config=tests/e2e/playwright.auth-v1.config.ts",
     "test:e2e:auth-oauth-mock": "playwright test --config=tests/e2e/playwright.auth-oauth-mock.config.ts",
