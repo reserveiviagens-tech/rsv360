@@ -44,11 +44,37 @@ async function run() {
   const listRes = await fetch(`${API}/api/v1/deals`, { headers });
   const listJson = await listRes.json();
   if (!listRes.ok) throw new Error(`GET /deals falhou: ${listRes.status}`);
-  const found = (listJson.data?.items || []).some((d) => d.id === dealId);
-  if (!found) throw new Error('Deal não encontrado na listagem imediata');
+  const readStage = () => {
+    const item = (listJson.data?.items || []).find((d) => d.id === dealId);
+    return item?.stage;
+  };
 
-  console.log('✅ GET /deals contém o deal criado (persistência ativa nesta instância).');
-  console.log('ℹ️  Para validar sobrevivência a restart: reinicie o container backend e rode GET novamente.');
+  let stage = readStage();
+  if (stage !== 'viewing') {
+    throw new Error(`Estágio inicial esperado viewing, recebido: ${stage ?? '—'}`);
+  }
+  console.log('✅ GET /deals contém o deal criado (viewing).');
+
+  const patchRes = await fetch(`${API}/api/v1/deals/${encodeURIComponent(dealId)}/stage`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ stage: 'offer' }),
+  });
+  const patchJson = await patchRes.json();
+  if (!patchRes.ok || patchJson?.data?.stage !== 'offer') {
+    throw new Error(`PATCH stage falhou: ${patchRes.status} ${JSON.stringify(patchJson)}`);
+  }
+  console.log('✅ PATCH stage → offer');
+
+  const list2Res = await fetch(`${API}/api/v1/deals`, { headers });
+  const list2Json = await list2Res.json();
+  if (!list2Res.ok) throw new Error(`GET /deals (2) falhou: ${list2Res.status}`);
+  const stageAfter = (list2Json.data?.items || []).find((d) => d.id === dealId)?.stage;
+  if (stageAfter !== 'offer') {
+    throw new Error(`Persistência de estágio falhou: esperado offer, recebido ${stageAfter ?? '—'}`);
+  }
+  console.log('✅ GET /deals reflete offer (K3 persistência de estágio).');
+  console.log('ℹ️  Restart: reinicie o backend e repita GET para validar sobrevivência a restart.');
   console.log(`   curl -s -H "Authorization: Bearer $SMOKE_BEARER" ${API}/api/v1/deals | findstr ${dealId}`);
 }
 
