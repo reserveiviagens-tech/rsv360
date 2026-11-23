@@ -52,13 +52,29 @@ Variáveis (backend, **não** commitar valores):
 | K3 | Refresh (F5) | Estágio persiste (`DEALS_PERSISTENCE=postgres` no Docker) |
 | K3a | Script automatizado | `npm run smoke:crm-deals-persistence` — POST + PATCH `offer` + GET confirma estágio |
 | K4 | `docker compose restart backend` + GET deals | Deal mantém estágio (smoke persistência) |
+| K4a | Script pós-restart | `npm run smoke:crm-deals-persistence:k4` (usa estado em `%TEMP%` ou `SMOKE_DEAL_ID`) |
+| K4b | Restart + verify num comando | `SMOKE_K4_RESTART=1` + `npm run smoke:crm-deals-persistence` (host com Docker) |
 
 Persistência deals:
 
 ```powershell
 $env:SMOKE_BEARER="<jwt>"
+# K3a
+npm run smoke:crm-deals-persistence
+docker compose restart backend
+# K4a
+npm run smoke:crm-deals-persistence:k4
+```
+
+Atalho K4b (reinicia backend automaticamente):
+
+```powershell
+$env:SMOKE_K4_RESTART="1"
+$env:SMOKE_BEARER="<jwt>"
 npm run smoke:crm-deals-persistence
 ```
+
+Requisitos K4: `DEALS_PERSISTENCE=postgres` e `DATABASE_URL` no container backend (ver `CRM-FASE3-PERSISTENCIA-2026-11-17.md`).
 
 ## Validação CI local (rápida)
 
