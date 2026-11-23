@@ -96,6 +96,12 @@ function OverviewContent() {
     return carteiraToOverviewContacts(items, role);
   }, [carteiraData, role]);
 
+  const carteiraContactsSource: 'api' | 'demo' | 'idle' = carteiraLoading
+    ? 'idle'
+    : carteiraError || carteiraData == null
+      ? 'demo'
+      : 'api';
+
   return (
     <>
       <Head>
@@ -130,8 +136,9 @@ function OverviewContent() {
           useCommissionDemo ? null : featuredHeroListings.length > 0 ? featuredHeroListings : null
         }
         lintelVisualDemo={useCommissionDemo}
-        carteiraContacts={carteiraContacts}
+        carteiraContacts={carteiraContactsSource === 'api' ? carteiraContacts : null}
         carteiraContactsLoading={carteiraLoading}
+        carteiraContactsSource={carteiraContactsSource}
         onOpenComissoes={() => void router.push('/anfitriao/comissoes')}
       />
     </>

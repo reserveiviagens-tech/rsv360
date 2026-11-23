@@ -11,7 +11,7 @@
 | H4 | Nav Lintel Deals/Leads/Contatos | Href `/overview?tab=…` (não rotas órfãs) |
 | H5 | `/overview?tab=leads` + login parceiro | Lista via API; badge **API**; PII mascarada; fallback demo se backend/auth falhar |
 | H5b | `/overview?tab=leads&lead=<id>` | Destaque no card do lead da API (`?lead=` alinhado a `GET /api/v1/leads`) |
-| H6 | `/overview?tab=contacts` | Carteira via overview; chips **Ver lead** / **Ver deal** quando pipeline associa nome → lead |
+| H6 | `/overview?tab=contacts` | Carteira via API + badge **API**; chips **Ver lead** / **Ver deal**; aviso se modo demo |
 | H6b | `/overview?tab=contacts&contact=<id>` | Aba contacts + destaque no card (`carteira-*` id) |
 | H7 | `/overview?tab=leads` → selecionar lead API → **Converter em deal** | Oportunidade criada; link **Ver no Kanban** → `tab=deals&deal=` |
 | H7b | Após H7 no Kanban | Card com **ring** verde; modal abre; DnD + F5 mantém estágio (K3/K4) |

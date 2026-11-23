@@ -160,6 +160,7 @@ interface RSV360DashboardProps {
   featuredHeroListings?: OverviewHeroListing[] | null;
   carteiraContacts?: OverviewContactRow[] | null;
   carteiraContactsLoading?: boolean;
+  carteiraContactsSource?: 'api' | 'demo' | 'idle';
   /** Overview alinhado ao vídeo Lintel (demo USD + hero/map). */
   lintelVisualDemo?: boolean;
 }
@@ -177,6 +178,7 @@ export default memo(function RSV360ExecutiveDashboard({
   featuredHeroListings = null,
   carteiraContacts = null,
   carteiraContactsLoading = false,
+  carteiraContactsSource = 'idle',
   lintelVisualDemo = false,
 }: RSV360DashboardProps) {
   const router = useRouter();
@@ -2414,9 +2416,20 @@ export default memo(function RSV360ExecutiveDashboard({
         {/* ========================================================================= */}
         {activeTab === 'contacts' && (
           <div className="flex flex-col gap-6">
+            {carteiraContactsSource === 'demo' && (
+              <div
+                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-100"
+                role="status"
+              >
+                Carteira em modo demonstração — login parceiro com backend ativo para vínculos reais.
+              </div>
+            )}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white leading-none">
+              <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white leading-none flex items-center gap-2">
                 Contacts
+                {carteiraContactsSource === 'api' && (
+                  <span className="text-[10px] font-bold uppercase text-[#138a63]">API</span>
+                )}
               </h1>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/70 dark:bg-[#171b23]/80 border border-white/80 dark:border-white/10 backdrop-blur shadow-xs">
@@ -2493,7 +2506,7 @@ export default memo(function RSV360ExecutiveDashboard({
                 loading={carteiraContactsLoading}
                 search={contactsSearch}
                 kindFilter={contactsKindFilter}
-                fromCarteiraApi={carteiraContacts != null && carteiraContacts.length > 0}
+                fromCarteiraApi={carteiraContactsSource === 'api'}
                 onCallContact={(c) => setCallingContact(c)}
                 onOpenProfile={(c) => setSelectedContactForProfile(c)}
               />
