@@ -40,6 +40,7 @@ export type LeadPageCard = {
   notes?: string;
   avatarInitials?: string;
   dealId?: string;
+  createdAt?: string | null;
 };
 
 export type CarteiraUser = {
@@ -66,6 +67,7 @@ export function leadApiRowToPageCard(row: LeadApiRow): LeadPageCard {
     notes: row.notes,
     avatarInitials: initialsFromName(row.name),
     dealId: row.dealId,
+    createdAt: row.createdAt,
   };
 }
 

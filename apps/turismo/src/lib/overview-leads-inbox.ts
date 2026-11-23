@@ -89,3 +89,44 @@ export function countLeadsByStatus(items: OverviewInboxLead[], id: LeadStage | '
   if (id === 'all') return items.length;
   return items.filter((l) => l.status === id).length;
 }
+
+export type OverviewLeadHeaderKpis = {
+  newLast24h: number;
+  avgScore: number;
+  conversionPct: number;
+  hotCount: number;
+};
+
+const DEMO_LEADS_HEADER_KPI: OverviewLeadHeaderKpis = {
+  newLast24h: 4,
+  avgScore: 75,
+  conversionPct: 50,
+  hotCount: 4,
+};
+
+function isWithinLast24h(iso: string): boolean {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t <= 24 * 60 * 60 * 1000;
+}
+
+/** KPIs do cabeçalho da aba Leads — API usa dados reais; demo mantém valores Lintel fixos. */
+export function resolveOverviewLeadHeaderKpis(
+  cards: LeadPageCard[],
+  source: 'api' | 'demo' | 'idle',
+): OverviewLeadHeaderKpis {
+  if (source !== 'api') return DEMO_LEADS_HEADER_KPI;
+  if (cards.length === 0) {
+    return { newLast24h: 0, avgScore: 0, conversionPct: 0, hotCount: 0 };
+  }
+  const withCreated = cards.filter((c) => c.createdAt && isWithinLast24h(c.createdAt));
+  const newLast24h =
+    withCreated.length > 0
+      ? withCreated.length
+      : cards.filter((c) => c.status === 'new').length;
+  const avgScore = Math.round(cards.reduce((sum, c) => sum + c.score, 0) / cards.length);
+  const converted = cards.filter((c) => c.status === 'qualified' || Boolean(c.dealId)).length;
+  const conversionPct = Math.round((converted / cards.length) * 100);
+  const hotCount = cards.filter((c) => c.score >= 80).length;
+  return { newLast24h, avgScore, conversionPct, hotCount };
+}
