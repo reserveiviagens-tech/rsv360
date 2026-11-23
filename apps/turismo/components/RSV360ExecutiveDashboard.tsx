@@ -121,6 +121,7 @@ import {
   countLeadsByStatus,
   loadOverviewLeadsInbox,
   OVERVIEW_LEAD_STATUS_CHIPS,
+  resolveOverviewLeadHeaderKpis,
   type OverviewInboxLead,
 } from '@/lib/overview-leads-inbox';
 import type { LeadPageCard } from '@/lib/overview-leads';
@@ -437,6 +438,11 @@ export default memo(function RSV360ExecutiveDashboard({
   const [overviewCreatedDealId, setOverviewCreatedDealId] = useState<string | null>(null);
   const [overviewDealsListRefreshKey, setOverviewDealsListRefreshKey] = useState(0);
   const [overviewLeadConverting, setOverviewLeadConverting] = useState(false);
+
+  const overviewLeadHeaderKpis = useMemo(
+    () => resolveOverviewLeadHeaderKpis(leadPageCards, leadsInboxSource),
+    [leadPageCards, leadsInboxSource],
+  );
 
   // Filtros de Deals (Kanban)
   const [dealType, setDealType] = useState<'all' | 'sale' | 'rent'>('all');
@@ -2040,7 +2046,9 @@ export default memo(function RSV360ExecutiveDashboard({
                     <Mail className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">4</span>
+                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">
+                      {leadsInboxLoading ? '…' : overviewLeadHeaderKpis.newLast24h}
+                    </span>
                     <span className="text-[11px] text-gray-500 font-semibold">Novos nas últimas 24h</span>
                   </div>
                 </div>
@@ -2050,7 +2058,9 @@ export default memo(function RSV360ExecutiveDashboard({
                     <Sparkles className="w-4 h-4 text-amber-500" />
                   </div>
                   <div>
-                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">75</span>
+                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">
+                      {leadsInboxLoading ? '…' : overviewLeadHeaderKpis.avgScore}
+                    </span>
                     <span className="text-[11px] text-gray-500 font-semibold">Score médio dos leads</span>
                   </div>
                 </div>
@@ -2060,7 +2070,9 @@ export default memo(function RSV360ExecutiveDashboard({
                     <TrendingUp className="w-4 h-4 text-[#138a63]" />
                   </div>
                   <div>
-                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">50%</span>
+                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">
+                      {leadsInboxLoading ? '…' : `${overviewLeadHeaderKpis.conversionPct}%`}
+                    </span>
                     <span className="text-[11px] text-gray-500 font-semibold">Taxa de conversão</span>
                   </div>
                 </div>
@@ -2070,7 +2082,9 @@ export default memo(function RSV360ExecutiveDashboard({
                     <Flame className="w-4 h-4 text-[#ff8a3d]" />
                   </div>
                   <div>
-                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">4</span>
+                    <span className="text-base font-black block leading-none text-gray-900 dark:text-white">
+                      {leadsInboxLoading ? '…' : overviewLeadHeaderKpis.hotCount}
+                    </span>
                     <span className="text-[11px] text-gray-500 font-semibold">Leads quentes (80+)</span>
                   </div>
                 </div>
