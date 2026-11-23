@@ -106,7 +106,7 @@
     "@aws-sdk/middleware-sdk-s3": {
       "fast-xml-parser": "^5.7.0"
     },
-    "axios": "^1.17.1",
+    "axios": "1.21.1",
     "follow-redirects": "^1.16.1",
     "dompurify": "3.4.17",
     "body-parser": "2.3.0",
