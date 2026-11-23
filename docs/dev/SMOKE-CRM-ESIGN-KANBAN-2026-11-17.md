@@ -50,13 +50,14 @@ Variáveis (backend, **não** commitar valores):
 | K1 | `/overview?tab=deals` ou módulo Deals | Colunas por estágio |
 | K2 | Arrastar card entre colunas | Overlay suave; card na nova coluna |
 | K3 | Refresh (F5) | Estágio persiste (`DEALS_PERSISTENCE=postgres` no Docker) |
+| K3a | Script automatizado | `npm run smoke:crm-deals-persistence` — POST + PATCH `offer` + GET confirma estágio |
 | K4 | `docker compose restart backend` + GET deals | Deal mantém estágio (smoke persistência) |
 
 Persistência deals:
 
 ```powershell
 $env:SMOKE_BEARER="<jwt>"
-node scripts/smoke-crm-deals-persistence.mjs
+npm run smoke:crm-deals-persistence
 ```
 
 ## Validação CI local (rápida)
