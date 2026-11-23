@@ -46,8 +46,8 @@
 |---|-------|------------|-------------------|--------|
 | 2.3.1 | Modal abre automaticamente | `/deals?deal=dhollismarc` | Split-pane modal com hero, métricas, pipeline | ✅ |
 | 2.3.2 | Botões "Mover para:" (pipeline) | No modal, abaixo do pipeline animado | 5 botões de estágio (Viewing → Offer → Negotiation → Under Contract → Closed). "Lost" é botão à parte, não conta aqui. | ✅ |
-| 2.3.3 | Clicar "Negotiation" | Botão no modal | Card atualiza estágio instantaneamente; barra anima | ☐ |
-| 2.3.4 | Botão "Copiar link" | Share2 no cabeçalho do modal | Toast com texto traduzido (PT/EN) | ☐ |
+| 2.3.3 | Clicar "Negotiation" | Botão no modal | Card atualiza estágio instantaneamente; barra anima | ☐ (ou via **H7b** modal pós-convert) |
+| 2.3.4 | Botão "Copiar link" | Share2 no cabeçalho do modal | Toast com texto traduzido (PT/EN) | ☐ (ou via **H7b**) |
 | 2.3.5 | Botão "Profile" do buyer | Buyer section no modal | Ação definida (não fica sem função) — se ainda sem ação, marcar **N/A** ou **falha conhecida** até próxima fatia. | N/A |
 
 ### 2.4 KPI Win Rate (Fatia 3)
