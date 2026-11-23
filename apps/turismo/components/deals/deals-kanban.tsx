@@ -24,6 +24,7 @@ import {
   inferListingKind,
   type DealStage,
 } from './deal-card';
+import { dealDeepLinkSlug } from './deals-deep-link';
 import { useKanbanAutoScroll } from './use-kanban-auto-scroll';
 
 const KANBAN_STAGE_ORDER: DealStage[] = ['viewing', 'offer', 'negotiation', 'under_contract', 'closed'];
@@ -43,6 +44,7 @@ const DraggableDealCard = memo(function DraggableDealCard({
   onOpen,
   menuHandlers,
   dimmed,
+  hubHighlighted,
 }: {
   deal: Deal;
   isOverlay?: boolean;
@@ -50,6 +52,7 @@ const DraggableDealCard = memo(function DraggableDealCard({
   onOpen: () => void;
   menuHandlers?: import('./deal-card-menu').DealCardMenuHandlers;
   dimmed?: boolean;
+  hubHighlighted?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: deal.id,
@@ -75,6 +78,7 @@ const DraggableDealCard = memo(function DraggableDealCard({
         onDragStart={() => undefined}
         onOpen={onOpen}
         menuHandlers={menuHandlers}
+        hubHighlighted={hubHighlighted}
       />
     </div>
   );
@@ -89,6 +93,7 @@ export interface KanbanColumnProps {
   registerColumnScroll: (stageId: string, el: HTMLDivElement | null) => void;
   onCardClick: (deal: Deal) => void;
   buildCardMenuHandlers?: (deal: Deal) => import('./deal-card-menu').DealCardMenuHandlers;
+  highlightDealId?: string | null;
 }
 
 export const KanbanColumn = memo(function KanbanColumn({
@@ -100,6 +105,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   registerColumnScroll,
   onCardClick,
   buildCardMenuHandlers,
+  highlightDealId,
 }: KanbanColumnProps) {
   const { copy } = useCrmLocale();
   const { setNodeRef, isOver } = useDroppable({ id: stage });
@@ -159,6 +165,10 @@ export const KanbanColumn = memo(function KanbanColumn({
                 key={deal.id}
                 deal={deal}
                 dimmed={activeDragDealId === deal.id}
+                hubHighlighted={
+                  Boolean(highlightDealId) &&
+                  (deal.id === highlightDealId || dealDeepLinkSlug(deal) === highlightDealId)
+                }
                 enterDelayMs={idx * 45}
                 onOpen={() => onCardClick(deal)}
                 menuHandlers={buildCardMenuHandlers?.(deal)}
@@ -178,6 +188,7 @@ export interface DealsKanbanProps {
   onDealClick: (deal: Deal) => void;
   onDealStageChange?: (dealId: string, stage: DealStage) => void;
   buildCardMenuHandlers?: (deal: Deal) => import('./deal-card-menu').DealCardMenuHandlers;
+  highlightDealId?: string | null;
 }
 
 export const DealsKanban = memo(function DealsKanban({
@@ -188,6 +199,7 @@ export const DealsKanban = memo(function DealsKanban({
   onDealClick,
   onDealStageChange,
   buildCardMenuHandlers,
+  highlightDealId = null,
 }: DealsKanbanProps) {
   const { copy } = useCrmLocale();
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
@@ -272,6 +284,7 @@ export const DealsKanban = memo(function DealsKanban({
                 registerColumnScroll={registerColumnScroll}
                 onCardClick={onDealClick}
                 buildCardMenuHandlers={buildCardMenuHandlers}
+                highlightDealId={highlightDealId}
               />
             ))}
           </div>

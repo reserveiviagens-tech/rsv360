@@ -37,6 +37,9 @@ export function findDealByDeepLink(key: string, deals: Deal[]): Deal | undefined
   const byExplicit = deals.find((row) => row.deepLinkSlug?.toLowerCase() === normalized);
   if (byExplicit) return byExplicit;
 
+  const byExactId = deals.find((row) => row.id === key || row.id.toLowerCase() === normalized);
+  if (byExactId) return byExactId;
+
   if (normalized.startsWith('deal_')) {
     return deals.find((row) => row.id === normalized);
   }

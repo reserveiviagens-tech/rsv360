@@ -256,6 +256,9 @@ export type DealCardProps = {
   /** Quando false, drag é controlado por @dnd-kit (sem HTML5 draggable). */
   useNativeDrag?: boolean;
 
+  /** Destaque hub (ex.: pós-converter lead → deal). */
+  hubHighlighted?: boolean;
+
 };
 
 
@@ -279,6 +282,8 @@ export const DealCard = memo(function DealCard({
   menuHandlers,
 
   useNativeDrag = true,
+
+  hubHighlighted = false,
 
 }: DealCardProps) {
 
@@ -334,7 +339,7 @@ export const DealCard = memo(function DealCard({
 
         isDragging ? 'lintel-deal-dragging cursor-grabbing' : 'cursor-grab active:cursor-grabbing'
 
-      }`}
+      } ${hubHighlighted ? 'ring-2 ring-[#138a63] ring-offset-2 ring-offset-white dark:ring-offset-[#171b23]' : ''}`}
 
       style={{ animationDelay: `${enterDelayMs}ms` }}
 
