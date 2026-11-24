@@ -91,6 +91,7 @@ export function DealsCrmModule({
 
   const [soldToast, setSoldToast] = useState<SoldToast | null>(null);
   const [linkCopyToast, setLinkCopyToast] = useState<string | null>(null);
+  const [linkCopyToastIsError, setLinkCopyToastIsError] = useState(false);
   const [activeAgentIds, setActiveAgentIds] = useState<string[]>([]);
   const [listingFilter, setListingFilter] = useState<ListingKindFilter>('all');
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -331,7 +332,10 @@ export function DealsCrmModule({
       onCopyLink: () => {
         const url = buildShareableDealUrl(deal, deepLinkContext);
         void copyTextToClipboard(url).then((ok) => {
-          setLinkCopyToast(ok ? d.cardMenu.copyLinkToast : d.cardMenu.copyLinkError);
+          const text = ok ? d.cardMenu.copyLinkToast : d.cardMenu.copyLinkError;
+          setLinkCopyToastIsError(!ok);
+          setLinkCopyToast(null);
+          queueMicrotask(() => setLinkCopyToast(text));
         });
       },
     }),
@@ -489,11 +493,19 @@ export function DealsCrmModule({
         highlightDealId={highlightDealId ?? (typeof router.query.deal === 'string' ? router.query.deal : null)}
       />
 
+      <p
+        className="sr-only"
+        role="status"
+        aria-live={linkCopyToastIsError ? 'assertive' : 'polite'}
+        aria-atomic="true"
+      >
+        {linkCopyToast ?? ''}
+      </p>
+
       {linkCopyToast ? (
         <div
           className="lintel-deal-card-menu-enter pointer-events-none fixed bottom-6 left-1/2 z-[200] flex -translate-x-1/2"
-          role="status"
-          aria-live="polite"
+          aria-hidden="true"
         >
           <div className="rounded-full border border-slate-800/10 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg">
             {linkCopyToast}
