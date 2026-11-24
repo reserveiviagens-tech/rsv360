@@ -26,6 +26,7 @@ import {
   type DealsDeepLinkContext,
 } from './deals-deep-link';
 import { DealsKanban, type ListingKindFilter } from './deals-kanban';
+import { buildOverviewContactHubPath, resolveBuyerContactId } from './deal-buyer-contact';
 
 const DealDetailModal = dynamic(
   () => import('./deal-detail-modal').then((mod) => mod.DealDetailModal),
@@ -294,6 +295,16 @@ export function DealsCrmModule({
     syncDealUrl(null);
   }, [syncDealUrl]);
 
+  const openBuyerProfile = useCallback(
+    (deal: Deal) => {
+      const contactId = resolveBuyerContactId(deal.clientName);
+      if (!contactId) return;
+      closeDealDetail();
+      void router.push(buildOverviewContactHubPath(contactId));
+    },
+    [closeDealDetail, router],
+  );
+
   const buildCardMenuHandlers = useCallback(
     (deal: Deal): DealCardMenuHandlers => ({
       onOpenDeal: () => openDealDetail(deal),
@@ -529,6 +540,7 @@ export function DealsCrmModule({
           onMarkLost={handleMarkLost}
           onOpenProperty={(row) => buildCardMenuHandlers(row).onOpenProperty()}
           onMessageBuyer={(row) => buildCardMenuHandlers(row).onMessageClient()}
+          onOpenBuyerProfile={openBuyerProfile}
           onSelectDeal={openDealDetail}
         />
       ) : null}
