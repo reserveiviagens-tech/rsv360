@@ -239,6 +239,25 @@ export default memo(function RSV360ExecutiveDashboard({
     };
   }, [router.query.deal, router.query.lead, router.query.rental]);
 
+  // Filtros de Leads (state antes de useMemo/handler que referenciam leadPageCards)
+  const [leadIntent, setLeadIntent] = useState<'all' | 'buy' | 'rent' | 'sell'>('all');
+  const [leadStatus, setLeadStatus] = useState<'all' | 'new' | 'contacted' | 'qualified'>('all');
+  const [leadSearch, setLeadSearch] = useState('');
+  const [leadsInbox, setLeadsInbox] = useState<OverviewInboxLead[]>([]);
+  const [leadPageCards, setLeadPageCards] = useState<LeadPageCard[]>([]);
+  const [leadsInboxLoading, setLeadsInboxLoading] = useState(false);
+  const [leadsInboxSource, setLeadsInboxSource] = useState<'api' | 'demo' | 'idle'>('idle');
+  const [selectedOverviewLeadId, setSelectedOverviewLeadId] = useState('');
+  const [overviewLeadConvertNotice, setOverviewLeadConvertNotice] = useState<string | null>(null);
+  const [overviewCreatedDealId, setOverviewCreatedDealId] = useState<string | null>(null);
+  const [overviewDealsListRefreshKey, setOverviewDealsListRefreshKey] = useState(0);
+  const [overviewLeadConverting, setOverviewLeadConverting] = useState(false);
+
+  const overviewLeadHeaderKpis = useMemo(
+    () => resolveOverviewLeadHeaderKpis(leadPageCards, leadsInboxSource),
+    [leadPageCards, leadsInboxSource],
+  );
+
   const highlightedLeadId =
     typeof router.query.lead === 'string' ? router.query.lead : '';
 
@@ -424,25 +443,6 @@ export default memo(function RSV360ExecutiveDashboard({
   const [blueprintFloor, setBlueprintFloor] = useState<'ground' | 'upper'>('ground');
   const [agentRankingTab, setAgentRankingTab] = useState<'commission' | 'deals'>('commission');
   const [showActivityModal, setShowActivityModal] = useState(false);
-
-  // Filtros de Leads
-  const [leadIntent, setLeadIntent] = useState<'all' | 'buy' | 'rent' | 'sell'>('all');
-  const [leadStatus, setLeadStatus] = useState<'all' | 'new' | 'contacted' | 'qualified'>('all');
-  const [leadSearch, setLeadSearch] = useState('');
-  const [leadsInbox, setLeadsInbox] = useState<OverviewInboxLead[]>([]);
-  const [leadPageCards, setLeadPageCards] = useState<LeadPageCard[]>([]);
-  const [leadsInboxLoading, setLeadsInboxLoading] = useState(false);
-  const [leadsInboxSource, setLeadsInboxSource] = useState<'api' | 'demo' | 'idle'>('idle');
-  const [selectedOverviewLeadId, setSelectedOverviewLeadId] = useState('');
-  const [overviewLeadConvertNotice, setOverviewLeadConvertNotice] = useState<string | null>(null);
-  const [overviewCreatedDealId, setOverviewCreatedDealId] = useState<string | null>(null);
-  const [overviewDealsListRefreshKey, setOverviewDealsListRefreshKey] = useState(0);
-  const [overviewLeadConverting, setOverviewLeadConverting] = useState(false);
-
-  const overviewLeadHeaderKpis = useMemo(
-    () => resolveOverviewLeadHeaderKpis(leadPageCards, leadsInboxSource),
-    [leadPageCards, leadsInboxSource],
-  );
 
   // Filtros de Deals (Kanban)
   const [dealType, setDealType] = useState<'all' | 'sale' | 'rent'>('all');
