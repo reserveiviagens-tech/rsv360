@@ -15,6 +15,7 @@
 | H6b | `/overview?tab=contacts&contact=<id>` | Aba contacts + destaque no card (`carteira-*` id) |
 | H7 | `/overview?tab=leads` → selecionar lead API → **Converter em deal** | Oportunidade criada; link **Ver no Kanban** → `tab=deals&deal=` |
 | H7b | Após H7 no Kanban | Card com **ring** verde; modal abre; DnD + F5 mantém estágio (K3/K4) |
+| H8 | `/overview?tab=rentals` parceiro com unidades | Badge **API**; cards `unit-<id>`; aviso demo se backend vazio/falha |
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |
 | L1c | `/leads?lead=<id>` | Painel seleciona o lead correspondente |

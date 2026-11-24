@@ -1,4 +1,5 @@
 ﻿import type { PortfolioMapPin, PortfolioMapPinKind } from '../../components/lintel/portfolio-map';
+import type { RentalListingStatus, RentalPortfolioItem } from '../../components/rentals/rentals-data';
 
 const FALLBACK_THUMB =
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=120&q=80';
@@ -132,4 +133,62 @@ export function portfolioPinSummary(units: AnfitriaoUnidadeListItem[]): string {
   const other = units.length - pub;
   if (units.length === 0) return 'Sem unidades no escopo';
   return `${pub} publicada${pub === 1 ? '' : 's'} · ${other} outras`;
+}
+
+/**
+ * Mapeia unidades do anfitrião (API) para RentalPortfolioItem (demo-like).
+ * Usado para preencher a aba Rentals com dados reais quando o parceiro é anfitrião.
+ *
+ * Regras:
+ * - id → string (único dentro do escopo do parceiro)
+ * - statusPublicacao → listingStatus: 'publicado' → 'for_rent', 'em_aprovacao' → 'application', 'rascunho' → 'for_rent'
+ * - precoDiaria → rent + rentAmount (BRL formatado)
+ * - midia → photo (via extractThumb)
+ * - quartos → occupied (estimativa: quartos quando disponível, senão 0)
+ * - criadoEm não existe na API → '' (data não disponível)
+ * - Sem PII extra: não inclui contato, e-mail, telefone do proprietário.
+ */
+export function unidadesToRentalPortfolio(
+  units: AnfitriaoUnidadeListItem[],
+): RentalPortfolioItem[] {
+  return units.map((u) => {
+    const status = statusToListingStatus(u.statusPublicacao);
+    const price = formatDiariaBrl(u.precoDiaria);
+    const rentAmount = Number(u.precoDiaria) || 0;
+    const roll = price.includes('—') ? '—' : `${price}/noite`;
+    const vacantUnits = status === 'for_rent' ? 1 : 0;
+
+    return {
+      id: `unit-${u.id}`,
+      name: repairUtf8Mojibake(u.titulo),
+      address: u.hotelId ?? '—',
+      area: statusLabel(u.statusPublicacao),
+      units: 1,
+      occupied: status === 'for_rent' || status === 'application' ? 0 : 1,
+      rent: price.includes('—') ? 'Consultar' : `${price}/noite`,
+      rentAmount,
+      roll,
+      type: 'Unidade',
+      photo: extractThumb(u.midia),
+      listingStatus: status,
+      vacantUnits,
+      nextLeaseEndDays: undefined,
+      agentAvatarUrl: undefined,
+      tags: [],
+      createdAt: '',
+    };
+  });
+}
+
+function statusToListingStatus(status?: string): RentalListingStatus {
+  switch (status) {
+    case 'publicado':
+      return 'for_rent';
+    case 'em_aprovacao':
+      return 'application';
+    case 'rascunho':
+      return 'for_rent';
+    default:
+      return 'for_rent';
+  }
 }

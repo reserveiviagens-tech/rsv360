@@ -25,7 +25,9 @@ import {
   portfolioPinSummary,
   unidadesToHeroListings,
   unidadesToPortfolioPins,
+  unidadesToRentalPortfolio,
 } from '@/lib/overview-portfolio';
+import type { RentalPortfolioItem } from '../components/rentals/rentals-data';
 import { RsvCrmShell } from '../components/lintel/rsv-crm-shell';
 import { lintelDisplayFirstName } from '../components/lintel/overview-primitives';
 
@@ -44,6 +46,7 @@ function OverviewContent() {
   const {
     data: unidadesData,
     isError: portfolioError,
+    isLoading: portfolioLoading,
   } = useOverviewPortfolioUnits();
   const {
     data: carteiraData,
@@ -102,6 +105,19 @@ function OverviewContent() {
       ? 'demo'
       : 'api';
 
+  const rentalPortfolioApi: RentalPortfolioItem[] | null = useMemo(() => {
+    if (useCommissionDemo || unidades.length === 0) return null;
+    return unidadesToRentalPortfolio(unidades);
+  }, [useCommissionDemo, unidades]);
+
+  const rentalPortfolioSource: 'api' | 'demo' | 'idle' = useCommissionDemo
+    ? 'demo'
+    : portfolioLoading
+      ? 'idle'
+      : portfolioError || !rentalPortfolioApi?.length
+        ? 'demo'
+        : 'api';
+
   return (
     <>
       <Head>
@@ -139,6 +155,9 @@ function OverviewContent() {
         carteiraContacts={carteiraContactsSource === 'api' ? carteiraContacts : null}
         carteiraContactsLoading={carteiraLoading}
         carteiraContactsSource={carteiraContactsSource}
+        rentalPortfolio={rentalPortfolioApi}
+        rentalPortfolioSource={rentalPortfolioSource}
+        rentalPortfolioLoading={portfolioLoading}
         onOpenComissoes={() => void router.push('/anfitriao/comissoes')}
       />
     </>

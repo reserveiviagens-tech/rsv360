@@ -30,10 +30,28 @@ export const RENTALS_PAGE_BOOT_MS = 580;
 type RentalsFilter = 'all' | 'vacant' | 'let' | 'application';
 type RentalsSort = 'newest' | 'name';
 
+export type RentalsPortfolioSource = 'api' | 'demo' | 'idle';
+
 export type RentalsCrmModuleProps = {
   isActive?: boolean;
   bootOnActivate?: boolean;
+  hostPortfolio?: RentalPortfolioItem[] | null;
+  portfolioSource?: RentalsPortfolioSource;
+  portfolioLoading?: boolean;
 };
+
+function findRentalPortfolioItem(
+  rows: RentalPortfolioItem[],
+  rentalParam: string,
+): RentalPortfolioItem | undefined {
+  const paramLower = rentalParam.toLowerCase();
+  return rows.find(
+    (p) =>
+      p.id.toLowerCase() === paramLower ||
+      p.name.toLowerCase().replace(/\s+/g, '-') === paramLower ||
+      p.name.toLowerCase() === paramLower,
+  );
+}
 
 function chipClass(active: boolean) {
   return active
@@ -50,7 +68,13 @@ function chipCount(active: boolean) {
 const kpiBadgeBlue = `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums ${LINTEL_RENTALS_TW.kpiBadgeBlue}`;
 const kpiBadgeOrange = `shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${LINTEL_RENTALS_TW.kpiBadgeOrange}`;
 
-export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: RentalsCrmModuleProps) {
+export function RentalsCrmModule({
+  isActive = true,
+  bootOnActivate = true,
+  hostPortfolio = null,
+  portfolioSource = 'idle',
+  portfolioLoading = false,
+}: RentalsCrmModuleProps) {
   const router = useRouter();
   const { copy } = useCrmLocale();
   const r = copy.rentals;
@@ -115,6 +139,13 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
   const [search, setSearch] = useState('');
   const [pageLoading, setPageLoading] = useState(true);
 
+  const portfolio = useMemo(() => {
+    if (portfolioSource === 'api' && hostPortfolio && hostPortfolio.length > 0) {
+      return hostPortfolio;
+    }
+    return SAMPLE_RENTAL_PORTFOLIO;
+  }, [hostPortfolio, portfolioSource]);
+
   // Deep link para abrir dossiê de locação diretamente via URL (?tab=rentals&rental=r1)
   useEffect(() => {
     if (!isActive || !router.isReady) return;
@@ -125,29 +156,23 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
           ? router.query.unit
           : '';
     if (rentalParam) {
-      const paramLower = rentalParam.toLowerCase();
-      const found = SAMPLE_RENTAL_PORTFOLIO.find(
-        (p) =>
-          p.id.toLowerCase() === paramLower ||
-          p.name.toLowerCase().replace(/\s+/g, '-') === paramLower ||
-          p.name.toLowerCase() === paramLower,
-      );
+      const found = findRentalPortfolioItem(portfolio, rentalParam);
       if (found) {
         setSelectedRental(found);
       }
     } else {
       setSelectedRental(null);
     }
-  }, [isActive, router.isReady, router.query.rental, router.query.unit]);
+  }, [isActive, router.isReady, router.query.rental, router.query.unit, portfolio]);
 
   useEffect(() => {
     if (!isActive || typeof window === 'undefined') return;
     const focusId = sessionStorage.getItem(CRM_RENTAL_FOCUS_ID_KEY);
     if (!focusId) return;
     sessionStorage.removeItem(CRM_RENTAL_FOCUS_ID_KEY);
-    const row = SAMPLE_RENTAL_PORTFOLIO.find((p) => p.id === focusId);
+    const row = portfolio.find((p) => p.id === focusId);
     if (row) setSearch(row.name);
-  }, [isActive]);
+  }, [isActive, portfolio]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -160,7 +185,6 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
     return () => window.clearTimeout(id);
   }, [isActive, bootOnActivate]);
 
-  const portfolio = SAMPLE_RENTAL_PORTFOLIO;
   const counts = useMemo(() => rentalFilterCounts(portfolio), [portfolio]);
 
   const totals = useMemo(() => {
@@ -192,7 +216,7 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
 
   if (!isActive) return null;
 
-  if (pageLoading) {
+  if (pageLoading || (portfolioLoading && portfolioSource === 'idle')) {
     return <RentalsSkeleton />;
   }
 
@@ -207,9 +231,20 @@ export function RentalsCrmModule({ isActive = true, bootOnActivate = true }: Ren
 
   return (
     <div className="flex flex-col gap-5">
+      {portfolioSource === 'demo' && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-100"
+          role="status"
+        >
+          Portfólio em modo demonstração — faça login parceiro com unidades no backend para ver imóveis reais.
+        </div>
+      )}
       <div className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-center xl:justify-between xl:gap-3">
         <h1 className="min-w-0 truncate text-2xl font-black leading-none tracking-tight text-gray-900 dark:text-white">
           {copy.nav.rentals}
+          {portfolioSource === 'api' && (
+            <span className="ml-2 align-middle text-[10px] font-bold uppercase text-[#138a63]">API</span>
+          )}
         </h1>
         <div className="min-w-0 flex-1 xl:flex xl:justify-end">
           <LintelKpiStripRow>
