@@ -23,7 +23,7 @@ import {
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { useLintelCreateOptional } from '../lintel/lintel-create-provider';
 import { useCrmLiveChatOptional } from '../lintel/crm-live-chat-provider';
-import { LINTEL_RENTALS_TW, LINTEL_THEME_TOKENS } from '../lintel/lintel-theme';
+import { LINTEL_RENTALS_TW, LINTEL_THEME_TOKENS, LINTEL_TW_CLASSES } from '../lintel/lintel-theme';
 import { lintelBtnGhost, lintelBtnPrimary, lintelIconBtn } from '../lintel/overview-primitives';
 import type { RentalPortfolioItem } from './rentals-data';
 import { isRentalFavorite, setRentalFavorite } from './rental-favorites';
@@ -157,7 +157,9 @@ export function RentalPropertyDetailModal({ item, onClose }: RentalPropertyDetai
       />
 
       {/* Modal Surface */}
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-2xl dark:border-gray-800 dark:bg-[#121722]">
+      <div
+        className={`relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-2xl dark:border-gray-800 ${LINTEL_TW_CLASSES.surfaceDark}`}
+      >
         {/* Header Bar */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-800">
           <div className="flex min-w-0 items-center gap-3">
