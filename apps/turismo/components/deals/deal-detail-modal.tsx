@@ -16,6 +16,7 @@ import { lintelBtnGhost, lintelBtnPrimary } from '../lintel/overview-primitives'
 import { LINTEL_TW_CLASSES } from '../lintel/lintel-theme';
 import { useCrmLocale } from '../lintel/crm-locale-provider';
 import { agentById } from './deals-agents';
+import { resolveBuyerContactId } from './deal-buyer-contact';
 import {
   STAGE_ORDER,
   buyerEmailFromName,
@@ -62,6 +63,7 @@ export interface DealDetailModalProps {
   onMarkLost?: (deal: Deal) => void;
   onOpenProperty?: (deal: Deal) => void;
   onMessageBuyer?: (deal: Deal) => void;
+  onOpenBuyerProfile?: (deal: Deal) => void;
   onSelectDeal?: (deal: Deal) => void;
   onCopyLink?: (deal: Deal) => void;
 }
@@ -75,6 +77,7 @@ export function DealDetailModal({
   onMarkLost,
   onOpenProperty,
   onMessageBuyer,
+  onOpenBuyerProfile,
   onSelectDeal,
   onCopyLink,
 }: DealDetailModalProps) {
@@ -117,6 +120,8 @@ export function DealDetailModal({
   const buyerContext = dm.buyerContext
     .replace('{city}', buyerCity)
     .replace('{agent}', agent?.name ?? deal.agentName);
+  const buyerContactId = useMemo(() => resolveBuyerContactId(deal.clientName), [deal.clientName]);
+  const canOpenBuyerProfile = Boolean(buyerContactId && onOpenBuyerProfile);
 
   const save = useCallback(() => {
     const price = Number.parseInt(offerAmount.replace(/\D/g, ''), 10);
@@ -481,8 +486,14 @@ export function DealDetailModal({
                   <Phone className="h-4 w-4" />
                   {dm.call}
                 </a>
-                <button type="button" className={lintelBtnGhost}>
-                  <User className="h-4 w-4" />
+                <button
+                  type="button"
+                  className={`${lintelBtnGhost}${canOpenBuyerProfile ? '' : ' opacity-50 cursor-not-allowed'}`}
+                  disabled={!canOpenBuyerProfile}
+                  onClick={() => onOpenBuyerProfile?.(deal)}
+                  aria-label={dm.profile}
+                >
+                  <User className="h-4 w-4" aria-hidden />
                   {dm.profile}
                 </button>
               </div>

@@ -4,6 +4,7 @@ export type OverviewHubDeepLink = {
   tab: OverviewHubTab;
   deal?: string;
   lead?: string;
+  contact?: string;
   rental?: string;
   property?: string;
 };
@@ -14,6 +15,7 @@ export function buildOverviewHubPath(link: OverviewHubDeepLink): string {
   const params = new URLSearchParams({ tab: link.tab });
   if (link.deal) params.set('deal', link.deal);
   if (link.lead) params.set('lead', link.lead);
+  if (link.contact) params.set('contact', link.contact);
   if (link.rental) params.set('rental', link.rental);
   if (link.property) params.set('property', link.property);
 
