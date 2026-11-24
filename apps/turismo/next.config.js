@@ -29,6 +29,20 @@ const nextConfig = {
       },
     ];
   },
+  /** Dev/local: same-origin /api/v1 → backend (:3002). Complements pages/api/v1/[...path].ts when Turbopack não registra o catch-all. */
+  async rewrites() {
+    if (process.env.NODE_ENV !== 'development') return [];
+    const backend = (process.env.BACKEND_URL || process.env.INTERNAL_API_URL || 'http://localhost:3002').replace(
+      /\/$/,
+      '',
+    );
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${backend}/api/v1/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
