@@ -149,7 +149,7 @@ Executado com navegador integrado (`dev` server ativo em `:3005`) + smoke manual
 |---|----------|-----------|
 | 2.3.3 | Login admin → `deal=dhollismarc` (overview tab deals) | Pipeline **Mover para:** → **Negociação** clicável; persistência API **não** revalidada (Fatia B em backlog) |
 | 2.3.4 | Mesmo modal | **Copiar link** — toast + `role="status"` persistente (merge #587) |
-| 2.3.5 | Deal comprador demo (ex. Marcus) | **Perfil** → `/overview?tab=contacts&contact=c5`, modal fecha, card **Marcus Adebayo** na aba Contatos (dev local `:3005`, 24/11) ✅ |
+| 2.3.5 | Deal comprador demo (ex. Marcus) | **Perfil** → `contact=c5` — dev local (24/11 manhã) ✅; **Docker** pós-`build turismo` (24/11 tarde, #586 na imagem) ✅ |
 
 *Commit local em `develop` — sem PR de docs (owner 24/11).*
 
