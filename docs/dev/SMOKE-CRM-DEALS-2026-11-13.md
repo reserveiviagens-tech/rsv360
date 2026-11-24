@@ -46,9 +46,9 @@
 |---|-------|------------|-------------------|--------|
 | 2.3.1 | Modal abre automaticamente | `/deals?deal=dhollismarc` | Split-pane modal com hero, métricas, pipeline | ✅ |
 | 2.3.2 | Botões "Mover para:" (pipeline) | No modal, abaixo do pipeline animado | 5 botões de estágio (Viewing → Offer → Negotiation → Under Contract → Closed). "Lost" é botão à parte, não conta aqui. | ✅ |
-| 2.3.3 | Clicar "Negotiation" | Botão no modal | Card atualiza estágio instantaneamente; barra anima | ☐ (ou via **H7b** modal pós-convert) |
-| 2.3.4 | Botão "Copiar link" | Share2 no cabeçalho do modal | Toast com texto traduzido (PT/EN) | ☐ (ou via **H7b**) |
-| 2.3.5 | Botão "Profile" do buyer | Buyer section no modal | Ação definida (não fica sem função) — se ainda sem ação, marcar **N/A** ou **falha conhecida** até próxima fatia. | N/A |
+| 2.3.3 | Clicar "Negotiation" | Botão no modal | Card atualiza estágio instantaneamente; barra anima | ✅ **Parcial** (24/11) — clique **Negociação** OK; **Oferta** disabled; persistência Kanban/API não revalidada (`develop` @ `1735c4a4`, Docker :3005) |
+| 2.3.4 | Botão "Copiar link" | Share2 no cabeçalho do modal | Toast com texto traduzido (PT/EN) | ✅ (24/11) — toast visual + anunciador `aria-live` (#587); Playwright/clipboard ainda opcional |
+| 2.3.5 | Botão "Profile" do buyer | Buyer section no modal | Ação definida (não fica sem função) — se ainda sem ação, marcar **N/A** ou **falha conhecida** até próxima fatia. | ✅ (24/11) — **Perfil** → `/overview?tab=contacts&contact=<id>` (#586); comprador sem match demo → botão disabled |
 
 ### 2.4 KPI Win Rate (Fatia 3)
 
@@ -129,7 +129,7 @@ Executado com navegador integrado (`dev` server ativo em `:3005`) + smoke manual
 |-------|-----------------|-------|
 | Auth (2.1.x) | ✅ 3/3 | Smoke manual + Cursor |
 | Deep Links + Kanban (2.2.x) | ✅ 5/5 | Cursor (navegador integrado) |
-| Modal Detalhe (2.3.x) | ✅ 4/5 + 1 N/A | Cursor + Smoke manual |
+| Modal Detalhe (2.3.x) | ✅ 4/5 + 1 parcial (2.3.3) | **2.3.4/2.3.5** fechados 24/11 (#586/#587); `develop` @ `3bc7c2d6` |
 | KPI Win Rate (2.4.x) | ✅ 2/2 | Fix + re-smoke Camila/Hana `—`, todos `100%` |
 | Design Tokens / Dark (2.5.x) | ✅ 2/2 | Dark OK; hex kanban → Opção 2 |
 
@@ -142,6 +142,16 @@ Executado com navegador integrado (`dev` server ativo em `:3005`) + smoke manual
 | `dhollisspen` (Spencer) | $1.215.000 | 2481 Hollis Lane · nota mobília · comissão $30.375 |
 
 **Build de produção:** `npm run build -w apps/turismo` → OK (validado nas Fatias 4–5)
+
+### Revalidação 24/11/2026 (2.3.3–2.3.5)
+
+| # | Ambiente | Evidência |
+|---|----------|-----------|
+| 2.3.3 | Login admin → `deal=dhollismarc` (overview tab deals) | Pipeline **Mover para:** → **Negociação** clicável; persistência API **não** revalidada (Fatia B em backlog) |
+| 2.3.4 | Mesmo modal | **Copiar link** — toast + `role="status"` persistente (merge #587) |
+| 2.3.5 | Deal comprador demo (ex. Marcus) | **Perfil** → `/overview?tab=contacts&contact=c5`, modal fecha, card **Marcus Adebayo** na aba Contatos (dev local `:3005`, 24/11) ✅ |
+
+*Commit local em `develop` — sem PR de docs (owner 24/11).*
 
 ---
 
