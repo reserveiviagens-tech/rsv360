@@ -8,6 +8,7 @@ import AnfitriaoRoleGuard from '../../../components/AnfitriaoRoleGuard';
 import { AnfitriaoHostNav } from '../../../components/anfitriao/AnfitriaoHostNav';
 import { useAuth } from '@/context/AuthContext';
 import { fase1Api } from '@/lib/fase1-api';
+import { CarteiraCsvImportPanel } from '../../../components/anfitriao/CarteiraCsvImportPanel';
 
 type UserOption = { id: number; name: string | null; email: string; role: string | null };
 
@@ -19,24 +20,6 @@ type CarteiraRow = {
   corretor: UserOption | null;
   proprietario: UserOption | null;
 };
-
-function parseCsvPairs(text: string): Array<{ corretorId: number; proprietarioId: number }> {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const pairs: Array<{ corretorId: number; proprietarioId: number }> = [];
-  for (const line of lines) {
-    if (/^corretor/i.test(line) && line.toLowerCase().includes('propriet')) continue;
-    const parts = line.split(/[,;\t]/).map((p) => p.trim());
-    if (parts.length < 2) continue;
-    const corretorId = Number(parts[0]);
-    const proprietarioId = Number(parts[1]);
-    if (!Number.isFinite(corretorId) || !Number.isFinite(proprietarioId)) continue;
-    pairs.push({ corretorId, proprietarioId });
-  }
-  return pairs;
-}
 
 export default function StaffCarteiraCorretorPage() {
   const { user } = useAuth();
@@ -54,9 +37,6 @@ export default function StaffCarteiraCorretorPage() {
   const [propQ, setPropQ] = useState('');
   const [selectedCorretor, setSelectedCorretor] = useState<UserOption | null>(null);
   const [selectedProp, setSelectedProp] = useState<UserOption | null>(null);
-
-  const [csvText, setCsvText] = useState('');
-  const [bulkPreview, setBulkPreview] = useState<Array<{ corretorId: number; proprietarioId: number }>>([]);
 
   const listParams = useMemo(
     () => ({
@@ -107,11 +87,7 @@ export default function StaffCarteiraCorretorPage() {
   const bulk = useMutation({
     mutationFn: (items: Array<{ corretorId: number; proprietarioId: number }>) =>
       fase1Api.anfitriaoAtribuirCarteiraBulk(items),
-    onSuccess: () => {
-      invalidate();
-      setCsvText('');
-      setBulkPreview([]);
-    },
+    onSuccess: () => invalidate(),
   });
 
   const patchStatus = useMutation({
@@ -132,11 +108,6 @@ export default function StaffCarteiraCorretorPage() {
   const total = payload?.total ?? 0;
   const pageSize = payload?.pageSize ?? 25;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  const onCsvChange = (value: string) => {
-    setCsvText(value);
-    setBulkPreview(parseCsvPairs(value));
-  };
 
   if (!isStaff) {
     return (
@@ -351,36 +322,18 @@ export default function StaffCarteiraCorretorPage() {
             </div>
           )}
 
-          <section className="mt-10 rounded-xl border border-slate-200 bg-white p-4">
-            <h2 className="text-lg font-semibold text-slate-900">Importação em lote (CSV)</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Uma linha por vínculo: <code className="text-xs">corretorId,proprietarioId</code>. Máximo 500
-              linhas por envio.
+          <CarteiraCsvImportPanel
+            isPending={bulk.isPending}
+            onImport={(items) => bulk.mutate(items)}
+            onPreviewServer={async (csv) => {
+              await fase1Api.anfitriaoPreviewCarteiraCsv(csv, 'carteira_vinculo');
+            }}
+          />
+          {bulk.isSuccess && bulk.data?.data?.summary && (
+            <p className="mt-2 text-sm text-emerald-800">
+              Concluído: {bulk.data.data.summary.ok} ok, {bulk.data.data.summary.fail} falha(s).
             </p>
-            <textarea
-              value={csvText}
-              onChange={(e) => onCsvChange(e.target.value)}
-              rows={6}
-              className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-slate-800"
-              placeholder={'corretorId,proprietarioId\n2,101\n2,102'}
-            />
-            {bulkPreview.length > 0 && (
-              <p className="mt-2 text-xs text-slate-600">{bulkPreview.length} par(es) prontos para envio.</p>
-            )}
-            <button
-              type="button"
-              disabled={bulkPreview.length === 0 || bulk.isPending}
-              className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-40"
-              onClick={() => bulk.mutate(bulkPreview)}
-            >
-              {bulk.isPending ? 'Enviando…' : 'Importar lote'}
-            </button>
-            {bulk.isSuccess && bulk.data?.data?.summary && (
-              <p className="mt-2 text-sm text-emerald-800">
-                Concluído: {bulk.data.data.summary.ok} ok, {bulk.data.data.summary.fail} falha(s).
-              </p>
-            )}
-          </section>
+          )}
 
           <p className="mt-6 text-xs text-slate-500">
             Runbook:{' '}

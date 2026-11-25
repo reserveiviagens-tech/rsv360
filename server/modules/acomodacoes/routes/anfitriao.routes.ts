@@ -15,6 +15,11 @@ import {
   writeGaleriaWebp,
   writeTrilhoWebp,
 } from '../services/anfitriao-trilho-upload';
+import {
+  parseCarteiraCsv,
+  parseCarteiraCsvVinculo,
+  type CarteiraCsvImportMode,
+} from '../../carteira/services/csv-importer.service';
 
 const router = Router();
 
@@ -1639,9 +1644,36 @@ router.post('/unidades/:id/validar-desconto', ...parceiroAuth, async (req, res) 
   }
 });
 
+router.post('/admin/carteira/upload-csv/preview', ...staffAprovacao, async (req, res) => {
+  try {
+    const csv = req.body?.csv ?? req.body?.text;
+    if (typeof csv !== 'string' || !csv.trim()) {
+      return res.status(400).json({ success: false, error: 'csv (string) obrigatório' });
+    }
+    const modeRaw = req.body?.mode;
+    const mode: CarteiraCsvImportMode =
+      modeRaw === 'contato_corretor' ? 'contato_corretor' : 'carteira_vinculo';
+    const report = parseCarteiraCsv(csv, mode);
+    res.json({ success: true, data: report });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/admin/carteira/bulk', ...staffAprovacao, async (req, res) => {
   try {
-    const items = req.body?.items ?? req.body?.pairs;
+    let items = req.body?.items ?? req.body?.pairs;
+    if (!Array.isArray(items) && typeof req.body?.csv === 'string') {
+      const parsed = parseCarteiraCsvVinculo(req.body.csv);
+      if (parsed.erros.some((e) => e.line === 0) || parsed.linhasValidas === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'CSV inválido',
+          details: parsed,
+        });
+      }
+      items = parsed.preview;
+    }
     if (!Array.isArray(items)) {
       return res.status(400).json({ success: false, error: 'items (array) obrigatório' });
     }
