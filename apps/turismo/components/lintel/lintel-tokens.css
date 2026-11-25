@@ -1,0 +1,78 @@
+/**
+ * Reservei Viagens — Design tokens Lintel (institucional).
+ * Fonte única de variáveis CSS; consumir via classes utilitárias ou var(--lintel-*).
+ * Fatia 1 — ver docs/WALKTHROUGH-LINTEL-CONSOLIDACAO.md
+ */
+
+:root {
+  --lintel-bg-canvas: #f7f8fa;
+  --lintel-bg-surface: #ffffff;
+  --lintel-bg-subtle: #f1f3f6;
+
+  --lintel-brand-navy: #0b2239;
+  --lintel-brand-gold: #c59b27;
+  --lintel-brand-gold-soft: #f6e7be;
+
+  --lintel-status-paid: #15803d;
+  --lintel-status-paid-bg: #dcfce7;
+  --lintel-status-pending: #b45309;
+  --lintel-status-pending-bg: #fef3c7;
+  --lintel-status-danger: #b91c1c;
+  --lintel-status-danger-bg: #fee2e2;
+
+  --lintel-z-sticky-bottom: 40;
+  --lintel-z-modal: 50;
+}
+
+.dark {
+  --lintel-bg-canvas: #0f1116;
+  --lintel-bg-surface: #121722;
+  --lintel-bg-subtle: #1d222c;
+}
+
+.lintel-tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.lintel-dense-table-row {
+  min-height: 2.75rem; /* 44px */
+  max-height: 3rem; /* 48px */
+}
+
+.lintel-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.lintel-status-pill[data-status='paid'] {
+  color: var(--lintel-status-paid);
+  background: var(--lintel-status-paid-bg);
+}
+
+.lintel-status-pill[data-status='pending'] {
+  color: var(--lintel-status-pending);
+  background: var(--lintel-status-pending-bg);
+}
+
+.lintel-status-pill[data-status='danger'] {
+  color: var(--lintel-status-danger);
+  background: var(--lintel-status-danger-bg);
+}
+
+.lintel-sticky-bottom-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--lintel-z-sticky-bottom);
+  border-top: 1px solid rgb(226 232 240 / 0.9);
+  background: color-mix(in srgb, var(--lintel-bg-surface) 94%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.dark .lintel-sticky-bottom-bar {
+  border-top-color: rgb(255 255 255 / 0.08);
+}

@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '../components/lintel/lintel-tokens.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
