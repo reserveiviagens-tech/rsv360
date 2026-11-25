@@ -683,6 +683,24 @@ export const fase1Api = {
       body: JSON.stringify({ corretorId, proprietarioId }),
     }),
 
+  anfitriaoPreviewCarteiraCsv: (
+    csv: string,
+    mode: 'carteira_vinculo' | 'contato_corretor' = 'carteira_vinculo',
+  ) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        totalLinhas: number;
+        linhasValidas: number;
+        linhasInvalidas: number;
+        erros: Array<{ line: number; reason: string }>;
+        preview: unknown[];
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/upload-csv/preview`, {
+      method: 'POST',
+      body: JSON.stringify({ csv, mode }),
+    }),
+
   anfitriaoAtribuirCarteiraBulk: (items: Array<{ corretorId: number; proprietarioId: number }>) =>
     fetchJson<{
       success: boolean;

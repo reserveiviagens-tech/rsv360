@@ -99,6 +99,29 @@ describe('P0.5 — admin carteira corretor', () => {
     expect(mockListarCarteiraCorretor).not.toHaveBeenCalled();
   });
 
+  it('POST /admin/carteira/upload-csv/preview validates csv', async () => {
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/admin/carteira/upload-csv/preview')
+      .set(authHeaders('admin', 1))
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /admin/carteira/upload-csv/preview returns report', async () => {
+    const res = await request(buildApp())
+      .post('/api/v1/acomodacoes/anfitriao/admin/carteira/upload-csv/preview')
+      .set(authHeaders('admin', 1))
+      .send({ csv: '2,10\n3,11' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.linhasValidas).toBe(2);
+    expect(res.body.data.preview).toEqual([
+      { corretorId: 2, proprietarioId: 10 },
+      { corretorId: 3, proprietarioId: 11 },
+    ]);
+  });
+
   it('POST /admin/carteira/bulk validates body', async () => {
     const res = await request(buildApp())
       .post('/api/v1/acomodacoes/anfitriao/admin/carteira/bulk')
