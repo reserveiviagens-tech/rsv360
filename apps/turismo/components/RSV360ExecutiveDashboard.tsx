@@ -138,6 +138,7 @@ import type { PortfolioMapPin } from './lintel/portfolio-map';
 import type { OverviewContactRow } from '@/lib/overview-contacts';
 import { OverviewContactsHubPanel } from '@/lib/overview-contacts-hub';
 import type { OverviewHeroListing } from '@/lib/overview-portfolio';
+import type { RentalPortfolioItem } from './rentals/rentals-data';
 
 export type OverviewListingKpis = {
   publicadas: number;
@@ -162,6 +163,9 @@ interface RSV360DashboardProps {
   carteiraContacts?: OverviewContactRow[] | null;
   carteiraContactsLoading?: boolean;
   carteiraContactsSource?: 'api' | 'demo' | 'idle';
+  rentalPortfolio?: RentalPortfolioItem[] | null;
+  rentalPortfolioSource?: 'api' | 'demo' | 'idle';
+  rentalPortfolioLoading?: boolean;
   /** Overview alinhado ao vídeo Lintel (demo USD + hero/map). */
   lintelVisualDemo?: boolean;
 }
@@ -180,6 +184,9 @@ export default memo(function RSV360ExecutiveDashboard({
   carteiraContacts = null,
   carteiraContactsLoading = false,
   carteiraContactsSource = 'idle',
+  rentalPortfolio = null,
+  rentalPortfolioSource = 'idle',
+  rentalPortfolioLoading = false,
   lintelVisualDemo = false,
 }: RSV360DashboardProps) {
   const router = useRouter();
@@ -2411,7 +2418,13 @@ export default memo(function RSV360ExecutiveDashboard({
         {/* ABA: RENTALS (Gestão de Imóveis para Locação e Ocupação)                  */}
         {/* ========================================================================= */}
         {activeTab === 'rentals' && (
-          <RentalsCrmModule isActive={activeTab === 'rentals'} bootOnActivate />
+          <RentalsCrmModule
+            isActive={activeTab === 'rentals'}
+            bootOnActivate
+            hostPortfolio={rentalPortfolio}
+            portfolioSource={rentalPortfolioSource}
+            portfolioLoading={rentalPortfolioLoading}
+          />
         )}
 
         {/* ========================================================================= */}

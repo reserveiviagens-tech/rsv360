@@ -21,6 +21,7 @@
 2. **Demo vs real:** manter `shouldUseLintelCommissionDemo` — não regressão Lintel vídeo.
 3. **P2 (23/11):** abas **Leads** (`leadsInboxSource`) e **Contacts** (`carteiraContactsSource`) — badge **API** + fallback demo com aviso; pipeline contacts usa `leadsApi.list`.
 4. **P3 (23/11):** KPIs do cabeçalho da aba **Leads** via `resolveOverviewLeadHeaderKpis` quando `leadsInboxSource === 'api'` (demo mantém valores Lintel).
+5. **P4 (24/11):** Aba **Rentals** (`?tab=rentals`) — portfólio via `unidadesToRentalPortfolio` + badge **API** / fallback demo (smoke **H8**).
 
 ---
 
