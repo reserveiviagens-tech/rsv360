@@ -54,3 +54,6 @@ export * from './cotacao/roteiro-inteligente.mapper.js';
 
 // Carteira — importação CSV (Fatia 2)
 export * from './carteira/csv-importer.service.js';
+
+// Propostas Rio Quente / Aviva (Fatia 3)
+export * from './propostas/proposta-rio-quente.service.js';
