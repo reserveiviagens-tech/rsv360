@@ -15,6 +15,7 @@ const router = Router();
 
 const parceiroAuth = [authenticateJwt, requireRole('anfitriao', 'corretor', 'admin', 'manager')];
 const adminAuth = [authenticateJwt, requireRole('admin')];
+const staffComissaoAuth = [authenticateJwt, requireRole('admin', 'manager')];
 
 const PREVIEW_OVERRIDE_KEYS = [
   'taxaPlataformaPct',
@@ -147,6 +148,37 @@ router.post('/rejeitar-sugestao', ...adminAuth, async (req, res) => {
     res.json({ success: true, data });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/lancamentos/gerar', ...staffComissaoAuth, async (req, res) => {
+  try {
+    const propostaId = Number(req.body?.propostaId);
+    if (!Number.isFinite(propostaId) || propostaId <= 0) {
+      return res.status(400).json({ success: false, error: 'propostaId inválido' });
+    }
+    const result = await comissoesService.gerarLancamentos(propostaId);
+    if (!result.generated && 'reason' in result && result.reason === 'proposta_status_blocked') {
+      return res.status(409).json({
+        success: false,
+        code: result.reason,
+        error: 'message' in result ? result.message : 'Proposta não paga',
+        statusProposta: 'statusProposta' in result ? result.statusProposta : undefined,
+      });
+    }
+    if (!result.generated && 'reason' in result) {
+      const reason = result.reason;
+      const status =
+        reason === 'proposta_not_found'
+          ? 404
+          : reason === 'module_disabled'
+            ? 503
+            : 400;
+      return res.status(status).json({ success: false, code: reason, data: result });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 

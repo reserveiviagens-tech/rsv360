@@ -20,8 +20,8 @@
 |-------|--------|----------------|
 | 1 | `lintel-tokens.css`, `tokens.ts`, `DenseTable`, `KpiZeigarnikCard`, `StickyBottomBar` | ✅ **#593** |
 | 2 | CSV carteira corretores | ✅ **#594** |
-| 3 | Propostas Rio Quente / Aviva | **Em PR** |
-| 4 | Comissões `status === 'paid'` | backlog |
+| 3 | Propostas Rio Quente / Aviva | ✅ **#595** |
+| 4 | Comissões `status === 'paid'` | **Em PR** |
 | 5 | Testes no harness | backlog |
 
 ## Fatia 1 — consumo
