@@ -19,8 +19,8 @@
 | Fatia | Escopo | Status develop |
 |-------|--------|----------------|
 | 1 | `lintel-tokens.css`, `tokens.ts`, `DenseTable`, `KpiZeigarnikCard`, `StickyBottomBar` | ✅ **#593** |
-| 2 | CSV carteira corretores | **Em PR** |
-| 3 | Propostas Rio Quente / Aviva | backlog |
+| 2 | CSV carteira corretores | ✅ **#594** |
+| 3 | Propostas Rio Quente / Aviva | **Em PR** |
 | 4 | Comissões `status === 'paid'` | backlog |
 | 5 | Testes no harness | backlog |
 

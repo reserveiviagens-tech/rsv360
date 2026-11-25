@@ -39,6 +39,13 @@ import {
   PropostaWriteSchema,
   TemplateIdParamSchema,
 } from '../schemas/proposta-write.schema';
+import {
+  buildPdfHtmlLintel,
+  formatarMensagemWhatsApp,
+  montarPropostaRioQuente,
+  RIO_QUENTE_AVIVA_CATALOG,
+  type RioQuenteEstadiaInput,
+} from '../services/proposta-rio-quente.service';
 
 const router = Router();
 const agentAuth = [authenticateJwt, requireRole('admin', 'manager', 'user')];
@@ -645,6 +652,25 @@ router.post('/:id/responder', publicLimiter, requireTurnstile, optionalJwt, asyn
     if (isPropostaExpiradaError(error)) {
       return res.status(403).json({ success: false, error: error.message });
     }
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/rio-quente/catalog', ...agentAuth, (_req, res) => {
+  res.json({ success: true, data: Object.values(RIO_QUENTE_AVIVA_CATALOG) });
+});
+
+router.post('/rio-quente/preview', ...agentAuth, (req, res) => {
+  try {
+    const body = (req.body ?? {}) as RioQuenteEstadiaInput & { nomeCliente?: string };
+    const draft = montarPropostaRioQuente(body);
+    if ('error' in draft) {
+      return res.status(400).json({ success: false, error: draft.error });
+    }
+    const whatsapp = formatarMensagemWhatsApp(draft, { nomeCliente: body.nomeCliente });
+    const pdfHtml = buildPdfHtmlLintel(draft);
+    res.json({ success: true, data: { draft, whatsapp, pdfHtml } });
+  } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });
   }
 });
