@@ -1,6 +1,16 @@
 # Continuar daqui — CRM Deals / Smoke / Lintel (13 nov 2026)
 
-> Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-LINTEL-2026-11-11.md`.
+> Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-2026-11-25.md`.
+
+### Atualização 25/11/2026 (pós #588–#590 — proxy, 3c, Overview P4)
+
+| Item | Estado |
+|------|--------|
+| `develop` | `8b49de24` |
+| **#588** | Proxy dev turismo `/api/v1` |
+| **#589** | Lintel 3c residual rentals modal |
+| **#590** | Overview **P4** — Rentals tab API anfitrião (smoke **H8**) |
+| **Próximo** | Smoke H8 manual · Fatia B só com repro · NPM audit brief (chore) |
 
 ### Atualização 23/11/2026 (pós hub + K3–K4 + H7b)
 
