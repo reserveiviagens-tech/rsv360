@@ -105,18 +105,17 @@ function OverviewContent() {
       ? 'demo'
       : 'api';
 
+  /** P5: Rentals tab usa API quando há unidades — independente do demo USD do gráfico de comissão. */
   const rentalPortfolioApi: RentalPortfolioItem[] | null = useMemo(() => {
-    if (useCommissionDemo || unidades.length === 0) return null;
+    if (unidades.length === 0) return null;
     return unidadesToRentalPortfolio(unidades);
-  }, [useCommissionDemo, unidades]);
+  }, [unidades]);
 
-  const rentalPortfolioSource: 'api' | 'demo' | 'idle' = useCommissionDemo
-    ? 'demo'
-    : portfolioLoading
-      ? 'idle'
-      : portfolioError || !rentalPortfolioApi?.length
-        ? 'demo'
-        : 'api';
+  const rentalPortfolioSource: 'api' | 'demo' | 'idle' = portfolioLoading
+    ? 'idle'
+    : portfolioError || !rentalPortfolioApi?.length
+      ? 'demo'
+      : 'api';
 
   return (
     <>
