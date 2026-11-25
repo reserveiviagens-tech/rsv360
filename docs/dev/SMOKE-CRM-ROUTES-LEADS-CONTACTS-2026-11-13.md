@@ -16,8 +16,8 @@
 | H7 | `/overview?tab=leads` → selecionar lead API → **Converter em deal** | Oportunidade criada; link **Ver no Kanban** → `tab=deals&deal=` |
 | H7b | Após H7 no Kanban | Card com **ring** verde; modal abre; DnD + F5 mantém estágio (K3/K4) |
 | H8 | `/overview?tab=rentals` parceiro com unidades | Badge **API**; cards `unit-<id>`; aviso demo se backend vazio/falha |
-| H8a | H8 pré-P5 (só referência) | Comissão demo acoplava Rentals → sample Lintel |
-| H8b | H8 pós-**P5** — unidades em `minhas` com gráfico comissão demo | Badge **API** + `unit-<id>`; revalidar Docker `:3005` |
+| H8a | H8 + login `admin@rsv360.com.br` (comissão Lintel demo) | ✅ **25/11** Docker `:3005` — portfólio sample Lintel; **sem** badge API (esperado com demo comissão; independente do portfólio pós-**#591**) |
+| H8b | H8 pós-merge **#591** — `minhas` com unidades **e** gráfico comissão demo | ✅ **25/11** Docker `:3005` pós-rebuild — badge **API**; cartões API (ex. Apartamento Premium…); ocupação 0/50 |
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |
 | L1c | `/leads?lead=<id>` | Painel seleciona o lead correspondente |
