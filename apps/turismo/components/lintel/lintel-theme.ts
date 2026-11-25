@@ -1,5 +1,7 @@
 /** Tema Lintel — sincronizado entre ThemeToggle e menu de perfil (localStorage `theme`). */
 
+/** Tokens institucionais Reservei (gold/navy, status) — ver `./tokens.ts` e `lintel-tokens.css`. */
+
 /**
  * Tokens de cor RSV/Lintel (fonte única). Valores hex sem `#` para reuso em style/JS;
  * classes Tailwind em `LINTEL_TW_CLASSES` (scan do JIT).
