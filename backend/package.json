@@ -23,7 +23,8 @@
     "smoke:p0-checkout": "node scripts/smoke-p0-checkout.mjs",
     "test": "jest --runInBand",
     "test:coverage": "jest --coverage --runInBand",
-    "test:ci": "jest --coverage --ci --runInBand --forceExit"
+    "test:ci": "jest --coverage --ci --runInBand --forceExit",
+    "test:lintel-consolidacao": "jest --runInBand --forceExit --testPathPattern \"csv-importer|proposta-rio-quente|comissoes-paid-guard|comissoes-lancamentos|anfitriao-carteira-admin\""
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
