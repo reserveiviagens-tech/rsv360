@@ -6,7 +6,7 @@
 
 | Item | Valor |
 |------|--------|
-| **origin/develop** | `1c14d458` — merge **#591** |
+| **origin/develop** | `ccbe53a4` — merge **#599** (ver `HANDOFF-CONTINUACAO-2026-11-26.md`) |
 | **Gate CI #591** | ✅ verde (gitleaks, CodeQL, NPM Audit, Trivy, Analyze) |
 | **Último merge** | P5 — Rentals API desacoplada de `useCommissionDemo` |
 
@@ -35,7 +35,8 @@
 | P2–P3 | ✅ #582/#583 |
 | **P4 Rentals API** | ✅ **#590** |
 | **P5 Rentals ≠ comissão demo** | ✅ **#591** |
-| P5+ | Backlog (ver abaixo) |
+| **P5+ Sales API** | ✅ **#599** |
+| P5+ (e2e Playwright) | Backlog |
 
 ## Smoke
 
