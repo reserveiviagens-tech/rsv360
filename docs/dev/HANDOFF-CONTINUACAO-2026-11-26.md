@@ -1,7 +1,7 @@
 # Handoff — continuação (26 nov 2026 — pausa)
 
 > **Prompt para retomar no Cursor:**  
-> `Pull develop @ dbc64f03. Leia docs/dev/HANDOFF-CONTINUACAO-2026-11-26.md. Últimos merges: #600 E2E overview, #601 nodemailer 10.`
+> `Pull develop @ 67668e23. Leia docs/dev/HANDOFF-CONTINUACAO-2026-11-26.md. Últimos merges: #601 nodemailer, #602 Next 16.4.6.`
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Item | Valor |
 |------|--------|
-| **HEAD** | `dbc64f03` — merge **#601** (nodemailer `^10.0.6`) |
-| **Anterior** | `961c5fa6` — merge **#600** (E2E overview H8/H9) |
+| **HEAD** | `67668e23` — merge **#602** (Next.js **16.4.6**) |
+| **Anterior** | `dbc64f03` — merge **#601** (nodemailer `^10.0.6`) |
 | **Lintel 1–5** | ✅ **#597** mergeado (`test:lintel-consolidacao`) |
 
 ### PRs mergeados nesta linha de trabalho
@@ -24,6 +24,7 @@
 | **#599** | **P5+ Sales** — `unidadesToSalesListings`, props `salesPortfolio*`, badge API, deep link `?tab=sales&property=unit-{id}` |
 | **#600** | E2E `overview-portfolio-smoke` (H8/H9/H8c/H9b); banner demo Sales; locator H9 |
 | **#601** | `nodemailer@10.0.6+` — root/backend/site-publico; sem `@types/nodemailer`; allowlist; brief dedicado |
+| **#602** | Next **16.4.6** — turismo/admin/guest/site-publico; allowlist `next` high; `BRIEF-NEXT-PATCH-16.4.6-2026-11-26.md` |
 
 ---
 
@@ -83,6 +84,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 | #599 | ✅ | ✅ | Escopo 6 ficheiros UI |
 | #600 | ✅ | ✅ | Mergeado `961c5fa6` |
 | #601 | ✅ | ✅ | Mergeado `dbc64f03`; jest password-reset 14/14 |
+| #602 | ✅ | ✅ | Mergeado `67668e23`; `build:turismo` local OK |
 
 ### E2E overview portfólio (`npm run test:e2e:overview-portfolio`) — 26 nov 2026
 
@@ -107,7 +109,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 
 1. ~~**Smoke Playwright** overview~~ — ✅ **#600**
 2. ~~**nodemailer@10.0.6+**~~ — ✅ **#601** (`BRIEF-NODEMAILER-10-2026-11-26.md`)
-3. **Next.js patch** — bump planejado (GHSA em brief audit); PR separada + `build:turismo`
+3. ~~**Next.js patch**~~ — ✅ **#602** (`16.4.6`, brief Next)
 4. **Fatia B Kanban** — **somente** com repro Playwright documentado
 5. Atualizar `HANDOFF-CRM-DEALS-2026-11-25.md` (SHA antigo `1c14d458` — obsoleto)
 
@@ -130,6 +132,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 | `feat/overview-p5-sales-api` | Mergeada — apagar após pull |
 | `chore/audit-deps` antiga local | `git branch -d` após sincronizar |
 | `chore/nodemailer-10.0.6` | Mergeada (#601) — apagar após pull |
+| `chore/next-16.4.6-security` | Mergeada (#602) — apagar após pull |
 
 ---
 
@@ -142,5 +145,6 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 - [x] P5+ Sales API (#599)
 - [x] E2E overview H8/H9 (#600)
 - [x] nodemailer 10 (#601)
+- [x] Next.js 16.4.6 (#602)
 
-**Pacr / enterprise:** gates #600/#601 fechados; próximo: **Next patch**, depois Kanban B.
+**Pacr / enterprise:** gates #600–#602 fechados; próximo: **Kanban B** (com repro Playwright) ou housekeeping CRM handoff.
