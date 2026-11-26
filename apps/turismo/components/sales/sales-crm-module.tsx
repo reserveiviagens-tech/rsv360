@@ -77,6 +77,9 @@ export function SalesCrmModule({
     return SAMPLE_SALES_LISTINGS;
   }, [hostListings, listingsSource]);
 
+  const portfolioFromApi =
+    listingsSource === 'api' && hostListings != null && hostListings.length > 0;
+
   const counts = useMemo(() => salesFilterCounts(listings), [listings]);
 
   const filtered = useMemo(() => {
@@ -155,7 +158,7 @@ export function SalesCrmModule({
 
   return (
     <div className="lintel-rentals-enter flex flex-col gap-4">
-      {listingsSource === 'demo' && (
+      {!portfolioFromApi && !listingsLoading && (
         <div
           className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-100"
           role="status"
@@ -167,7 +170,7 @@ export function SalesCrmModule({
         <h1 className="min-w-0 shrink-0 leading-none">
           <span className="block text-2xl font-black tracking-tight text-gray-900 dark:text-white">
             {sm.pageTitleMain}
-            {listingsSource === 'api' && (
+            {portfolioFromApi && (
               <span className="ml-2 align-middle text-[10px] font-bold uppercase text-[#138a63]">API</span>
             )}
           </span>
