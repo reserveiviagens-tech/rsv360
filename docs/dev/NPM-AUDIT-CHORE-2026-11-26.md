@@ -30,6 +30,7 @@ npm audit --workspace=apps/turismo
 
 - `npm audit fix` (sem `--force`) na árvore lockfile já regenerada.
 - **Não** incluído: bumps de **Next** para 16.4.6+ via force, **Zod 4**, downgrades/upgrades breaking de `eslint-config-next`.
+- **CI Dependency Review:** `npm audit fix` tinha resolvido `nodemailer@9.1.1` (dezenas de GHSA moderate/high novas na comparação com `develop`). Revertido para **`9.0.3`** via `overrides` + pin na raiz; follow-up dedicado **`nodemailer@10.0.6+`** quando backend for validado.
 
 ---
 
