@@ -58,7 +58,8 @@ Variáveis (backend, **não** commitar valores):
 Persistência deals:
 
 ```powershell
-$env:SMOKE_BEARER="<jwt>"
+# Login automático (admin dev) se SMOKE_BEARER omitido — igual rental-sign smoke
+$env:SEED_TEST_USER_PASSWORD="dev-only-fallback-do-not-use-in-prod"
 # K3a
 npm run smoke:crm-deals-persistence
 docker compose restart backend

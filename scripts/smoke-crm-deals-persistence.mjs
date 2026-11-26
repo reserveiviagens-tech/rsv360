@@ -3,7 +3,8 @@
  * Smoke — CRM deals com persistência Postgres (K3a + K4).
  *
  * K3a (padrão):
- *   SMOKE_API_URL=http://127.0.0.1:3002 SMOKE_BEARER=<jwt> npm run smoke:crm-deals-persistence
+ *   SMOKE_API_URL=http://127.0.0.1:3002 npm run smoke:crm-deals-persistence
+ *   (opcional SMOKE_BEARER; senão login via SEED_TEST_USER_* / admin dev)
  *
  * K4 após restart (manual):
  *   docker compose restart backend
@@ -23,21 +24,37 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const STATE_FILE = path.join(os.tmpdir(), 'rsv360-smoke-deal-persist.json');
 
 const API = (process.env.SMOKE_API_URL || 'http://127.0.0.1:3002').replace(/\/$/, '');
-const bearer = process.env.SMOKE_BEARER || process.env.SMOKE_JWT;
 const k4Verify =
   process.argv.includes('--k4-verify') ||
   process.env.SMOKE_K4_VERIFY === '1' ||
   process.env.npm_lifecycle_event === 'smoke:crm-deals-persistence:k4';
 
-if (!bearer) {
-  console.error('Defina SMOKE_BEARER ou SMOKE_JWT (token parceiro/corretor).');
-  process.exit(2);
-}
-
-const headers = {
-  Authorization: `Bearer ${bearer}`,
+let headers = {
+  Authorization: '',
   'Content-Type': 'application/json',
 };
+
+async function resolveBearer() {
+  const fromEnv = process.env.SMOKE_BEARER || process.env.SMOKE_JWT;
+  if (fromEnv) return fromEnv;
+  const email = (process.env.SEED_TEST_USER_EMAIL || 'admin@rsv360.com.br').toLowerCase();
+  const password =
+    process.env.SEED_TEST_USER_PASSWORD || 'dev-only-fallback-do-not-use-in-prod';
+  const res = await fetch(`${API}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Login smoke falhou HTTP ${res.status}`);
+  const token =
+    json?.data?.access_token ??
+    json?.data?.accessToken ??
+    json?.access_token ??
+    json?.accessToken;
+  if (!token) throw new Error('Login smoke sem accessToken');
+  return token;
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -168,6 +185,11 @@ async function runK3a() {
 }
 
 async function run() {
+  const bearer = await resolveBearer();
+  headers = {
+    Authorization: `Bearer ${bearer}`,
+    'Content-Type': 'application/json',
+  };
   if (k4Verify) {
     await runK4VerifyOnly();
     return;
