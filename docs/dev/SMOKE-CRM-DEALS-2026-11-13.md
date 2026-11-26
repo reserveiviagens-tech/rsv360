@@ -46,7 +46,7 @@
 |---|-------|------------|-------------------|--------|
 | 2.3.1 | Modal abre automaticamente | `/deals?deal=dhollismarc` | Split-pane modal com hero, métricas, pipeline | ✅ |
 | 2.3.2 | Botões "Mover para:" (pipeline) | No modal, abaixo do pipeline animado | 5 botões de estágio (Viewing → Offer → Negotiation → Under Contract → Closed). "Lost" é botão à parte, não conta aqui. | ✅ |
-| 2.3.3 | Clicar "Negotiation" | Botão no modal | Card atualiza estágio instantaneamente; barra anima | ✅ **Parcial** (24/11) — clique **Negociação** OK; **Oferta** disabled; persistência Kanban/API não revalidada (`develop` @ `1735c4a4`, Docker :3005) |
+| 2.3.3 | Clicar "Negotiation" | Botão no modal | Card atualiza estágio instantaneamente; barra anima | ✅ E2E **K3** `npm run test:e2e:deals-kanban` (modal Negociação + reload) — revalidar após merge |
 | 2.3.4 | Botão "Copiar link" | Share2 no cabeçalho do modal | Toast com texto traduzido (PT/EN) | ✅ (24/11) — toast visual + anunciador `aria-live` (#587); Playwright/clipboard ainda opcional |
 | 2.3.5 | Botão "Profile" do buyer | Buyer section no modal | Ação definida (não fica sem função) — se ainda sem ação, marcar **N/A** ou **falha conhecida** até próxima fatia. | ✅ (24/11) — **Perfil** → `/overview?tab=contacts&contact=<id>` (#586); comprador sem match demo → botão disabled |
 

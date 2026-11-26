@@ -1,7 +1,7 @@
 # Handoff — continuação (26 nov 2026 — pausa)
 
 > **Prompt para retomar no Cursor:**  
-> `Pull develop @ e057f790. HANDOFF-CONTINUACAO + PLANO-EXECUCAO-RESTANTE-2026-11-26.md. Próximo: Fatia B Kanban E2E.`
+> `Pull develop @ 1eaade19. PLANO-EXECUCAO-RESTANTE + Fatia B K3 E2E.`
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Item | Valor |
 |------|--------|
-| **HEAD** | **`e057f790`** — docs pós-#602; merge code **#602** @ `67668e23` |
+| **HEAD** | **`1eaade19`** — merge **#603** (plano CRM + E2E Kanban K1) |
 | **Anterior** | `dbc64f03` — merge **#601** (nodemailer `^10.0.6`) |
 | **Lintel 1–5** | ✅ **#597** mergeado (`test:lintel-consolidacao`) |
 
@@ -25,6 +25,7 @@
 | **#600** | E2E `overview-portfolio-smoke` (H8/H9/H8c/H9b); banner demo Sales; locator H9 |
 | **#601** | `nodemailer@10.0.6+` — root/backend/site-publico; sem `@types/nodemailer`; allowlist; brief dedicado |
 | **#602** | Next **16.4.6** — turismo/admin/guest/site-publico; allowlist `next` high; `BRIEF-NEXT-PATCH-16.4.6-2026-11-26.md` |
+| **#603** | Plano execução restante + E2E deals K1 + handoffs CRM |
 
 ---
 

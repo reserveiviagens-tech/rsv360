@@ -106,8 +106,9 @@ flowchart TD
 | ✅ Plano mestre | Este ficheiro |
 | ✅ Handoffs | `HANDOFF-CRM-DEALS`, `CONTINUAR-CRM`, `HANDOFF-CONTINUACAO` |
 | ✅ Branches locais | Removidas mergeadas (#601, #602, …) |
-| ✅ E2E scaffold K1 | `deals-kanban-smoke.spec.ts` + `npm run test:e2e:deals-kanban` |
-| ⏳ Fatia B completa | K3 DnD + reload + `dealsApi.patchStage` assert (próximo PR) |
+| ✅ E2E K1 | #603 mergeado |
+| ⏳ E2E K3 | Modal Negociação + reload (PR em curso) |
+| ⏳ K4 | `smoke:crm-deals-persistence:k4` (script; fora Playwright) |
 
 **Comando K1:**
 
