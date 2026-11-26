@@ -80,7 +80,7 @@
     "@sendgrid/mail": "^8.1.6",
     "handlebars": "^4.7.9",
     "ioredis": "5.10.1",
-    "nodemailer": "9.0.3",
+    "nodemailer": "^9.0.1",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "twilio": "^5.13.1"
@@ -137,7 +137,6 @@
       "socket.io-parser": "4.2.7"
     },
     "test-exclude": "7.0.1",
-    "nodemailer": "9.0.3",
     "shell-quote": "1.10.0",
     "js-yaml": "3.15.0",
     "@eslint/eslintrc": {
