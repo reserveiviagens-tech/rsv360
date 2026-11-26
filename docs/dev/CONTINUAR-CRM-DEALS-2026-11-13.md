@@ -2,6 +2,15 @@
 
 > Checkpoint da sessão **13/11/2026 (noite)**. Retomar a partir deste ficheiro + `SMOKE-CRM-DEALS-2026-11-13.md` + `HANDOFF-CRM-DEALS-2026-11-25.md`.
 
+### Atualização 26/11/2026 (pós #600–#602 — E2E overview, nodemailer, Next)
+
+| Item | Estado |
+|------|--------|
+| `develop` | **`e057f790`** |
+| Overview | Rentals/Sales API + E2E H8/H9 ✅ |
+| **Próximo** | **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`** — Fatia B Kanban E2E, Docker rebuild |
+| CRM deals | 2.3.3 / K3–K4 UI persistência — Fatia B em aberto |
+
 ### Atualização 25/11/2026 (pós #588–#590 — proxy, 3c, Overview P4)
 
 | Item | Estado |
