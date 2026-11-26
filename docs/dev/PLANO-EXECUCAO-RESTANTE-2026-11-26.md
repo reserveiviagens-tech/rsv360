@@ -107,7 +107,7 @@ flowchart TD
 | ✅ Handoffs | `HANDOFF-CRM-DEALS`, `CONTINUAR-CRM`, `HANDOFF-CONTINUACAO` |
 | ✅ Branches locais | Removidas mergeadas (#601, #602, …) |
 | ✅ E2E K1 | #603 mergeado |
-| ⏳ E2E K3 | PR [#604](https://github.com/reserveiviagens-tech/rsv360/pull/604) — 2/2 Playwright local |
+| ✅ E2E K3 | Mergeado **#604** — 2/2 Playwright |
 | ✅ K3a/K4 API | `npm run smoke:crm-deals-persistence` + `:k4` pós-restart backend (26/11) |
 
 **Comando K1:**

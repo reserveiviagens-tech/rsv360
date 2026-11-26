@@ -1,7 +1,7 @@
 # Handoff — continuação (26 nov 2026 — pausa)
 
 > **Prompt para retomar no Cursor:**  
-> `Pull develop @ 1eaade19. PLANO-EXECUCAO-RESTANTE + Fatia B K3 E2E.`
+> `Pull develop @ 229e8981. PLANO-EXECUCAO-RESTANTE — Fatia B fechada; Fase 1 Docker opcional.`
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Item | Valor |
 |------|--------|
-| **HEAD** | **`1eaade19`** — merge **#603** (plano CRM + E2E Kanban K1) |
+| **HEAD** | **`229e8981`** — merge **#604** (E2E Kanban K3 + smoke K4) |
 | **Anterior** | `dbc64f03` — merge **#601** (nodemailer `^10.0.6`) |
 | **Lintel 1–5** | ✅ **#597** mergeado (`test:lintel-consolidacao`) |
 
@@ -26,6 +26,7 @@
 | **#601** | `nodemailer@10.0.6+` — root/backend/site-publico; sem `@types/nodemailer`; allowlist; brief dedicado |
 | **#602** | Next **16.4.6** — turismo/admin/guest/site-publico; allowlist `next` high; `BRIEF-NEXT-PATCH-16.4.6-2026-11-26.md` |
 | **#603** | Plano execução restante + E2E deals K1 + handoffs CRM |
+| **#604** | Fatia B: E2E K3 (2.3.3) + auto-login `smoke:crm-deals-persistence` K3a/K4 |
 
 ---
 
@@ -86,6 +87,8 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 | #600 | ✅ | ✅ | Mergeado `961c5fa6` |
 | #601 | ✅ | ✅ | Mergeado `dbc64f03`; jest password-reset 14/14 |
 | #602 | ✅ | ✅ | Mergeado `67668e23`; `build:turismo` local OK |
+| #603 | ✅ | ✅ | Plano + K1 E2E |
+| #604 | ✅ | ✅ | K3 E2E + K4 smoke API |
 
 ### E2E overview portfólio (`npm run test:e2e:overview-portfolio`) — 26 nov 2026
 
@@ -111,7 +114,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 1. ~~**Smoke Playwright** overview~~ — ✅ **#600**
 2. ~~**nodemailer@10.0.6+**~~ — ✅ **#601** (`BRIEF-NODEMAILER-10-2026-11-26.md`)
 3. ~~**Next.js patch**~~ — ✅ **#602** (`16.4.6`, brief Next)
-4. **Fatia B Kanban** — K3 E2E **#604** (open); K3a/K4 API ✅; ver **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`**
+4. ~~**Fatia B Kanban**~~ — ✅ **#604** (K3 E2E + K3a/K4 smoke); opcional: DnD E2E
 5. ~~Atualizar HANDOFF-CRM-DEALS~~ — ✅ 26/11 @ `e057f790`
 
 ---
@@ -134,6 +137,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 | `chore/audit-deps` antiga local | `git branch -d` após sincronizar |
 | `chore/nodemailer-10.0.6` | Mergeada (#601) — apagar após pull |
 | `chore/next-16.4.6-security` | Mergeada (#602) — apagar após pull |
+| `feat/deals-kanban-e2e-k1` / `feat/deals-kanban-e2e-k3` | Mergeadas (#603/#604) — apagar após pull |
 
 ---
 
@@ -147,5 +151,6 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 - [x] E2E overview H8/H9 (#600)
 - [x] nodemailer 10 (#601)
 - [x] Next.js 16.4.6 (#602)
+- [x] Fatia B Kanban K3/K4 (#603/#604)
 
-**Pacr / enterprise:** gates #600–#602 fechados; plano mestre: **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`** — executar Fase 1 (Docker) → Fase 2–3 (Kanban B E2E).
+**Pacr / enterprise:** gates até **#604**; ver **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`** Fase 5 (Zod/sharp) ou Docker rebuild.
