@@ -16,16 +16,18 @@ export function IngressosFold3() {
         <h3 className="text-lg font-bold" style={{ color: rsvColors.textPrimary }}>
           Quem comprou ingressos também reservou
         </h3>
-        <div className="mt-4 flex gap-4 overflow-x-auto pb-2">
+        <div className="mt-4 min-w-0 max-w-full">
+          <div className="flex gap-4 overflow-x-auto overscroll-x-contain pb-2 [-webkit-overflow-scrolling:touch]">
           {["Hotel A", "Pousada B", "Resort C", "Flat D"].map((name) => (
             <div
               key={name}
-              className="min-w-[200px] rounded-lg border bg-white p-4 shadow-sm"
+              className="min-w-[200px] shrink-0 rounded-lg border bg-white p-4 shadow-sm"
             >
               <p className="font-medium">{name}</p>
               <p className="text-sm text-gray-600">a partir de R$ 199,00</p>
             </div>
           ))}
+          </div>
         </div>
       </motionBlock>
 
