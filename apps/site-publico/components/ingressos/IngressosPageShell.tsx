@@ -52,7 +52,7 @@ export function IngressosPageShell({
         />
         <IngressosFold3 />
       </main>
-      <IngressosCartStickyPlaceholder cartItemCount={0} />
+      <IngressosCartStickyPlaceholder />
     </div>
   )
 }
