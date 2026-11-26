@@ -91,11 +91,6 @@
       "reason": "Framework pin shared across apps; upgrade via dedicated Next security PR (not this feature branch)",
       "expires": "2026-12-31"
     },
-    "nodemailer": {
-      "severity": "high",
-      "reason": "Mail transport pin; upgrade pending regression tests on notification templates",
-      "expires": "2026-12-31"
-    },
     "proxy-addr": {
       "severity": "critical",
       "reason": "Express trust-proxy transitive; fix with express stack security PR",

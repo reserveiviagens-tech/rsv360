@@ -30,7 +30,7 @@ npm audit --workspace=apps/turismo
 
 - `npm audit fix` (sem `--force`) na árvore lockfile já regenerada.
 - **Não** incluído: bumps de **Next** para 16.4.6+ via force, **Zod 4**, downgrades/upgrades breaking de `eslint-config-next`.
-- **CI Dependency Review:** `npm audit fix` puxou `nodemailer@9.1.1` no lockfile (GHSA novas). Lock mantém **`9.0.3`** (igual `develop`); **não** alterar declaração em `package.json` (pin/override na raiz dispara PR-09b). Follow-up: **`nodemailer@10.0.6+`** em PR dedicada com testes backend (`password-reset-email`).
+- **CI Dependency Review:** `npm audit fix` puxou `nodemailer@9.1.1` no lockfile (GHSA novas). Lock mantém **`9.0.3`** (igual `develop`); **não** alterar declaração em `package.json` (pin/override na raiz dispara PR-09b). Follow-up: **`nodemailer@10.0.6+`** — ver **`BRIEF-NODEMAILER-10-2026-11-26.md`**.
 
 ---
 
