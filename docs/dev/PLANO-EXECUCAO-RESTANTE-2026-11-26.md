@@ -109,6 +109,7 @@ flowchart TD
 | ✅ E2E K1 | #603 mergeado |
 | ✅ E2E K3 | Mergeado **#604** — 2/2 Playwright |
 | ✅ K3a/K4 API | `npm run smoke:crm-deals-persistence` + `:k4` pós-restart backend (26/11) |
+| ✅ Fase 1 Docker | `docker compose build turismo` + E2E overview 4/4 + kanban 2/2 + K3a/K4 na imagem (26/11) |
 
 **Comando K1:**
 
