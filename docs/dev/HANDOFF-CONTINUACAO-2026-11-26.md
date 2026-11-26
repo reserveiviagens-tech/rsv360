@@ -111,7 +111,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 1. ~~**Smoke Playwright** overview~~ — ✅ **#600**
 2. ~~**nodemailer@10.0.6+**~~ — ✅ **#601** (`BRIEF-NODEMAILER-10-2026-11-26.md`)
 3. ~~**Next.js patch**~~ — ✅ **#602** (`16.4.6`, brief Next)
-4. **Fatia B Kanban** — **somente** com repro Playwright — ver **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`**
+4. **Fatia B Kanban** — K3 E2E **#604** (open); K3a/K4 API ✅; ver **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`**
 5. ~~Atualizar HANDOFF-CRM-DEALS~~ — ✅ 26/11 @ `e057f790`
 
 ---
