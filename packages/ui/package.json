@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "type-check": "tsc --noEmit",
-    "test": "tsx --test src/tests/**/*.test.ts src/tests/**/*.test.tsx"
+    "test": "tsx --test src/tests/tokens.contract.test.ts && tsx --test src/tests/primitives.test.tsx"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
