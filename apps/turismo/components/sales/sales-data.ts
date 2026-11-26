@@ -296,9 +296,14 @@ export function salesListingSlug(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function findSalesListingBySlug(slug: string): SalesListing | undefined {
+export function findSalesListingBySlug(
+  slug: string,
+  catalog?: SalesListing[] | null,
+): SalesListing | undefined {
   const normalized = slug.toLowerCase();
-  return SAMPLE_SALES_LISTINGS.find((l) => l.slug === normalized || salesListingSlug(l.name) === normalized);
+  const pool =
+    catalog && catalog.length > 0 ? catalog : SAMPLE_SALES_LISTINGS;
+  return pool.find((l) => l.slug === normalized || salesListingSlug(l.name) === normalized);
 }
 
 export type SalesStatusFilter = 'all' | 'draft' | 'active' | 'offer' | 'sold';
@@ -309,6 +314,15 @@ export function salesMatchesFilter(item: SalesListing, filter: SalesStatusFilter
 }
 
 export function salesPriceSortValue(price: string): number {
+  const trimmed = price.trim();
+  if (/^R\$/i.test(trimmed)) {
+    const digits = trimmed
+      .replace(/^R\$\s*/i, '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+    const n = parseFloat(digits);
+    return Number.isFinite(n) ? n : 0;
+  }
   const raw = price.replace(/[$,\s]/g, '');
   if (raw.endsWith('M')) return parseFloat(raw) * 1_000_000;
   if (raw.endsWith('K')) return parseFloat(raw) * 1_000;

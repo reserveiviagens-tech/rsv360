@@ -26,8 +26,10 @@ import {
   unidadesToHeroListings,
   unidadesToPortfolioPins,
   unidadesToRentalPortfolio,
+  unidadesToSalesListings,
 } from '@/lib/overview-portfolio';
 import type { RentalPortfolioItem } from '../components/rentals/rentals-data';
+import type { SalesListing } from '../components/sales/sales-data';
 import { RsvCrmShell } from '../components/lintel/rsv-crm-shell';
 import { lintelDisplayFirstName } from '../components/lintel/overview-primitives';
 
@@ -117,6 +119,18 @@ function OverviewContent() {
       ? 'demo'
       : 'api';
 
+  /** P5+: Sales tab — mesmas unidades `minhas`, independente do demo de comissão. */
+  const salesPortfolioApi: SalesListing[] | null = useMemo(() => {
+    if (unidades.length === 0) return null;
+    return unidadesToSalesListings(unidades);
+  }, [unidades]);
+
+  const salesPortfolioSource: 'api' | 'demo' | 'idle' = portfolioLoading
+    ? 'idle'
+    : portfolioError || !salesPortfolioApi?.length
+      ? 'demo'
+      : 'api';
+
   return (
     <>
       <Head>
@@ -157,6 +171,9 @@ function OverviewContent() {
         rentalPortfolio={rentalPortfolioApi}
         rentalPortfolioSource={rentalPortfolioSource}
         rentalPortfolioLoading={portfolioLoading}
+        salesPortfolio={salesPortfolioApi}
+        salesPortfolioSource={salesPortfolioSource}
+        salesPortfolioLoading={portfolioLoading}
         onOpenComissoes={() => void router.push('/anfitriao/comissoes')}
       />
     </>
