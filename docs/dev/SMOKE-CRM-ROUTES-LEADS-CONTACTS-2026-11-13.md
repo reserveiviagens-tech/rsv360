@@ -29,6 +29,7 @@
 $env:E2E_AUTH_EMAIL="admin@rsv360.com.br"
 $env:E2E_AUTH_PASSWORD="<dev password — ver TROUBLESHOOTING-LOGIN-LOCAL>"
 npm run test:e2e:overview-portfolio
+npm run test:e2e:deals-kanban   # K1 scaffold (Fatia B — colunas [data-stage])
 ```
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |

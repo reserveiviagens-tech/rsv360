@@ -1,95 +1,70 @@
-# Handoff — CRM / Overview / Lintel (25 nov 2026 — pausa)
+# Handoff — CRM / Overview / Lintel (atualizado 26 nov 2026)
 
-> Retomar por este ficheiro + `CONTINUAR-CRM-DEALS-2026-11-13.md` + `BRIEF-OVERVIEW-ANFITRIAO-2026-11-13.md`.
+> **Retomar:** `PLANO-EXECUCAO-RESTANTE-2026-11-26.md` + `HANDOFF-CONTINUACAO-2026-11-26.md` + smokes abaixo.
 
 ## develop (fonte de verdade)
 
 | Item | Valor |
 |------|--------|
-| **origin/develop** | `ccbe53a4` — merge **#599** (ver `HANDOFF-CONTINUACAO-2026-11-26.md`) |
-| **Gate CI #591** | ✅ verde (gitleaks, CodeQL, NPM Audit, Trivy, Analyze) |
-| **Último merge** | P5 — Rentals API desacoplada de `useCommissionDemo` |
+| **HEAD** | **`e057f790`** — pós **#602** Next 16.4.6 (ver handoff continuação) |
+| **Overview Anfitrião** | P4/P5/P5+ Sales ✅ #590–#591, #599; E2E H8/H9 ✅ #600 |
+| **Segurança** | #598 audit, #601 nodemailer 10, #602 Next 16.4.6 |
 
-### PRs mergeados (sessão 24–25/11)
+### CRM / Deals (estado funcional)
+
+| Área | Status |
+|------|--------|
+| Hub overview `tab=deals\|leads\|contacts\|rentals\|sales` | ✅ |
+| Persistência Postgres `crm_deals` | ✅ backend + scripts K3a/K4 |
+| Kanban DnD UI | ✅ #547 |
+| Modal pipeline 2.3.3 | **Parcial** — UI clique OK; **Fatia B:** persistência UI não revalidada |
+| E2E Playwright Kanban | **Não implantado** — gate para Fatia B |
+
+### PRs relevantes (histórico recente)
 
 | PR | Escopo |
 |----|--------|
-| **#588** | Proxy dev `next.config` — `/api/v1` → `:3002` |
-| **#589** | Lintel 3c — último hex em `rental-property-detail-modal` |
-| **#590** | **P4** — `?tab=rentals` portfólio API (`unidadesToRentalPortfolio`) + badge API + smoke **H8** |
-| **#591** | **P5** — Rentals API independente de comissão demo (`overview.tsx`) |
+| #588 | Proxy dev `/api/v1` → backend |
+| #563–#572 | Hub leads/contacts, convert deal |
+| #576–#579 | Drizzle journal, K3a/K4 smoke scripts, H7b |
+| #590–#591, #599–#600 | Overview rentals/sales + E2E |
 
-### Já em develop antes desta sessão
+## Smoke (fonte)
 
-| PR | Escopo |
-|----|--------|
-| #586 | Perfil buyer → contacts hub |
-| #587 | Copiar link + aria-live |
-| #582–#583 | Anfitrião P2/P3 (Leads/Contacts API) |
+| Doc | Uso |
+|-----|-----|
+| `SMOKE-CRM-DEALS-2026-11-13.md` | 2.1–2.5 deals; **2.3.3 Fatia B pendente** |
+| `SMOKE-CRM-ROUTES-LEADS-CONTACTS-2026-11-13.md` | H1–H9 hub |
+| `SMOKE-CRM-ESIGN-KANBAN-2026-11-17.md` | E1–E8 e-sign; K1–K4b Kanban |
+| `CRM-FASE3-PERSISTENCIA-2026-11-17.md` | Postgres deals |
 
-## Overview Anfitrião — estado
+### Scripts automatizados
 
-| Fatia | Status |
-|-------|--------|
-| P0–P1 | ✅ |
-| P2–P3 | ✅ #582/#583 |
-| **P4 Rentals API** | ✅ **#590** |
-| **P5 Rentals ≠ comissão demo** | ✅ **#591** |
-| **P5+ Sales API** | ✅ **#599** |
-| P5+ (e2e Playwright) | Backlog |
+```powershell
+npm run smoke:crm-deals-persistence      # K3a API
+npm run smoke:crm-deals-persistence:k4   # K4 pós-restart
+$env:SMOKE_BEARER="<jwt-admin-dev>"
+```
 
-## Smoke
-
-| Doc | Notas |
-|-----|--------|
-| `SMOKE-CRM-DEALS-2026-11-13.md` | 2.3.4/2.3.5 ✅; 2.3.3 parcial (Fatia B em espera) |
-| `SMOKE-CRM-ROUTES-LEADS-CONTACTS-2026-11-13.md` | **H8** ✅ 25/11 (H8a demo comissão; H8b API pós-**#591**) |
-
-### H8 (validado 25/11 — browser Docker `:3005`)
-
-| Caso | Resultado |
-|------|-----------|
-| **H8a** admin + comissão demo | ✅ Sample Lintel; sem badge API — `useCommissionDemo` |
-| **H8b** badge API + portfólio API | ✅ 25/11 pós-rebuild turismo #591 — badge **API**; unidades reais (não sample Lintel) |
-
-## Ambiente dev local
+## Ambiente
 
 | Item | Nota |
 |------|------|
-| Auth proxy | **#588** em develop; `.env.local` → `NEXT_PUBLIC_API_URL=http://localhost:3002` (**não commitar**) |
-| Docker | Rebuild `turismo` para imagem com **#591** (~15–20 min) |
-| `dev:mem` | Script no `package.json` pode existir só local — não obrigatório |
+| Turismo | `next dev :3005` ou Docker — **rebuild** após #600–#602 |
+| Auth | `docs/cotacao/TROUBLESHOOTING-LOGIN-LOCAL.md` |
+| E2E overview | `npm run test:e2e:overview-portfolio` |
 
-```powershell
-cd "c:\Users\RSV 360\Documents\rsv360"
-git checkout develop
-git pull origin develop
-docker compose up -d postgres redis backend   # se usar stack
-docker compose build turismo && docker compose up -d turismo   # opcional
-# OU: npm run dev -w apps/turismo  (uma instância :3005; parar container turismo)
-# Smoke: http://localhost:3005/overview?tab=rentals
-```
+## Backlog (ordem)
 
-## Backlog prioritizado (próxima sessão)
-
-1. ~~Smoke H8b~~ ✅ — próximo: NPM audit chore ou Overview P5+
-2. **Fatia B** — persistência Kanban/API — **somente** com repro documentado
-3. **NPM audit brief** — chore/CI, PR separada (não bloqueador)
-4. Playwright clipboard 2.3.4 — nice-to-have (#587 já cobre UX)
-5. Overview P5+ — Sales tab API, deep links `?rental=unit-*` e2e, jest `overview-portfolio-rentals.test.ts`
-
-## Branches / housecleaning
-
-| Branch | Ação sugerida |
-|--------|----------------|
-| `feat/overview-anfitriao-p4-rentals-api-portfolio` | Pode apagar após pull |
-| `fix/lintel-3c-hex-polish` | Obsoleta (commit vazio + docs) — apagar remoto |
+1. **Fatia B** — E2E Kanban persistência + fechar 2.3.3 (`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`)
+2. E2E rotas CRM (H1/H7) — após Fatia B ou em paralelo
+3. Audit follow-up (Zod 4, sharp) — PRs chore separadas
 
 ## Gate enterprise
 
-- **Próxima fatia:** gate **#591** + smoke **H8** ✅ — **liberado**
-- Sem auto-merge · sem Fatia B sem repro
+- Sem Fatia B sem repro Playwright documentado
+- Sem auto-merge
 
-## Prompt para retomar no Cursor
+## Prompt Cursor
 
-> Pull `develop` @ `1c14d458`. Gate #591 verde. Rebuild turismo + smoke **H8b**. Depois: NPM audit chore **ou** Overview P5+.
+> Pull `develop` @ `e057f790`. Plano: `PLANO-EXECUCAO-RESTANTE-2026-11-26.md`. Fase 2: PACR Kanban B.

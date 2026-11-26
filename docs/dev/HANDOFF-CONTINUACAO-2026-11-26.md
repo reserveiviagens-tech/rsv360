@@ -1,7 +1,7 @@
 # Handoff — continuação (26 nov 2026 — pausa)
 
 > **Prompt para retomar no Cursor:**  
-> `Pull develop @ 67668e23. Leia docs/dev/HANDOFF-CONTINUACAO-2026-11-26.md. Últimos merges: #601 nodemailer, #602 Next 16.4.6.`
+> `Pull develop @ e057f790. HANDOFF-CONTINUACAO + PLANO-EXECUCAO-RESTANTE-2026-11-26.md. Próximo: Fatia B Kanban E2E.`
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Item | Valor |
 |------|--------|
-| **HEAD** | `67668e23` — merge **#602** (Next.js **16.4.6**) |
+| **HEAD** | **`e057f790`** — docs pós-#602; merge code **#602** @ `67668e23` |
 | **Anterior** | `dbc64f03` — merge **#601** (nodemailer `^10.0.6`) |
 | **Lintel 1–5** | ✅ **#597** mergeado (`test:lintel-consolidacao`) |
 
@@ -110,8 +110,8 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 1. ~~**Smoke Playwright** overview~~ — ✅ **#600**
 2. ~~**nodemailer@10.0.6+**~~ — ✅ **#601** (`BRIEF-NODEMAILER-10-2026-11-26.md`)
 3. ~~**Next.js patch**~~ — ✅ **#602** (`16.4.6`, brief Next)
-4. **Fatia B Kanban** — **somente** com repro Playwright documentado
-5. Atualizar `HANDOFF-CRM-DEALS-2026-11-25.md` (SHA antigo `1c14d458` — obsoleto)
+4. **Fatia B Kanban** — **somente** com repro Playwright — ver **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`**
+5. ~~Atualizar HANDOFF-CRM-DEALS~~ — ✅ 26/11 @ `e057f790`
 
 ---
 
@@ -147,4 +147,4 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 - [x] nodemailer 10 (#601)
 - [x] Next.js 16.4.6 (#602)
 
-**Pacr / enterprise:** gates #600–#602 fechados; próximo: **Kanban B** (com repro Playwright) ou housekeeping CRM handoff.
+**Pacr / enterprise:** gates #600–#602 fechados; plano mestre: **`PLANO-EXECUCAO-RESTANTE-2026-11-26.md`** — executar Fase 1 (Docker) → Fase 2–3 (Kanban B E2E).
