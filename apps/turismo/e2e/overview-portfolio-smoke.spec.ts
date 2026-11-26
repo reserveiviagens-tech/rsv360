@@ -42,7 +42,7 @@ test.describe('Overview — Rentals/Sales portfolio (H8 / H9)', () => {
     });
     await expect(page).toHaveURL(/tab=sales/);
     await expect(
-      page.getByRole('heading', { name: /Imóveis à venda/i }),
+      page.getByRole('heading', { level: 1 }).filter({ hasText: /venda/i }),
     ).toBeVisible({ timeout: 30_000 });
     const apiBadge = page.getByText('API', { exact: true }).first();
     const demoBanner = page

@@ -79,12 +79,30 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 |----|-------------------|-----------|--------|
 | #598 | ✅ após pin lock nodemailer 9.0.3 sem diff em `package.json` | ✅ | Lock grande; não usar `audit fix --force` cego |
 | #599 | ✅ | ✅ | Escopo 6 ficheiros UI |
+| #600 (aberta) | ✅ (última verificação local) | ✅ | E2E não roda no CI — validar local |
+
+### E2E overview portfólio (`npm run test:e2e:overview-portfolio`) — 26 nov 2026
+
+| Cenário | H8 | H9 | H8c | H9b |
+|---------|----|----|-----|-----|
+| Docker `turismo` sem `60191fc0` | pass | **fail** (sem banner demo) | pass | pass |
+| `next dev` branch `feat/e2e-overview-portfolio-smoke` + credenciais admin dev | pass | pass | pass | pass |
+
+**Comando:** `E2E_TURISMO_URL=http://localhost:3005` + `E2E_AUTH_EMAIL` / `E2E_AUTH_PASSWORD` (ver `docs/cotacao/TROUBLESHOOTING-LOGIN-LOCAL.md`). Backend `:3002` health 200.
+
+**Causas documentadas:**
+- Imagem Docker desatualizada → H9 sem badge **API** nem banner demo até merge do fix em `sales-crm-module.tsx`.
+- H9 com API: título DOM `ImóveisAPI à venda` — locator usa `heading` nível 1 + `/venda/i` (não string fixa `Imóveis à venda`).
+
+**Evidência:** 4 passed ~10s com dev local após locator + fix Sales (`60191fc0`).
+
+**PR:** [#600](https://github.com/reserveiviagens-tech/rsv360/pull/600) — branch `feat/e2e-overview-portfolio-smoke`.
 
 ---
 
 ## Backlog prioritizado (próxima sessão)
 
-1. **Smoke Playwright** — `npm run test:e2e:overview-portfolio` (`apps/turismo/e2e/overview-portfolio-smoke.spec.ts`) — H8/H9/H8c/H9b
+1. ~~**Smoke Playwright** overview~~ — **#600** (merge humano após push + gate)
 2. **nodemailer@10.0.6+** — PR dedicada + testes backend e-mail (`password-reset-email`)
 3. **Next.js patch** — bump planejado (GHSA em brief audit); PR separada + `build:turismo`
 4. **Fatia B Kanban** — **somente** com repro Playwright documentado
@@ -118,5 +136,6 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 - [x] Lintel 1–5 (#597)
 - [x] Audit chore (#598)
 - [x] P5+ Sales API (#599)
+- [ ] E2E overview H8/H9 (#600 — 4/4 local; merge pendente)
 
-**Pacr / enterprise:** próxima tarefa só após `git pull` + smoke H8/Sales; escolher backlog acima.
+**Pacr / enterprise:** após merge **#600**, seguir backlog (nodemailer, Next patch, Kanban B).
