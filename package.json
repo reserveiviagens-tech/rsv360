@@ -29,6 +29,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:hub": "npm run test --workspace=backend -- --testPathPattern=\"fornecedores-hub|ancoragem|objecao|rbac-aprovacao|mgm|reverter-reserva\" --forceExit",
+    "test:lintel-consolidacao": "npm run build:shared && npm run test:lintel-consolidacao --workspace=backend",
     "migrate": "npm run migrate --workspace=backend",
     "migrate:db-json": "tsx scripts/migrate-db-json.ts",
     "migrate:new": "npm run migrate:new --workspace=backend",

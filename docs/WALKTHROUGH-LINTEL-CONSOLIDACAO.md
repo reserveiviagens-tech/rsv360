@@ -21,8 +21,8 @@
 | 1 | `lintel-tokens.css`, `tokens.ts`, `DenseTable`, `KpiZeigarnikCard`, `StickyBottomBar` | ✅ **#593** |
 | 2 | CSV carteira corretores | ✅ **#594** |
 | 3 | Propostas Rio Quente / Aviva | ✅ **#595** |
-| 4 | Comissões `status === 'paid'` | **Em PR** |
-| 5 | Testes no harness | backlog |
+| 4 | Comissões `status === 'paid'` | ✅ **#596** |
+| 5 | Testes no harness | **Em PR** |
 
 ## Fatia 1 — consumo
 
@@ -31,3 +31,11 @@ import { DenseTable, KpiZeigarnikCard, StickyBottomBar } from '@/components/lint
 ```
 
 CSS carregado via `apps/turismo/styles/globals.css` → `lintel-tokens.css`.
+
+## Fatia 5 — harness Jest (monorepo)
+
+```bash
+npm run test:lintel-consolidacao
+```
+
+Cobre suítes shared (`csv-importer`, `proposta-rio-quente`) + rotas/unit (`comissoes-paid-guard`, `comissoes-lancamentos`, `anfitriao-carteira-admin`) — **31 testes** em ~4s. Jest roots já incluem `packages/shared/src` via `backend/jest.config.js`.
