@@ -1,7 +1,7 @@
 # Handoff — continuação (26 nov 2026 — pausa)
 
 > **Prompt para retomar no Cursor:**  
-> `Pull develop @ ccbe53a4. Leia docs/dev/HANDOFF-CONTINUACAO-2026-11-26.md. Últimos merges: #598 audit, #599 P5+ Sales API. Smoke: /overview?tab=sales e /overview?tab=rentals.`
+> `Pull develop @ dbc64f03. Leia docs/dev/HANDOFF-CONTINUACAO-2026-11-26.md. Últimos merges: #600 E2E overview, #601 nodemailer 10.`
 
 ---
 
@@ -9,8 +9,8 @@
 
 | Item | Valor |
 |------|--------|
-| **HEAD** | `ccbe53a4` — merge **#599** (P5+ Sales API) |
-| **Anterior** | `f774e8a8` — merge **#598** (npm audit lockfile chore) |
+| **HEAD** | `dbc64f03` — merge **#601** (nodemailer `^10.0.6`) |
+| **Anterior** | `961c5fa6` — merge **#600** (E2E overview H8/H9) |
 | **Lintel 1–5** | ✅ **#597** mergeado (`test:lintel-consolidacao`) |
 
 ### PRs mergeados nesta linha de trabalho
@@ -22,6 +22,8 @@
 | **#597** | Lintel fatia 5 — harness `npm run test:lintel-consolidacao` |
 | **#598** | Chore audit — `package-lock.json` seguro; brief `NPM-AUDIT-CHORE-2026-11-26.md`; gate **dependency-review** (pin `nodemailer@9.0.3`, sem alterar declaração na raiz) |
 | **#599** | **P5+ Sales** — `unidadesToSalesListings`, props `salesPortfolio*`, badge API, deep link `?tab=sales&property=unit-{id}` |
+| **#600** | E2E `overview-portfolio-smoke` (H8/H9/H8c/H9b); banner demo Sales; locator H9 |
+| **#601** | `nodemailer@10.0.6+` — root/backend/site-publico; sem `@types/nodemailer`; allowlist; brief dedicado |
 
 ---
 
@@ -79,7 +81,8 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 |----|-------------------|-----------|--------|
 | #598 | ✅ após pin lock nodemailer 9.0.3 sem diff em `package.json` | ✅ | Lock grande; não usar `audit fix --force` cego |
 | #599 | ✅ | ✅ | Escopo 6 ficheiros UI |
-| #600 (aberta) | ✅ (última verificação local) | ✅ | E2E não roda no CI — validar local |
+| #600 | ✅ | ✅ | Mergeado `961c5fa6` |
+| #601 | ✅ | ✅ | Mergeado `dbc64f03`; jest password-reset 14/14 |
 
 ### E2E overview portfólio (`npm run test:e2e:overview-portfolio`) — 26 nov 2026
 
@@ -96,14 +99,14 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 
 **Evidência:** 4 passed ~10s com dev local após locator + fix Sales (`60191fc0`).
 
-**PR:** [#600](https://github.com/reserveiviagens-tech/rsv360/pull/600) — branch `feat/e2e-overview-portfolio-smoke`.
+**PR:** [#600](https://github.com/reserveiviagens-tech/rsv360/pull/600) — mergeado.
 
 ---
 
 ## Backlog prioritizado (próxima sessão)
 
-1. ~~**Smoke Playwright** overview~~ — **#600** (merge humano após push + gate)
-2. **nodemailer@10.0.6+** — PR dedicada + testes backend e-mail (`password-reset-email`)
+1. ~~**Smoke Playwright** overview~~ — ✅ **#600**
+2. ~~**nodemailer@10.0.6+**~~ — ✅ **#601** (`BRIEF-NODEMAILER-10-2026-11-26.md`)
 3. **Next.js patch** — bump planejado (GHSA em brief audit); PR separada + `build:turismo`
 4. **Fatia B Kanban** — **somente** com repro Playwright documentado
 5. Atualizar `HANDOFF-CRM-DEALS-2026-11-25.md` (SHA antigo `1c14d458` — obsoleto)
@@ -126,6 +129,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 | `chore/audit-deps` | Mergeada — apagar local/remoto se existir |
 | `feat/overview-p5-sales-api` | Mergeada — apagar após pull |
 | `chore/audit-deps` antiga local | `git branch -d` após sincronizar |
+| `chore/nodemailer-10.0.6` | Mergeada (#601) — apagar após pull |
 
 ---
 
@@ -136,6 +140,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 - [x] Lintel 1–5 (#597)
 - [x] Audit chore (#598)
 - [x] P5+ Sales API (#599)
-- [ ] E2E overview H8/H9 (#600 — 4/4 local; merge pendente)
+- [x] E2E overview H8/H9 (#600)
+- [x] nodemailer 10 (#601)
 
-**Pacr / enterprise:** após merge **#600**, seguir backlog (nodemailer, Next patch, Kanban B).
+**Pacr / enterprise:** gates #600/#601 fechados; próximo: **Next patch**, depois Kanban B.
