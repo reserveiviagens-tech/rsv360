@@ -1,0 +1,39 @@
+{
+  "name": "@rsv360/ui",
+  "version": "0.2.0",
+  "description": "Design tokens and shared UI foundation for RSV360 Onda 4",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tokens.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "test": "tsx --test src/tests/**/*.test.ts src/tests/**/*.test.tsx"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "rsv360",
+    "design-tokens",
+    "ui"
+  ],
+  "author": "RSV360 Team",
+  "license": "MIT"
+}
