@@ -45,7 +45,7 @@ Turismo declara `"next": "16.2.11"` em `apps/turismo/package.json`. O relatório
 - [GHSA-vcvr-r3jv-pc5j](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j) — RCE `next/og` ImageResponse
 - (e demais GHSA listados no output completo de `npm audit --workspace=apps/turismo`)
 
-**Plano:** PR dedicada `chore: bump next@16.4.x` (ou patch mínimo após release notes) + `build:turismo` + smoke; alinhar com `.github/audit-allowlist.json` / `npm run audit:gate` se necessário.
+**Plano:** PR dedicada `chore: bump next@16.4.6` — ver **`BRIEF-NEXT-PATCH-16.4.6-2026-11-26.md`**.
 
 ### High — Zod, sharp, brace-expansion (tooling/eslint)
 
