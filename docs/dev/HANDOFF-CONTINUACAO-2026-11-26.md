@@ -84,7 +84,7 @@ npx jest --runInBand --testPathPattern overview-portfolio --roots apps/turismo/s
 
 ## Backlog prioritizado (próxima sessão)
 
-1. **Smoke Playwright** — Sales `property=unit-*` + Rentals `rental=unit-*` (nice-to-have)
+1. **Smoke Playwright** — `npm run test:e2e:overview-portfolio` (`apps/turismo/e2e/overview-portfolio-smoke.spec.ts`) — H8/H9/H8c/H9b
 2. **nodemailer@10.0.6+** — PR dedicada + testes backend e-mail (`password-reset-email`)
 3. **Next.js patch** — bump planejado (GHSA em brief audit); PR separada + `build:turismo`
 4. **Fatia B Kanban** — **somente** com repro Playwright documentado

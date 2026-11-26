@@ -18,6 +18,18 @@
 | H8 | `/overview?tab=rentals` parceiro com unidades | Badge **API**; cards `unit-<id>`; aviso demo se backend vazio/falha |
 | H8a | H8 + login `admin@rsv360.com.br` (comissão Lintel demo) | ✅ **25/11** Docker `:3005` — portfólio sample Lintel; **sem** badge API (esperado com demo comissão; independente do portfólio pós-**#591**) |
 | H8b | H8 pós-merge **#591** — `minhas` com unidades **e** gráfico comissão demo | ✅ **25/11** Docker `:3005` pós-rebuild — badge **API**; cartões API (ex. Apartamento Premium…); ocupação 0/50 |
+| H8c | `/overview?tab=rentals&rental=unit-{id}` | Query preservada; modal/dossiê quando unidade no catálogo API/demo |
+| H9 | `/overview?tab=sales` parceiro com unidades | Badge **API** ou aviso demo (pós-**#599**) |
+| H9b | `/overview?tab=sales&property=unit-{id}` | Query preservada; detalhe sales quando slug no catálogo |
+
+**Playwright (automatizado):**
+
+```powershell
+# turismo :3005 + backend :3002 + credenciais seed
+$env:E2E_AUTH_EMAIL="admin@rsv360.com.br"
+$env:E2E_AUTH_PASSWORD="<dev password — ver TROUBLESHOOTING-LOGIN-LOCAL>"
+npm run test:e2e:overview-portfolio
+```
 | L1 | `/leads` | Redirect hub → `/overview?tab=leads` (preserva `?lead=`) |
 | L1b | `GET /api/v1/leads` | 401 sem token; 200 corretor; `data.items[].email` com `•` |
 | L1c | `/leads?lead=<id>` | Painel seleciona o lead correspondente |

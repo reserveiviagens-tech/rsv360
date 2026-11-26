@@ -60,6 +60,7 @@
     "test:e2e:auth-v1": "playwright test --config=tests/e2e/playwright.auth-v1.config.ts",
     "test:e2e:auth-oauth-mock": "playwright test --config=tests/e2e/playwright.auth-oauth-mock.config.ts",
     "test:e2e:turismo-legacy": "playwright test --config=tests/e2e/playwright.turismo-legacy.config.ts",
+    "test:e2e:overview-portfolio": "playwright test --config=tests/e2e/playwright.overview-portfolio.config.ts",
     "test:smoke": "npm run test:e2e && npm run test:e2e:routes",
     "validate:auth-env": "node scripts/validate-auth-production-env.cjs",
     "staging:webhook": "node scripts/staging-password-reset-webhook.mjs"
