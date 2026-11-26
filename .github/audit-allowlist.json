@@ -87,8 +87,8 @@
       "expires": "2026-12-31"
     },
     "next": {
-      "severity": "critical",
-      "reason": "Framework pin shared across apps; upgrade via dedicated Next security PR (not this feature branch)",
+      "severity": "high",
+      "reason": "Pinned 16.4.6+ (critical GHSA fixed); npm audit may still report high via postcss/sharp graph",
       "expires": "2026-12-31"
     },
     "proxy-addr": {
