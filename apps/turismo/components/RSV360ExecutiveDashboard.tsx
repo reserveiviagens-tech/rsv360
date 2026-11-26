@@ -166,6 +166,9 @@ interface RSV360DashboardProps {
   rentalPortfolio?: RentalPortfolioItem[] | null;
   rentalPortfolioSource?: 'api' | 'demo' | 'idle';
   rentalPortfolioLoading?: boolean;
+  salesPortfolio?: SalesListing[] | null;
+  salesPortfolioSource?: 'api' | 'demo' | 'idle';
+  salesPortfolioLoading?: boolean;
   /** Overview alinhado ao vídeo Lintel (demo USD + hero/map). */
   lintelVisualDemo?: boolean;
 }
@@ -187,12 +190,19 @@ export default memo(function RSV360ExecutiveDashboard({
   rentalPortfolio = null,
   rentalPortfolioSource = 'idle',
   rentalPortfolioLoading = false,
+  salesPortfolio = null,
+  salesPortfolioSource = 'idle',
+  salesPortfolioLoading = false,
   lintelVisualDemo = false,
 }: RSV360DashboardProps) {
   const router = useRouter();
   const { openCreate } = useLintelCreate();
   const { copy, locale: crmLocale } = useCrmLocale();
   const greetingFirstName = useMemo(() => lintelDisplayFirstName(userName), [userName]);
+  const salesCatalog = useMemo(
+  () => (salesPortfolioSource === 'api' && salesPortfolio?.length ? salesPortfolio : null),
+  [salesPortfolio, salesPortfolioSource],
+);
   const chatCollapsed = useCrmLiveChatOptional()?.isChatCollapsed ?? true;
   const co = copy.commission;
   const pd = copy.propertyDetail;
@@ -513,7 +523,7 @@ export default memo(function RSV360ExecutiveDashboard({
       typeof propObj.slug === 'string'
         ? propObj.slug
         : salesListingSlug(String(propObj.name || propObj.title || ''));
-    const fromCatalog = findSalesListingBySlug(slug);
+    const fromCatalog = findSalesListingBySlug(slug, salesCatalog);
     const name = String(propObj.name || propObj.title || fromCatalog?.name || 'Hollis Modern House');
     const isMistfield = name.toLowerCase().includes('mistfield');
 
@@ -618,7 +628,7 @@ export default memo(function RSV360ExecutiveDashboard({
     if (tab !== 'sales') return;
     const propSlug = typeof router.query.property === 'string' ? router.query.property : '';
     if (propSlug) {
-      const listing = findSalesListingBySlug(propSlug);
+      const listing = findSalesListingBySlug(propSlug, salesCatalog);
       if (listing) {
         setViewingPropertyDetail(getFullProperty(listing));
         setPropertySubTab('overview');
@@ -626,7 +636,7 @@ export default memo(function RSV360ExecutiveDashboard({
     } else {
       setViewingPropertyDetail(null);
     }
-  }, [router.isReady, router.query.tab, router.query.property]);
+  }, [router.isReady, router.query.tab, router.query.property, salesCatalog]);
 
   const handlePortfolioPinSelect = (pin: PortfolioMapPin) => {
     setActiveMapPinId(pin.id);
@@ -2434,6 +2444,9 @@ export default memo(function RSV360ExecutiveDashboard({
           <SalesCrmModule
             isActive={activeTab === 'sales' && !viewingPropertyDetail}
             bootOnActivate
+            hostListings={salesPortfolio}
+            listingsSource={salesPortfolioSource}
+            listingsLoading={salesPortfolioLoading}
             onSelectListing={(listing) => openSalesProperty(listing)}
           />
         )}

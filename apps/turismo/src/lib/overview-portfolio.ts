@@ -1,5 +1,6 @@
 ﻿import type { PortfolioMapPin, PortfolioMapPinKind } from '../../components/lintel/portfolio-map';
 import type { RentalListingStatus, RentalPortfolioItem } from '../../components/rentals/rentals-data';
+import type { SalesListing, SalesListingStatus } from '../../components/sales/sales-data';
 
 const FALLBACK_THUMB =
   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=120&q=80';
@@ -191,4 +192,58 @@ function statusToListingStatus(status?: string): RentalListingStatus {
     default:
       return 'for_rent';
   }
+}
+
+const SALES_AGENT_AVATAR =
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
+
+function statusToSalesStatus(status?: string): SalesListingStatus {
+  switch (status) {
+    case 'publicado':
+      return 'active';
+    case 'em_aprovacao':
+      return 'offer';
+    case 'rascunho':
+      return 'draft';
+    default:
+      return 'draft';
+  }
+}
+
+/**
+ * Mapeia unidades do anfitrião (API) para SalesListing (aba Sales).
+ * Deep link: `/overview?tab=sales&property=unit-{id}`.
+ */
+export function unidadesToSalesListings(units: AnfitriaoUnidadeListItem[]): SalesListing[] {
+  return units.map((u) => {
+    const status = statusToSalesStatus(u.statusPublicacao);
+    const name = repairUtf8Mojibake(u.titulo);
+    const pos = hashUnitPosition(u.id);
+    const price = formatDiariaBrl(u.precoDiaria);
+    const priceLabel = price.includes('—') ? 'Consultar' : price;
+    const beds = Math.max(1, Number(u.quartos) || 1);
+
+    return {
+      id: `unit-${u.id}`,
+      slug: `unit-${u.id}`,
+      name,
+      address: u.hotelId ?? '—',
+      area: statusLabel(u.statusPublicacao),
+      propertyType: 'house',
+      listedOrder: u.id,
+      mapTop: pos.top,
+      mapLeft: pos.left,
+      price: priceLabel,
+      priceShort: priceLabel,
+      beds,
+      baths: 1,
+      sqft: '—',
+      dom: 0,
+      views: 0,
+      status,
+      agent: 'RSV360',
+      agentAvatarUrl: SALES_AGENT_AVATAR,
+      photo: extractThumb(u.midia),
+    };
+  });
 }

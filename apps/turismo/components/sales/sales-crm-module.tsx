@@ -30,16 +30,24 @@ export const SALES_PAGE_BOOT_MS = 580;
 
 export type { SalesViewMode } from './sales-data';
 
+export type SalesListingsSource = 'api' | 'demo' | 'idle';
+
 export type SalesCrmModuleProps = {
   onSelectListing: (listing: SalesListing) => void;
   isActive?: boolean;
   bootOnActivate?: boolean;
+  hostListings?: SalesListing[] | null;
+  listingsSource?: SalesListingsSource;
+  listingsLoading?: boolean;
 };
 
 export function SalesCrmModule({
   onSelectListing,
   isActive = true,
   bootOnActivate = true,
+  hostListings = null,
+  listingsSource = 'idle',
+  listingsLoading = false,
 }: SalesCrmModuleProps) {
   const { copy } = useCrmLocale();
   const sm = copy.salesModule;
@@ -62,11 +70,18 @@ export function SalesCrmModule({
     return () => window.clearTimeout(id);
   }, [isActive, bootOnActivate]);
 
-  const counts = useMemo(() => salesFilterCounts(SAMPLE_SALES_LISTINGS), []);
+  const listings = useMemo(() => {
+    if (listingsSource === 'api' && hostListings && hostListings.length > 0) {
+      return hostListings;
+    }
+    return SAMPLE_SALES_LISTINGS;
+  }, [hostListings, listingsSource]);
+
+  const counts = useMemo(() => salesFilterCounts(listings), [listings]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const rows = SAMPLE_SALES_LISTINGS.filter((item) => {
+    const rows = listings.filter((item) => {
       if (!salesMatchesFilter(item, filter)) return false;
       if (!salesMatchesType(item, typeFilter)) return false;
       if (!salesMatchesBeds(item, bedsFilter)) return false;
@@ -78,7 +93,7 @@ export function SalesCrmModule({
       );
     });
     return sortSalesListings(rows, sortKey);
-  }, [filter, search, typeFilter, bedsFilter, sortKey]);
+  }, [filter, search, typeFilter, bedsFilter, sortKey, listings]);
 
   const typeOptions = useMemo(
     () =>
@@ -134,16 +149,27 @@ export function SalesCrmModule({
 
   if (!isActive) return null;
 
-  if (pageLoading) {
+  if (pageLoading || (listingsLoading && listingsSource === 'idle')) {
     return <SalesSkeleton />;
   }
 
   return (
     <div className="lintel-rentals-enter flex flex-col gap-4">
+      {listingsSource === 'demo' && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-100"
+          role="status"
+        >
+          Vendas em modo demonstração — login parceiro com unidades no backend para anúncios reais.
+        </div>
+      )}
       <div className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start xl:justify-between xl:gap-3">
         <h1 className="min-w-0 shrink-0 leading-none">
           <span className="block text-2xl font-black tracking-tight text-gray-900 dark:text-white">
             {sm.pageTitleMain}
+            {listingsSource === 'api' && (
+              <span className="ml-2 align-middle text-[10px] font-bold uppercase text-[#138a63]">API</span>
+            )}
           </span>
           <span className={`block text-lg font-bold ${LINTEL_SALES_TW.pageTitleAccent}`}>
             {sm.pageTitleAccent}
@@ -152,11 +178,11 @@ export function SalesCrmModule({
         <div className="min-w-0 flex-1 xl:flex xl:justify-end">
           <SalesKpiStrip
             lintelLayout
-            activeCount={6}
-            underOfferCount={2}
-            soldThisYear={22}
-            soldVolumeLabel="$35.46M"
-            avgPricePerUnit="$643"
+            activeCount={listingsSource === 'api' ? counts.active : 6}
+            underOfferCount={listingsSource === 'api' ? counts.offer : 2}
+            soldThisYear={listingsSource === 'api' ? counts.sold : 22}
+            soldVolumeLabel={listingsSource === 'api' ? '—' : '$35.46M'}
+            avgPricePerUnit={listingsSource === 'api' ? '—' : '$643'}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
           />
