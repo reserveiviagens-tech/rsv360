@@ -10,9 +10,18 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.FRONTEND_URL || 'http://localhost:3000',
+    baseURL: process.env.FRONTEND_URL || 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+  },
+  webServer: {
+    command:
+      process.platform === 'win32'
+        ? 'cmd /c "set JWT_SECRET=test-secret-key-for-e2e-local-only!!&& npm run start"'
+        : 'JWT_SECRET=test-secret-key-for-e2e-local-only!! npm run start',
+    url: 'http://127.0.0.1:3000/ingressos',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
   },
   projects: [
     {

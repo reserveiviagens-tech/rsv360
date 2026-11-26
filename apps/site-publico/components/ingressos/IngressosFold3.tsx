@@ -35,13 +35,23 @@ export function IngressosFold3() {
         <AccordionItem value="faq">
           <AccordionTrigger>Dúvidas frequentes</AccordionTrigger>
           <AccordionContent>
-            <p className="text-sm text-gray-600">Conteúdo FAQ — F-024.</p>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600">
+              <li>Ingressos digitais com validação no parque — apresente QR ou código na entrada.</li>
+              <li>Meia-entrada exige comprovante no balcão, conforme regras do parque.</li>
+              <li>Cancelamento e reembolso seguem a política exibida antes do pagamento.</li>
+            </ul>
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="map">
           <AccordionTrigger>Localização</AccordionTrigger>
           <AccordionContent>
-            <p className="text-sm text-gray-600">Mini-mapa — F-024.</p>
+            <p className="text-sm text-gray-600">
+              Rio Quente (GO) e Caldas Novas (GO). Use o rodapé para contato ou{" "}
+              <a href="/mapa-caldas-novas" className="font-medium underline">
+                mapa de Caldas Novas
+              </a>
+              .
+            </p>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

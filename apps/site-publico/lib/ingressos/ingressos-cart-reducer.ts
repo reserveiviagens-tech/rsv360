@@ -35,6 +35,7 @@ export function setLineQty(
   }
 
   return {
+    ...state,
     lines: {
       ...state.lines,
       [ticketId]: line,
@@ -45,11 +46,15 @@ export function setLineQty(
 export function clearLine(state: IngressosCartState, ticketId: string): IngressosCartState {
   if (!state.lines[ticketId]) return state
   const { [ticketId]: _removed, ...rest } = state.lines
-  return { lines: rest }
+  return { ...state, lines: rest }
 }
 
 export function clearAll(state: IngressosCartState): IngressosCartState {
-  return { lines: {} }
+  return { lines: {}, visitDateIso: state.visitDateIso }
+}
+
+export function setVisitDate(state: IngressosCartState, visitDateIso: string | null): IngressosCartState {
+  return { ...state, visitDateIso }
 }
 
 export function addComboTicketIds(
