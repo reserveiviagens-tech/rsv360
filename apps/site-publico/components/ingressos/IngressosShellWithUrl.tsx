@@ -5,6 +5,7 @@ import type { IngressosTicket } from "@/lib/ingressos/catalog-data"
 import { buildComboIaRecommendation } from "@/lib/ingressos/combo-recommendation"
 import { filterTicketsByIntent } from "@/lib/ingressos/filter-tickets"
 import { useIngressosUrlIntent } from "@/hooks/use-ingressos-url-intent"
+import { IngressosCartProvider } from "./IngressosCartProvider"
 import { IngressosPageShell } from "./IngressosPageShell"
 
 export function IngressosShellWithUrl({ tickets }: { tickets: IngressosTicket[] }) {
@@ -21,13 +22,15 @@ export function IngressosShellWithUrl({ tickets }: { tickets: IngressosTicket[] 
   )
 
   return (
-    <IngressosPageShell
-      filteredTickets={filteredTickets}
-      comboRecommendation={comboRecommendation}
-      intent={intent}
-      onCityChange={setCity}
-      onRapidoChange={setRapido}
-      onClearRapido={clearRapido}
-    />
+    <IngressosCartProvider tickets={tickets}>
+      <IngressosPageShell
+        filteredTickets={filteredTickets}
+        comboRecommendation={comboRecommendation}
+        intent={intent}
+        onCityChange={setCity}
+        onRapidoChange={setRapido}
+        onClearRapido={clearRapido}
+      />
+    </IngressosCartProvider>
   )
 }
