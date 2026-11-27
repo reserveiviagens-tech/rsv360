@@ -4,9 +4,11 @@ import { useMemo } from "react"
 import { Button, rsvColors } from "@rsv360/ui"
 import { buildVisitDateChips } from "@/lib/ingressos/ingressos-visit-dates"
 import { useIngressosCart } from "./IngressosCartProvider"
+import { useIngressosCheckoutFlow } from "./IngressosCheckoutFlowProvider"
 
 export function IngressosVisitDateChips() {
   const { state, setVisitDate, summary } = useIngressosCart()
+  const { dateRequiredVisible } = useIngressosCheckoutFlow()
   const chips = useMemo(() => buildVisitDateChips(new Date(), 5), [])
 
   if (summary.totalItems === 0) return null
@@ -25,7 +27,9 @@ export function IngressosVisitDateChips() {
               className="h-9 px-3 text-xs"
               aria-pressed={selected}
               data-testid={`ingressos-visit-date-${chip.iso}`}
-              onClick={() => setVisitDate(chip.iso)}
+              onClick={() => {
+                setVisitDate(chip.iso)
+              }}
               style={
                 selected
                   ? undefined
@@ -37,6 +41,15 @@ export function IngressosVisitDateChips() {
           )
         })}
       </div>
+      {dateRequiredVisible && !state.visitDateIso ? (
+        <p
+          className="mt-2 text-sm text-red-700"
+          role="alert"
+          data-testid="ingressos-checkout-date-required"
+        >
+          Selecione a data da visita para continuar.
+        </p>
+      ) : null}
     </div>
   )
 }
