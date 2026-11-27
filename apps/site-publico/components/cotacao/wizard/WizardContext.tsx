@@ -31,7 +31,6 @@ import {
   initialWizardState,
   TOTAL_STEPS,
   WIZARD_CATALOG_STORAGE_KEY,
-  WIZARD_DRAFT_MAX_AGE_MS,
   WIZARD_STEP_STORAGE_KEY,
   WIZARD_STORAGE_KEY,
   type StoredWizardDraft,
