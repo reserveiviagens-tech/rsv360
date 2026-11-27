@@ -34,7 +34,7 @@ export function IngressosPageShell({
     <div
       data-testid="rsv-ingressos-shell"
       data-rsv-ingressos-shell
-      className="min-h-screen"
+      className="min-h-screen overflow-x-hidden"
       style={{ backgroundColor: rsvColors.canvas }}
     >
       <main

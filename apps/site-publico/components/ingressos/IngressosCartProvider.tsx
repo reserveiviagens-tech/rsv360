@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
   type ReactNode,
@@ -11,11 +12,17 @@ import {
 import type { IngressosTicket } from "@/lib/ingressos/catalog-data"
 import type { ComboIaRecommendation } from "@/lib/ingressos/combo-recommendation"
 import {
+  mergeHydratedCart,
+  readCartFromSessionStorage,
+  writeCartToSessionStorage,
+} from "@/lib/ingressos/ingressos-cart-persistence"
+import {
   addComboTicketIds,
   clearAll,
   clearLine,
   getLineQty,
   setLineQty,
+  setVisitDate,
   summarizeCart,
 } from "@/lib/ingressos/ingressos-cart-reducer"
 import {
@@ -31,6 +38,7 @@ type IngressosCartContextValue = {
   setQty: (ticketId: string, qty: number) => void
   clearLine: (ticketId: string) => void
   clearAll: () => void
+  setVisitDate: (visitDateIso: string | null) => void
   addComboRecommendation: (recommendation: ComboIaRecommendation) => void
 }
 
@@ -43,9 +51,11 @@ function buildCatalogMap(tickets: IngressosTicket[]) {
 }
 
 type CartAction =
+  | { type: "HYDRATE"; state: IngressosCartState }
   | { type: "SET_QTY"; ticketId: string; qty: number }
   | { type: "CLEAR_LINE"; ticketId: string }
   | { type: "CLEAR_ALL" }
+  | { type: "SET_VISIT_DATE"; visitDateIso: string | null }
   | { type: "ADD_COMBO"; ticketIds: string[] }
 
 function cartReducer(
@@ -54,6 +64,8 @@ function cartReducer(
   catalog: ReturnType<typeof buildCatalogMap>,
 ): IngressosCartState {
   switch (action.type) {
+    case "HYDRATE":
+      return action.state
     case "SET_QTY": {
       const meta = catalog[action.ticketId]
       if (!meta) return state
@@ -63,6 +75,8 @@ function cartReducer(
       return clearLine(state, action.ticketId)
     case "CLEAR_ALL":
       return clearAll(state)
+    case "SET_VISIT_DATE":
+      return setVisitDate(state, action.visitDateIso)
     case "ADD_COMBO":
       return addComboTicketIds(state, action.ticketIds, catalog)
     default:
@@ -84,6 +98,15 @@ export function IngressosCartProvider({
     initialIngressosCartState,
   )
 
+  useEffect(() => {
+    const hydrated = mergeHydratedCart(readCartFromSessionStorage())
+    dispatch({ type: "HYDRATE", state: hydrated })
+  }, [])
+
+  useEffect(() => {
+    writeCartToSessionStorage(state)
+  }, [state])
+
   const summary = useMemo(() => summarizeCart(state), [state])
 
   const setQty = useCallback((ticketId: string, qty: number) => {
@@ -96,6 +119,10 @@ export function IngressosCartProvider({
 
   const clearAllCb = useCallback(() => {
     dispatch({ type: "CLEAR_ALL" })
+  }, [])
+
+  const setVisitDateCb = useCallback((visitDateIso: string | null) => {
+    dispatch({ type: "SET_VISIT_DATE", visitDateIso })
   }, [])
 
   const addComboRecommendation = useCallback((recommendation: ComboIaRecommendation) => {
@@ -112,9 +139,10 @@ export function IngressosCartProvider({
       setQty,
       clearLine: clearLineCb,
       clearAll: clearAllCb,
+      setVisitDate: setVisitDateCb,
       addComboRecommendation,
     }),
-    [state, summary, getQty, setQty, clearLineCb, clearAllCb, addComboRecommendation],
+    [state, summary, getQty, setQty, clearLineCb, clearAllCb, setVisitDateCb, addComboRecommendation],
   )
 
   return (

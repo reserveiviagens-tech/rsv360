@@ -5,6 +5,7 @@ import {
   clearLine,
   getLineQty,
   setLineQty,
+  setVisitDate,
   summarizeCart,
 } from "../ingressos-cart-reducer"
 import { initialIngressosCartState } from "../ingressos-cart-types"
@@ -47,6 +48,13 @@ describe("ingressos-cart-reducer", () => {
     state = setLineQty(state, "hot-park", 1, metaFor("hot-park"))
     state = clearAll(state)
     expect(state.lines).toEqual({})
+  })
+
+  it("setVisitDate preserves lines", () => {
+    let state = setLineQty(initialIngressosCartState, "hot-park", 1, metaFor("hot-park"))
+    state = setVisitDate(state, "2026-06-01")
+    expect(state.visitDateIso).toBe("2026-06-01")
+    expect(getLineQty(state, "hot-park")).toBe(1)
   })
 
   it("addComboTicketIds increments each combo ticket by 1", () => {
