@@ -8,6 +8,8 @@ import {
   type IngressosRapidoSlug,
   type IngressosUrlIntent,
 } from "@/lib/ingressos/query-intent"
+import { IngressosHeroCitySelect } from "./IngressosHeroCitySelect"
+import { IngressosHeroDateDemandPicker } from "./IngressosHeroDateDemandPicker"
 
 const RAPIDO_PILLS: { slug: IngressosRapidoSlug; label: string }[] = [
   { slug: "custo-beneficio", label: "Melhor custo-benefício" },
@@ -35,9 +37,12 @@ export function IngressosFold1({ intent, onCityChange, onRapidoChange, onClearRa
           Sua aventura começa aqui
         </h2>
         <div className="mt-4 flex flex-wrap gap-4 rounded-xl bg-white/10 p-4 backdrop-blur-md">
-          <span className="text-sm">Destino · {citySlugToLabel(intent.city)}</span>
-          <span className="text-sm">Data de ida</span>
-          <span className="text-sm">Prova social</span>
+          <IngressosHeroCitySelect value={intent.city} onChange={onCityChange} />
+          <IngressosHeroDateDemandPicker city={intent.city} />
+          <div className="flex min-w-[8rem] flex-col justify-end text-sm text-white/80">
+            <span className="text-xs uppercase tracking-wide text-white/70">Prova social</span>
+            <span>+2.400 famílias este mês</span>
+          </div>
         </div>
       </div>
 
