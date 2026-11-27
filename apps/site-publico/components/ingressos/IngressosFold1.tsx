@@ -1,16 +1,29 @@
 "use client"
 
 import { Badge, Button, rsvColors, rsvLayout } from "@rsv360/ui"
+import {
+  INGRESSOS_CITY_SLUGS,
+  citySlugToLabel,
+  type IngressosCitySlug,
+  type IngressosRapidoSlug,
+  type IngressosUrlIntent,
+} from "@/lib/ingressos/query-intent"
 
-const DESTINOS = ["Rio Quente", "Caldas Novas", "Multi-Destino"] as const
-const ESCOLHA_RAPIDA = [
-  "Melhor custo-benefício",
-  "Vou com crianças",
-  "Mais popular",
-  "Quero combo",
-] as const
+const RAPIDO_PILLS: { slug: IngressosRapidoSlug; label: string }[] = [
+  { slug: "custo-beneficio", label: "Melhor custo-benefício" },
+  { slug: "criancas", label: "Vou com crianças" },
+  { slug: "popular", label: "Mais popular" },
+  { slug: "combo", label: "Quero combo" },
+]
 
-export function IngressosFold1() {
+type Props = {
+  intent: IngressosUrlIntent
+  onCityChange: (city: IngressosCitySlug) => void
+  onRapidoChange: (rapido: IngressosRapidoSlug) => void
+  onClearRapido: () => void
+}
+
+export function IngressosFold1({ intent, onCityChange, onRapidoChange, onClearRapido }: Props) {
   return (
     <section aria-label="Topo e filtros" data-testid="ingressos-fold-1">
       <div
@@ -22,30 +35,60 @@ export function IngressosFold1() {
           Sua aventura começa aqui
         </h2>
         <div className="mt-4 flex flex-wrap gap-4 rounded-xl bg-white/10 p-4 backdrop-blur-md">
-          <span className="text-sm">Destino · Clima</span>
+          <span className="text-sm">Destino · {citySlugToLabel(intent.city)}</span>
           <span className="text-sm">Data de ida</span>
           <span className="text-sm">Prova social</span>
         </div>
       </div>
 
-      <div className={`mt-6 ${rsvLayout.containerPaddingClasses}`.replace(/px-\S+/g, "")}>
+      <div className="mt-6">
         <div className="flex flex-wrap gap-2">
-          {DESTINOS.map((d) => (
-            <Button key={d} variant="ghost" className="text-sm">
-              {d}
+          {INGRESSOS_CITY_SLUGS.map((slug) => (
+            <Button
+              key={slug}
+              variant={intent.city === slug ? "amber" : "ghost"}
+              className="text-sm"
+              type="button"
+              aria-pressed={intent.city === slug}
+              data-testid={`ingressos-city-${slug}`}
+              onClick={() => onCityChange(slug)}
+            >
+              {citySlugToLabel(slug)}
             </Button>
           ))}
         </div>
         <p className="mt-4 text-sm font-semibold" style={{ color: rsvColors.textMuted }}>
           Escolha rápida
         </p>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {ESCOLHA_RAPIDA.map((pill) => (
-            <Badge key={pill} variant="outline" className="justify-center py-2">
-              {pill}
+        {intent.rapido ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge variant="amber" data-testid="ingressos-rapido-active">
+              Filtro: {intent.rapido}
             </Badge>
+            <Button type="button" variant="outline" className="text-xs" onClick={onClearRapido}>
+              Limpar filtros
+            </Button>
+          </div>
+        ) : null}
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {RAPIDO_PILLS.map((pill) => (
+            <button
+              key={pill.slug}
+              type="button"
+              className="w-full"
+              data-testid={`ingressos-rapido-${pill.slug}`}
+              onClick={() => onRapidoChange(pill.slug)}
+            >
+              <Badge
+                variant={intent.rapido === pill.slug ? "amber" : "outline"}
+                className="w-full justify-center py-2"
+              >
+                {pill.label}
+              </Badge>
+            </button>
           ))}
         </div>
+        <p className="sr-only">{rsvLayout.containerPaddingClasses}</p>
       </div>
     </section>
   )

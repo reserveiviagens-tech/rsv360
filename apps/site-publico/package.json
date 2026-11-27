@@ -25,6 +25,7 @@
     "test:backend": "jest __tests__/lib/ __tests__/api/",
     "test:frontend": "jest __tests__/components/",
     "test:e2e": "playwright test",
+    "test:e2e:ingressos-shell": "playwright test tests/e2e/ingressos-shell-responsiveness.spec.ts --config=playwright.ingressos-shell.config.ts",
     "test:all": "node scripts/test-all.js",
     "test:phase4": "node scripts/run-all-tests.js",
     "test:performance": "node scripts/run-performance-tests.js",

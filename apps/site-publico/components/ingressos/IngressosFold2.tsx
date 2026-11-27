@@ -1,63 +1,70 @@
 "use client"
 
-import { useState, type CSSProperties, type ReactNode } from "react"
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  Badge,
   Button,
   NumericStepper,
   rsvColors,
 } from "@rsv360/ui"
 import type { IngressosTicket } from "@/lib/ingressos/catalog-data"
+import type { ComboIaRecommendation } from "@/lib/ingressos/combo-recommendation"
+import { IngressosComboIaCard } from "./IngressosComboIaCard"
 
-export function IngressosFold2({ tickets }: { tickets: IngressosTicket[] }) {
-  const hotPark = tickets.find((t) => t.id === "hot-park")
-  const others = tickets.filter((t) => t.id !== "hot-park")
+type Props = {
+  filteredTickets: IngressosTicket[]
+  comboRecommendation: ComboIaRecommendation | null
+}
+
+export function IngressosFold2({ filteredTickets, comboRecommendation }: Props) {
   const [qty, setQty] = useState(2)
+
+  const accordionDefault = useMemo(() => {
+    if (filteredTickets.length === 0) return undefined
+    const hot = filteredTickets.find((t) => t.id === "hot-park")
+    return hot?.id ?? filteredTickets[0]?.id
+  }, [filteredTickets])
+
+  const firstOpen = filteredTickets.length > 0 ? accordionDefault : undefined
 
   return (
     <section aria-label="Combo e catálogo" data-testid="ingressos-fold-2" className="space-y-6">
-      <motionCard
-        className="rounded-2xl border p-5 text-white"
-        style={{
-          backgroundColor: rsvColors.midnight,
-          borderColor: rsvColors.amber,
-        }}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Badge variant="amber">Combo IA</Badge>
-            <h3 className="mt-2 text-lg font-bold">Economize com o combo inteligente</h3>
-            <p className="text-sm text-white/80">Até 15% OFF · placeholder F-022</p>
-          </div>
-          <Button variant="amber">Adicionar combo</Button>
-        </div>
-      </motionCard>
+      {comboRecommendation ? (
+        <IngressosComboIaCard recommendation={comboRecommendation} />
+      ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div>
-          <Accordion type="single" defaultValue="hot-park" collapsible>
-            {hotPark ? (
-              <AccordionItem value="hot-park">
-                <AccordionTrigger>{hotPark.name}</AccordionTrigger>
-                <AccordionContent>
-                  <p className="mb-3 text-sm text-gray-600">{hotPark.description}</p>
-                  <NumericStepper value={qty} min={0} max={20} onChange={setQty} />
-                </AccordionContent>
-              </AccordionItem>
-            ) : null}
-            {others.map((t) => (
-              <AccordionItem key={t.id} value={t.id}>
-                <AccordionTrigger>{t.name}</AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-sm text-gray-600">{t.location}</p>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+        <div className="min-w-0">
+          {filteredTickets.length === 0 ? (
+            <p
+              className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-gray-600"
+              data-testid="ingressos-catalog-empty"
+            >
+              Nenhum ingresso para esse filtro. O Combo IA acima sugere a melhor opção para você.
+            </p>
+          ) : (
+            <Accordion
+              type="single"
+              collapsible
+              defaultValue={firstOpen}
+              key={firstOpen ?? "empty-accordion"}
+            >
+              {filteredTickets.map((ticket, index) => (
+                <AccordionItem key={ticket.id} value={ticket.id}>
+                  <AccordionTrigger>{ticket.name}</AccordionTrigger>
+                  <AccordionContent>
+                    <p className="mb-3 text-sm text-gray-600">{ticket.description}</p>
+                    {index === 0 ? (
+                      <NumericStepper value={qty} min={0} max={20} onChange={setQty} />
+                    ) : null}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </div>
 
         <aside
