@@ -5,7 +5,7 @@ const { getNextSecurityHeaders } = require('../../packages/shared/security-heade
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ['@rsv360/shared'],
+  transpilePackages: ['@rsv360/shared', '@rsv360/ui'],
   serverExternalPackages: ['pg', 'ioredis', 'sharp', 'nodemailer'],
   typescript: {
     ignoreBuildErrors: true,
