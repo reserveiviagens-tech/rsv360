@@ -1,15 +1,15 @@
 "use client"
 
-import { Button, rsvColors } from "@rsv360/ui"
+import { Button } from "@rsv360/ui"
 import { formatIngressosPrice } from "@/lib/ingressos/catalog-data"
 import { IngressosSalvaVendasLink } from "./IngressosSalvaVendasLink"
 import { IngressosVisitDateChips } from "./IngressosVisitDateChips"
 import { useIngressosCart } from "./IngressosCartProvider"
-import { useIngressosBeginCheckout } from "./use-ingressos-begin-checkout"
+import { useIngressosCheckoutFlow } from "./IngressosCheckoutFlowProvider"
 
 export function IngressosCartSummaryPanel({ className }: { className?: string }) {
   const { summary, state, clearAll } = useIngressosCart()
-  const beginCheckout = useIngressosBeginCheckout()
+  const { requestCheckout } = useIngressosCheckoutFlow()
   const lineEntries = Object.values(state.lines)
 
   return (
@@ -45,17 +45,9 @@ export function IngressosCartSummaryPanel({ className }: { className?: string })
       )}
       <IngressosVisitDateChips />
       {summary.totalItems > 0 ? (
-        <div
-          className="mt-3 rounded-lg border bg-gray-50 p-3 text-sm text-gray-700"
-          data-testid="ingressos-pre-checkout-upsell"
-        >
-          <p className="font-semibold" style={{ color: rsvColors.midnight }}>
-            Explore também
-          </p>
-          <p className="mt-1 text-xs text-gray-600">
-            Hospedagem com desconto para quem fecha ingresso hoje — detalhes no checkout.
-          </p>
-        </div>
+        <p className="mt-3 text-xs text-gray-600">
+          Ofertas de cabana, transporte e combo aparecem ao avançar para o pagamento.
+        </p>
       ) : null}
       <p className="mt-3 text-sm font-semibold">
         Total: {formatIngressosPrice(summary.subtotal)}
@@ -67,7 +59,7 @@ export function IngressosCartSummaryPanel({ className }: { className?: string })
         type="button"
         data-testid="ingressos-begin-checkout"
         disabled={summary.totalItems === 0}
-        onClick={() => beginCheckout(state)}
+        onClick={requestCheckout}
       >
         Ir para pagamento →
       </Button>

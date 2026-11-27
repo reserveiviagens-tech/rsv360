@@ -8,12 +8,13 @@ import {
 } from "@rsv360/ui"
 import { formatIngressosPrice } from "@/lib/ingressos/catalog-data"
 import { IngressosSalvaVendasLink } from "./IngressosSalvaVendasLink"
+import { IngressosVisitDateChips } from "./IngressosVisitDateChips"
 import { useIngressosCart } from "./IngressosCartProvider"
-import { useIngressosBeginCheckout } from "./use-ingressos-begin-checkout"
+import { useIngressosCheckoutFlow } from "./IngressosCheckoutFlowProvider"
 
 export function IngressosCartStickyPlaceholder() {
-  const { summary, state } = useIngressosCart()
-  const beginCheckout = useIngressosBeginCheckout()
+  const { summary } = useIngressosCart()
+  const { requestCheckout } = useIngressosCheckoutFlow()
   const cartItemCount = summary.totalItems
 
   if (cartItemCount === 0) {
@@ -41,6 +42,7 @@ export function IngressosCartStickyPlaceholder() {
         style={{ zIndex: rsvZIndex.cartBar, backgroundColor: rsvColors.canvas }}
       >
         <div className="mx-auto flex max-w-7xl flex-col gap-2">
+          <IngressosVisitDateChips />
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-gray-600">
               <span className="font-semibold text-gray-900">{cartItemCount}</span> itens ·{" "}
@@ -51,7 +53,7 @@ export function IngressosCartStickyPlaceholder() {
               className="text-sm"
               type="button"
               data-testid="ingressos-begin-checkout-mobile"
-              onClick={() => beginCheckout(state)}
+              onClick={requestCheckout}
             >
               Pagar
             </Button>
