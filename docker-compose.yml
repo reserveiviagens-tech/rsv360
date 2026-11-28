@@ -89,6 +89,7 @@ services:
       PORT: 3002
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DEALS_PERSISTENCE: ${DEALS_PERSISTENCE:-postgres}
       REDIS_URL: redis://redis:6379
       TRUST_PROXY: ${TRUST_PROXY:-loopback}
       JWT_SECRET: ${JWT_SECRET}
@@ -274,6 +275,9 @@ services:
     environment:
       <<: *app-env
       PORT: 3005
+      # Browser SSR fallback; client uses same-origin /api/v1 via BFF proxy
+      NEXT_PUBLIC_API_URL: http://localhost:3005
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:3005
     healthcheck:
       test: ['CMD-SHELL', 'wget --no-verbose --tries=1 -O /dev/null http://127.0.0.1:3005/api/health || exit 1']
       interval: 20s

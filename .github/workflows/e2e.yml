@@ -22,6 +22,8 @@ on:
 jobs:
   infra-smoke:
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
     services:
       postgres:

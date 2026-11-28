@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       POSTGRES_USER: rsv360
       POSTGRES_PASSWORD: REDACTED_PG_DEV_PASSWORD
       POSTGRES_DB: rsv_360_ecosystem

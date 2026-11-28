@@ -1,0 +1,81 @@
+# Brief — PR dedicada NPM Audit / lockfile (fora do escopo CRM Lintel)
+
+**Data:** 13/11/2026  
+**Contexto:** PRs **#517–#520** falham check **Security Scan / NPM Audit** com o mesmo padrão da base `develop` (não regressão das fatias de UI).
+
+**Atualização 13/11 (noite):** **#522** mergeado (lockfile). Gate **NPM Audit** ainda vermelho por CVE — fatia seguinte = allowlist/renovações em PR dedicada (`chore/audit-allowlist-renew-2026-11`), **sem** CRM Lintel.
+
+**Atualização 23/11/2026:** `develop` @ `c8b4a242` — **Security Scan / NPM Audit verde** (allowlist ativa). Lockfiles: `check-lockfiles.sh` OK. Repro local: `npm run audit:gate`.
+
+---
+
+## Como o CI decide
+
+1. **Validate lockfiles** — `.github/scripts/check-lockfiles.sh` (root + `backend`): `npm ci --dry-run` deve passar.
+2. **NPM Audit** — `npm audit --omit=dev` + `.github/scripts/audit-gate.py` + `.github/audit-allowlist.json` (root, `backend`, `apps/site-publico`).
+
+Workflow: `.github/workflows/security-scan.yml` (job `NPM Audit`).
+
+---
+
+## Diagnóstico local (13/11 — executado)
+
+**Causa confirmada (H1):** `npm ci --dry-run` na raiz falha com **Missing** de `@next/bundle-analyzer` e cadeia `webpack-bundle-analyzer` — devDep de `apps/turismo` sem árvore completa no lock.
+
+**Regeneração lock:** use **Node 24 + npm 10.9.7** (como CI); npm 11 local reescreve o lock inteiro (~50k linhas).
+
+**Correção sugerida:** no runner CI, `npm install -w apps/turismo @next/bundle-analyzer@16.4.5 --ignore-scripts` + `check-lockfiles.sh` verde.
+
+## Hipóteses (ordenadas)
+
+| # | Causa provável | Evidência a colher |
+|---|----------------|-------------------|
+| H1 | `package-lock.json` dessincronizado de `package.json` (root ou backend) | **Confirmado local** + log **Validate lockfiles** |
+| H2 | Vulnerabilidade prod não allowlisted | Saída do `audit-gate.py` no job |
+| H3 | Workspace `apps/site-publico` com audit distinto | Step **NPM Audit (frontend)** |
+
+---
+
+## Escopo sugerido da PR (mínimo)
+
+- **Só lockfile/sync:** `npm install` controlado + `npm ci` verde localmente; **sem** `audit fix --force` sem review.
+- **Só allowlist:** entrada documentada em `audit-allowlist.json` com issue de follow-up de upgrade.
+- **Upgrade dirigido:** uma dependência por commit quando `audit-gate` apontar CVE concreta.
+
+**Proibido na mesma PR:** CRM Lintel, Anfitrião, migrations destrutivas.
+
+---
+
+## Comandos (validação local)
+
+```powershell
+# Na raiz do repo (Git Bash ou WSL para o script shell)
+bash .github/scripts/check-lockfiles.sh . backend
+
+npm ci
+npm run audit:gate
+```
+
+Backend:
+
+```powershell
+Set-Location backend
+npm ci
+npm audit --omit=dev
+```
+
+---
+
+## Checklist PR
+
+- [ ] Causa-raiz citada (log do Actions ou repro local)
+- [ ] `check-lockfiles.sh` verde
+- [ ] `audit-gate.py` verde ou allowlist justificada
+- [ ] CI Security Scan verde na PR
+- [ ] Blast radius: só `package.json` / `package-lock.json` / allowlist
+
+---
+
+## Risco
+
+**Médio** — upgrades npm podem quebrar build/test; exige `npm run test`, `npm run build` (monorepo) antes do merge.

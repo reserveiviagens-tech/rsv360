@@ -1,4 +1,12 @@
-import { isLabUiPath } from '../../lib/app-mode';
+import { isLabUiPath, isStaticAssetPath } from '../../lib/app-mode';
+
+describe('isStaticAssetPath', () => {
+  it('serves PWA manifest on Lab without redirect to PRIMARY_SITE', () => {
+    expect(isStaticAssetPath('/manifest.json')).toBe(true);
+    expect(isStaticAssetPath('/manifest.webmanifest')).toBe(true);
+    expect(isStaticAssetPath('/favicon.ico')).toBe(true);
+  });
+});
 
 describe('isLabUiPath', () => {
   it('keeps public listing slug routes on marketing-lab host', () => {

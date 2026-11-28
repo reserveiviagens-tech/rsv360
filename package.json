@@ -29,6 +29,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:hub": "npm run test --workspace=backend -- --testPathPattern=\"fornecedores-hub|ancoragem|objecao|rbac-aprovacao|mgm|reverter-reserva\" --forceExit",
+    "test:lintel-consolidacao": "npm run build:shared && npm run test:lintel-consolidacao --workspace=backend",
     "migrate": "npm run migrate --workspace=backend",
     "migrate:db-json": "tsx scripts/migrate-db-json.ts",
     "migrate:new": "npm run migrate:new --workspace=backend",
@@ -51,10 +52,16 @@
     "smoke:marketing-lab": "node tests/e2e/marketing-lab-smoke.js",
     "start:s1": "powershell -ExecutionPolicy Bypass -File ./scripts/start-s1-site-principal.ps1",
     "smoke:auctions": "node tests/e2e/auctions-smoke.js",
+    "smoke:crm-rental-sign": "node scripts/smoke-crm-rental-sign.mjs",
+    "smoke:crm-deals-persistence": "node scripts/smoke-crm-deals-persistence.mjs",
+    "smoke:crm-deals-persistence:k4": "node scripts/smoke-crm-deals-persistence.mjs --k4-verify",
+    "audit:gate": "node scripts/npm-audit-gate-local.mjs",
     "seed:auctions": "node backend/scripts/seed-auctions.js",
     "test:e2e:auth-v1": "playwright test --config=tests/e2e/playwright.auth-v1.config.ts",
     "test:e2e:auth-oauth-mock": "playwright test --config=tests/e2e/playwright.auth-oauth-mock.config.ts",
     "test:e2e:turismo-legacy": "playwright test --config=tests/e2e/playwright.turismo-legacy.config.ts",
+    "test:e2e:overview-portfolio": "playwright test --config=tests/e2e/playwright.overview-portfolio.config.ts",
+    "test:e2e:deals-kanban": "playwright test --config=tests/e2e/playwright.deals-kanban.config.ts",
     "test:smoke": "npm run test:e2e && npm run test:e2e:routes",
     "validate:auth-env": "node scripts/validate-auth-production-env.cjs",
     "staging:webhook": "node scripts/staging-password-reset-webhook.mjs"
@@ -62,7 +69,6 @@
   "devDependencies": {
     "@alloc/quick-lru": "^5.2.0",
     "@playwright/test": "^1.61.0",
-    "@types/nodemailer": "^8.0.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "concurrently": "^8.2.2",
@@ -75,7 +81,7 @@
     "@sendgrid/mail": "^8.1.6",
     "handlebars": "^4.7.9",
     "ioredis": "5.10.1",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^10.0.6",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "twilio": "^5.13.1"
@@ -102,8 +108,9 @@
     "@aws-sdk/middleware-sdk-s3": {
       "fast-xml-parser": "^5.7.0"
     },
-    "axios": "^1.17.1",
-    "dompurify": "3.4.12",
+    "axios": "1.21.1",
+    "follow-redirects": "^1.16.1",
+    "dompurify": "3.4.17",
     "body-parser": "2.3.0",
     "brace-expansion": "5.0.9",
     "sharp": "0.35.3",

@@ -1,6 +1,15 @@
-import { DEFAULT_API_URL } from './auth-v1';
+import { DEFAULT_API_URL, resolveApiBaseUrl } from './auth-v1';
 
+/** @deprecated Use fase1ApiBase() — kept for legacy imports */
 export const FASE1_API_BASE = DEFAULT_API_URL;
+
+export function fase1ApiBase(): string {
+  return resolveApiBaseUrl();
+}
+
+function apiBase(): string {
+  return resolveApiBaseUrl();
+}
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
@@ -8,7 +17,7 @@ function getToken(): string {
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${FASE1_API_BASE}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -88,8 +97,8 @@ export const fase1Api = {
 
   // Relatórios
   relatoriosDashboard: () => fetchJson<{ success: boolean; data: unknown }>('/api/v1/relatorios/dashboard'),
-  exportCsvUrl: (tipo: string) => `${FASE1_API_BASE}/api/v1/relatorios/export/csv?tipo=${tipo}`,
-  exportPdfUrl: (tipo: string) => `${FASE1_API_BASE}/api/v1/relatorios/export/pdf?tipo=${tipo}`,
+  exportCsvUrl: (tipo: string) => `${fase1ApiBase()}/api/v1/relatorios/export/csv?tipo=${tipo}`,
+  exportPdfUrl: (tipo: string) => `${fase1ApiBase()}/api/v1/relatorios/export/pdf?tipo=${tipo}`,
 
   // Configurações — modulo_propostas (configuracoes_sistema)
   getModuloPropostas: () =>
@@ -285,7 +294,7 @@ export const fase1Api = {
   anfitriaoUploadTrilhoThumb: async (id: number, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/trilho-thumb`, {
+    const res = await fetch(`${apiBase()}/api/v1/acomodacoes/anfitriao/unidades/${id}/trilho-thumb`, {
       method: 'POST',
       headers: {
         ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
@@ -303,7 +312,7 @@ export const fase1Api = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(
-      `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/acessibilidade-foto`,
+      `${apiBase()}/api/v1/acomodacoes/anfitriao/unidades/${id}/acessibilidade-foto`,
       {
         method: 'POST',
         headers: {
@@ -320,7 +329,7 @@ export const fase1Api = {
     const form = new FormData();
     form.append('file', file);
     const res = await fetch(
-      `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/unidades/${id}/galeria-foto`,
+      `${apiBase()}/api/v1/acomodacoes/anfitriao/unidades/${id}/galeria-foto`,
       {
         method: 'POST',
         headers: {
@@ -389,7 +398,7 @@ export const fase1Api = {
     const params = new URLSearchParams();
     if (ativo) params.set('ativo', ativo);
     const qs = params.toString();
-    const url = `${FASE1_API_BASE}/api/v1/acomodacoes/anfitriao/impostos/export.csv${qs ? `?${qs}` : ''}`;
+    const url = `${apiBase()}/api/v1/acomodacoes/anfitriao/impostos/export.csv${qs ? `?${qs}` : ''}`;
     const res = await fetch(url, {
       headers: {
         ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
@@ -615,6 +624,104 @@ export const fase1Api = {
       `/api/v1/acomodacoes/anfitriao/admin/unidades/${id}/verificacao-local/rejeitar`,
       { method: 'POST', body: JSON.stringify({ motivo }) },
     ),
+
+  anfitriaoListarCarteiraCorretor: (params?: {
+    corretorId?: number;
+    q?: string;
+    status?: 'ativo' | 'inativo' | 'all';
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params?.corretorId) sp.set('corretorId', String(params.corretorId));
+    if (params?.q) sp.set('q', params.q);
+    if (params?.status) sp.set('status', params.status);
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.pageSize) sp.set('pageSize', String(params.pageSize));
+    const qs = sp.toString();
+    return fetchJson<{
+      success: boolean;
+      data: {
+        items: Array<{
+          corretorId: number;
+          proprietarioId: number;
+          status: string;
+          criadoEm: string | null;
+          corretor: { id: number; name: string | null; email: string; role: string | null } | null;
+          proprietario: { id: number; name: string | null; email: string; role: string | null } | null;
+        }>;
+        page: number;
+        pageSize: number;
+        total: number;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira${qs ? `?${qs}` : ''}`);
+  },
+
+  anfitriaoBuscarCorretoresStaff: (q?: string, limit = 20) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set('q', q);
+    sp.set('limit', String(limit));
+    return fetchJson<{
+      success: boolean;
+      data: Array<{ id: number; name: string | null; email: string; role: string | null }>;
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/corretores?${sp.toString()}`);
+  },
+
+  anfitriaoBuscarProprietariosStaff: (q?: string, limit = 20) => {
+    const sp = new URLSearchParams();
+    if (q) sp.set('q', q);
+    sp.set('limit', String(limit));
+    return fetchJson<{
+      success: boolean;
+      data: Array<{ id: number; name: string | null; email: string; role: string | null }>;
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/proprietarios?${sp.toString()}`);
+  },
+
+  anfitriaoAtribuirCarteira: (corretorId: number, proprietarioId: number) =>
+    fetchJson<{ success: boolean; data: unknown }>(`/api/v1/acomodacoes/anfitriao/admin/carteira`, {
+      method: 'POST',
+      body: JSON.stringify({ corretorId, proprietarioId }),
+    }),
+
+  anfitriaoPreviewCarteiraCsv: (
+    csv: string,
+    mode: 'carteira_vinculo' | 'contato_corretor' = 'carteira_vinculo',
+  ) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        totalLinhas: number;
+        linhasValidas: number;
+        linhasInvalidas: number;
+        erros: Array<{ line: number; reason: string }>;
+        preview: unknown[];
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/upload-csv/preview`, {
+      method: 'POST',
+      body: JSON.stringify({ csv, mode }),
+    }),
+
+  anfitriaoAtribuirCarteiraBulk: (items: Array<{ corretorId: number; proprietarioId: number }>) =>
+    fetchJson<{
+      success: boolean;
+      data: {
+        summary: { ok: number; fail: number; total: number };
+        results: Array<{ corretorId: number; proprietarioId: number; ok: boolean; error?: string }>;
+      };
+    }>(`/api/v1/acomodacoes/anfitriao/admin/carteira/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }),
+
+  anfitriaoAtualizarCarteiraStatus: (
+    corretorId: number,
+    proprietarioId: number,
+    status: 'ativo' | 'inativo',
+  ) =>
+    fetchJson<{ success: boolean; data: unknown }>(`/api/v1/acomodacoes/anfitriao/admin/carteira`, {
+      method: 'PATCH',
+      body: JSON.stringify({ corretorId, proprietarioId, status }),
+    }),
 
   salvarAnfitriaoDisponibilidade: (
     id: number,
@@ -908,5 +1015,5 @@ export const fase1Api = {
 };
 
 export function getWsBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_WS_URL || FASE1_API_BASE;
+  return process.env.NEXT_PUBLIC_WS_URL || fase1ApiBase();
 }

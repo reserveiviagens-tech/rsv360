@@ -22,6 +22,12 @@ export default function PropostasListPage() {
               <Link href="/orcamentos" className="rounded-lg border border-slate-300 px-4 py-2 text-sm">
                 Orçamentos
               </Link>
+              <Link
+                href="/gerador-propostas-rioquente"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+              >
+                Rio Quente / Aviva
+              </Link>
               <Link href="/propostas/nova" className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">
                 Nova proposta
               </Link>

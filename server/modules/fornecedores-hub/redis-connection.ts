@@ -3,7 +3,31 @@ import type Redis from 'ioredis';
 let sharedClient: Redis | null | undefined;
 
 export function isRedisRequiredForLocks(): boolean {
-  return process.env.REDIS_DISABLED !== 'true' && Boolean(process.env.REDIS_URL);
+  if (process.env.REDIS_DISABLED === 'true') return false;
+  if (process.env.REDIS_ENABLED === 'false') return false;
+  return Boolean(process.env.REDIS_URL);
+}
+
+function attachSafeHandlers(client: Redis, label: string): void {
+  client.on('error', (err) => {
+    // Evita crash do processo por "Unhandled error event" quando Redis cai.
+    console.warn(`[redis:${label}]`, err?.message || err);
+  });
+}
+
+async function connectOrThrow(client: Redis, label: string): Promise<Redis> {
+  attachSafeHandlers(client, label);
+  try {
+    await client.connect();
+    return client;
+  } catch (err) {
+    try {
+      client.disconnect(false);
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  }
 }
 
 /** Cliente Redis dedicado a locks/BullMQ — exige REDIS_URL (sem fallback em memória). */
@@ -22,8 +46,9 @@ export async function getRedisConnection(): Promise<Redis> {
     enableReadyCheck: true,
     lazyConnect: true,
     connectTimeout: 5_000,
+    retryStrategy: () => null, // não reconectar em loop no boot
   });
-  await client.connect();
+  await connectOrThrow(client, 'shared');
   sharedClient = client;
   return client;
 }
@@ -39,8 +64,9 @@ export async function createBullMQConnection(): Promise<Redis> {
     enableReadyCheck: true,
     lazyConnect: true,
     connectTimeout: 5_000,
+    retryStrategy: () => null,
   });
-  await client.connect();
+  await connectOrThrow(client, 'bullmq');
   return client;
 }
 

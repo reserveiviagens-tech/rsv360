@@ -15,6 +15,11 @@ import {
   writeGaleriaWebp,
   writeTrilhoWebp,
 } from '../services/anfitriao-trilho-upload';
+import {
+  parseCarteiraCsv,
+  parseCarteiraCsvVinculo,
+  type CarteiraCsvImportMode,
+} from '../../carteira/services/csv-importer.service';
 
 const router = Router();
 
@@ -1639,6 +1644,123 @@ router.post('/unidades/:id/validar-desconto', ...parceiroAuth, async (req, res) 
   }
 });
 
+router.post('/admin/carteira/upload-csv/preview', ...staffAprovacao, async (req, res) => {
+  try {
+    const csv = req.body?.csv ?? req.body?.text;
+    if (typeof csv !== 'string' || !csv.trim()) {
+      return res.status(400).json({ success: false, error: 'csv (string) obrigatório' });
+    }
+    const modeRaw = req.body?.mode;
+    const mode: CarteiraCsvImportMode =
+      modeRaw === 'contato_corretor' ? 'contato_corretor' : 'carteira_vinculo';
+    const report = parseCarteiraCsv(csv, mode);
+    res.json({ success: true, data: report });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.post('/admin/carteira/bulk', ...staffAprovacao, async (req, res) => {
+  try {
+    let items = req.body?.items ?? req.body?.pairs;
+    if (!Array.isArray(items) && typeof req.body?.csv === 'string') {
+      const parsed = parseCarteiraCsvVinculo(req.body.csv);
+      if (parsed.erros.some((e) => e.line === 0) || parsed.linhasValidas === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'CSV inválido',
+          details: parsed,
+        });
+      }
+      items = parsed.preview;
+    }
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ success: false, error: 'items (array) obrigatório' });
+    }
+    const result = await anfitriaoService.atribuirCarteiraBulk(req.user!.role ?? '', items);
+    if (result.error === 'forbidden') return res.status(403).json({ success: false, error: 'Acesso negado' });
+    if (result.error === 'invalid_batch') {
+      return res.status(400).json({ success: false, error: 'Lote inválido (1–500 pares)' });
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.patch('/admin/carteira', ...staffAprovacao, async (req, res) => {
+  try {
+    const { corretorId, proprietarioId, status } = req.body ?? {};
+    if (!corretorId || !proprietarioId || !status) {
+      return res.status(400).json({
+        success: false,
+        error: 'corretorId, proprietarioId e status obrigatórios',
+      });
+    }
+    const result = await anfitriaoService.atualizarStatusCarteira(
+      req.user!.role ?? '',
+      Number(corretorId),
+      Number(proprietarioId),
+      String(status) as 'ativo' | 'inativo',
+    );
+    if (result.error === 'forbidden') return res.status(403).json({ success: false, error: 'Acesso negado' });
+    if (result.error === 'not_found') return res.status(404).json({ success: false, error: 'Vínculo não encontrado' });
+    if (result.error === 'invalid_ids' || result.error === 'invalid_status') {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/admin/carteira/corretores', ...staffAprovacao, async (req, res) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+    const result = await anfitriaoService.buscarCorretoresStaff(req.user!.role ?? '', q, limit);
+    if (result.error === 'forbidden') return res.status(403).json({ success: false, error: 'Acesso negado' });
+    res.json({ success: true, data: result.items });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/admin/carteira/proprietarios', ...staffAprovacao, async (req, res) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+    const result = await anfitriaoService.buscarProprietariosStaff(req.user!.role ?? '', q, limit);
+    if (result.error === 'forbidden') return res.status(403).json({ success: false, error: 'Acesso negado' });
+    res.json({ success: true, data: result.items });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
+router.get('/admin/carteira', ...staffAprovacao, async (req, res) => {
+  try {
+    const corretorId = req.query.corretorId ? Number(req.query.corretorId) : undefined;
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
+    const statusRaw = typeof req.query.status === 'string' ? req.query.status : 'all';
+    const status =
+      statusRaw === 'ativo' || statusRaw === 'inativo' || statusRaw === 'all' ? statusRaw : 'all';
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25;
+    const result = await anfitriaoService.listarCarteiraCorretor(req.user!.role ?? '', {
+      corretorId,
+      q,
+      status,
+      page,
+      pageSize,
+    });
+    if (result.error === 'forbidden') return res.status(403).json({ success: false, error: 'Acesso negado' });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: (error as Error).message });
+  }
+});
+
 router.post('/admin/carteira', ...staffAprovacao, async (req, res) => {
   try {
     const { corretorId, proprietarioId } = req.body ?? {};
@@ -1651,6 +1773,9 @@ router.post('/admin/carteira', ...staffAprovacao, async (req, res) => {
       Number(proprietarioId),
     );
     if (result.error === 'forbidden') return res.status(403).json({ success: false, error: 'Acesso negado' });
+    if (result.error === 'same_user' || result.error === 'invalid_ids') {
+      return res.status(400).json({ success: false, error: result.error });
+    }
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(400).json({ success: false, error: (error as Error).message });

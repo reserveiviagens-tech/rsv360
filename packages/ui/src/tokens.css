@@ -1,0 +1,27 @@
+/**
+ * RSV360 Onda 4 — CSS custom properties (--rsv-*).
+ * Import from apps/site-publico when wiring F-021+; does not redefine :root --primary.
+ */
+:root {
+  --rsv-color-midnight: #0f172a;
+  --rsv-color-amber: #d97706;
+  --rsv-color-amber-bright: #f59e0b;
+  --rsv-color-action: #16a34a;
+  --rsv-color-canvas: #f8fafc;
+  --rsv-color-text-primary: #111827;
+  --rsv-color-text-muted: #4b5563;
+
+  --rsv-container-max: 1360px;
+  --rsv-touch-target: 44px;
+
+  --rsv-z-base: 10;
+  --rsv-z-header: 100;
+  --rsv-z-dropdown: 200;
+  --rsv-z-modal: 500;
+  --rsv-z-cart-bar: 1100;
+
+  --rsv-assistant-bottom-offset: 88px;
+
+  --rsv-type-fluid-title: clamp(1.5rem, 1.1rem + 1.75vw, 2.25rem);
+  --rsv-type-fluid-price: clamp(1.25rem, 1rem + 1.25vw, 1.875rem);
+}

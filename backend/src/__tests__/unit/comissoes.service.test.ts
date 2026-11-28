@@ -125,7 +125,11 @@ describe('comissoes.service', () => {
         .mockResolvedValueOnce([{ valores: { comissoes_modulo_ativo: true, taxa_plataforma_pct: 20, taxa_corretor_pct: 5 } }])
         .mockResolvedValueOnce([{ id: 1, status: 'accepted', valorTotal: '1000.00', metadata: { acomodacaoId: 10 } }]);
       const result = await comissoesService.gerarLancamentos(1);
-      expect(result).toEqual({ generated: false, reason: 'proposta_not_paid' });
+      expect(result).toMatchObject({
+        generated: false,
+        reason: 'proposta_status_blocked',
+        statusProposta: 'accepted',
+      });
     });
   });
 

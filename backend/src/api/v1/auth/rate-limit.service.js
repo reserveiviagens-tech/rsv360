@@ -172,16 +172,29 @@ async function recordLoginAttempt(email, ipAddress, userAgent, success, failureR
 async function enforceLoginRateLimit(email, ipAddress) {
   const normalizedEmail = String(email || '').toLowerCase();
   const ip = ipAddress || 'unknown';
+  const allowMemoryFallback =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.REDIS_DISABLED === 'true' ||
+    process.env.AUTH_RATE_LIMIT_MEMORY === 'true';
 
   if (isRateLimitEnabled()) {
     const ipCheck = await checkRateLimit(ip, 'ip', 'login');
-    if (!ipCheck.allowed) return ipCheck;
-    return checkRateLimit(normalizedEmail, 'email', 'login');
+    if (!ipCheck.storeUnavailable) {
+      if (!ipCheck.allowed) return ipCheck;
+      const emailCheck = await checkRateLimit(normalizedEmail, 'email', 'login');
+      if (!emailCheck.storeUnavailable) return emailCheck;
+      if (!allowMemoryFallback) return emailCheck;
+      console.warn('[AUTH] rate-limit DB indisponível — fallback memória (login/email)');
+    } else if (!allowMemoryFallback) {
+      return ipCheck;
+    } else {
+      console.warn('[AUTH] rate-limit DB indisponível — fallback memória (login/ip)');
+    }
   }
 
   const config = RATE_LIMIT_CONFIGS.login;
-  const ipCheck = enforceMemoryRateLimit(`login:ip:${ip}`, config);
-  if (!ipCheck.allowed) return ipCheck;
+  const memIp = enforceMemoryRateLimit(`login:ip:${ip}`, config);
+  if (!memIp.allowed) return memIp;
   return enforceMemoryRateLimit(`login:email:${normalizedEmail}`, config);
 }
 

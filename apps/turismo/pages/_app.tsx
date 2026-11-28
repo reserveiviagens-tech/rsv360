@@ -7,10 +7,14 @@ import { InstrutorHelpWidget } from '../components/agentes/InstrutorHelpWidget';
 import AppSidebar from '../components/AppSidebar';
 import '../styles/globals.css';
 
+const CRM_PARTNER_ROUTES = ['/overview', '/rentals', '/deals', '/leads', '/contacts'] as const;
+
 function shouldHideSidebar(pathname: string): boolean {
   if (pathname === '/login' || pathname === '/register') return true;
   // Host chrome uses AnfitriaoHostNav — avoid double shell.
   if (pathname === '/anfitriao' || pathname.startsWith('/anfitriao/')) return true;
+  // CRM parceiro (shell Lintel) — sem sidebar global RSV.
+  if (CRM_PARTNER_ROUTES.includes(pathname as (typeof CRM_PARTNER_ROUTES)[number])) return true;
   return false;
 }
 
@@ -20,7 +24,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const hideSidebar = shouldHideSidebar(router.pathname || '');
+  const pathname = router.pathname || '';
+  const hideSidebar = shouldHideSidebar(pathname);
+  const hideHelpWidget = hideSidebar;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -68,7 +74,7 @@ export default function App({ Component, pageProps }: AppProps) {
           >
             <Component {...pageProps} />
           </main>
-          <InstrutorHelpWidget />
+          {!hideHelpWidget ? <InstrutorHelpWidget /> : null}
         </div>
       </AuthProvider>
     </QueryProvider>

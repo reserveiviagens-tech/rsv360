@@ -24,6 +24,7 @@ import {
 import { acomodacoesService } from '../../acomodacoes/services/acomodacoes.service';
 import { resolveModoReserva } from '../../acomodacoes/services/listing-slug.util';
 import { assertHotelMatchProposta } from './assert-hotel-match-proposta';
+import { resolveCorretorIdForAcomodacao } from '../../comissoes/services/resolve-corretor-proposta';
 
 function resolveAcomodacaoId(payload: GerarPropostaPayload): number | null {
   const raw = payload.selectedAcomodacaoId;
@@ -185,6 +186,12 @@ export class CotacaoPublicaService {
       console.warn('[cotacao-publica] reservarVaga ignorado:', (lockErr as Error).message);
     }
 
+    let corretorIdMeta: number | undefined;
+    if (acomodacaoId) {
+      const corretorResolved = await resolveCorretorIdForAcomodacao(acomodacaoId);
+      if (corretorResolved) corretorIdMeta = corretorResolved;
+    }
+
     let modoReservaListing: 'instantanea' | 'aprovar' = 'instantanea';
     if (acomodacaoId) {
       const listing = await acomodacoesService.findById(acomodacaoId);
@@ -242,6 +249,7 @@ export class CotacaoPublicaService {
           children: payload.children,
           hotelId: payload.hotelId != null ? String(payload.hotelId) : undefined,
           acomodacaoId: acomodacaoId ?? undefined,
+          corretorId: corretorIdMeta,
           modoReserva: modoReservaListing,
           ...acomodacaoSnapshot,
           ...(taxaHospedeResolvida?.snapshot ?? {}),

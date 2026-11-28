@@ -11,6 +11,8 @@ import { acomodacoes } from '../../../../backend/src/db/schema/acomodacoes';
 import { comissoesLancamento } from '../../../../backend/src/db/schema/comissoes-lancamento';
 import { configuracoesSistema } from '../../../../backend/src/db/schema/configuracoes-sistema';
 import { propostas } from '../../../../backend/src/db/schema/propostas';
+import { resolveCorretorIdForAcomodacao } from './resolve-corretor-proposta';
+import { avaliarComissaoPropostaStatus } from './comissoes-paid-guard';
 import {
   COMISSOES_CONFIANCA_MINIMA,
   COMISSOES_OFICIAL_RESERVEI,
@@ -492,13 +494,22 @@ export const comissoesService = {
     if (!proposta) {
       return { generated: false, reason: 'proposta_not_found' as const };
     }
-    if (proposta.status !== 'paid') {
-      return { generated: false, reason: 'proposta_not_paid' as const };
+    const gate = avaliarComissaoPropostaStatus(proposta.status);
+    if (!gate.allowed) {
+      return {
+        generated: false,
+        reason: gate.code,
+        statusProposta: gate.status,
+        message: gate.message,
+      };
     }
 
     const metadata = parseMetadata(proposta.metadata);
     const acomodacaoId = Number(metadata.acomodacaoId ?? metadata.selectedAcomodacaoId ?? 0) || null;
-    const corretorId = Number(metadata.corretorId ?? 0) || null;
+    let corretorId = Number(metadata.corretorId ?? 0) || null;
+    if (!corretorId && acomodacaoId) {
+      corretorId = await resolveCorretorIdForAcomodacao(acomodacaoId);
+    }
 
     if (!acomodacaoId) {
       return { generated: false, reason: 'acomodacao_missing' as const };

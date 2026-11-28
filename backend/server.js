@@ -63,7 +63,9 @@ async function startServer() {
 
     try {
       const { startAuctionsWorker } = require('../server/modules/auctions/auctions.worker');
-      void startAuctionsWorker();
+      void startAuctionsWorker().catch((err) => {
+        console.warn('[auctions] Worker settlement omitido:', err?.message || err);
+      });
     } catch (err) {
       console.warn('[auctions] Worker settlement não disponível:', err.message);
     }

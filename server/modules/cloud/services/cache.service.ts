@@ -1,11 +1,18 @@
-import { Redis } from 'ioredis';
 import { eq } from 'drizzle-orm';
 import { db } from '../../../../backend/src/db/drizzle';
 import { cloudCacheConfig } from '../db/schema';
+import { getCloudRedis } from './redis-lazy';
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+async function requireRedis() {
+  const redis = await getCloudRedis();
+  if (!redis) {
+    throw new Error('Redis cloud cache unavailable (REDIS_DISABLED ou conexão falhou)');
+  }
+  return redis;
+}
 
 export async function setCache(key: string, value: any, ttl?: number) {
+  const redis = await requireRedis();
   const serializedValue = JSON.stringify(value);
   const config = await getCacheConfig();
 
@@ -22,6 +29,7 @@ export async function setCache(key: string, value: any, ttl?: number) {
 }
 
 export async function getCache(key: string) {
+  const redis = await requireRedis();
   const value = await redis.get(key);
   if (!value) return null;
 
@@ -33,10 +41,12 @@ export async function getCache(key: string) {
 }
 
 export async function deleteCache(key: string) {
+  const redis = await requireRedis();
   return await redis.del(key);
 }
 
 export async function clearCache(pattern?: string) {
+  const redis = await requireRedis();
   if (pattern) {
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
@@ -50,6 +60,10 @@ export async function clearCache(pattern?: string) {
 }
 
 export async function getCacheStats() {
+  const redis = await getCloudRedis();
+  if (!redis) {
+    return { connected: false, dbSize: 0, info: {}, mode: 'memory-disabled' };
+  }
   const info = await redis.info();
   const dbSize = await redis.dbsize();
 

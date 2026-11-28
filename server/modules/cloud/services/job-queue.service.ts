@@ -1,19 +1,27 @@
 import { Queue, Worker, Job } from 'bullmq';
-import { Redis } from 'ioredis';
 import { eq, and, lt } from 'drizzle-orm';
 import { db } from '../../../../backend/src/db/drizzle';
 import { cloudJobs } from '../db/schema';
 import { generateThumbnails, optimizeImage } from './image-optimization.service';
-
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+import { getCloudRedis } from './redis-lazy';
 
 const queues: Record<string, Queue> = {};
 const workers: Record<string, Worker> = {};
+
+async function requireRedis() {
+  const redis = await getCloudRedis();
+  if (!redis) {
+    throw new Error('Redis job queue unavailable (REDIS_DISABLED ou conexão falhou)');
+  }
+  return redis;
+}
 
 export async function createQueue(queueName: string, options?: { concurrency?: number; removeOnComplete?: number; removeOnFail?: number }) {
   const { concurrency = 5, removeOnComplete = 50, removeOnFail = 50 } = options || {};
 
   if (queues[queueName]) return queues[queueName];
+
+  const redis = await requireRedis();
 
   queues[queueName] = new Queue(queueName, {
     connection: redis,
