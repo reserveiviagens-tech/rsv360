@@ -19,6 +19,7 @@ export function AtendimentoProposta({ propostaId }: { propostaId: number }) {
 
   const [messages, setMessages] = useState<PropostaChatMessage[]>([]);
   const [text, setText] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   const proposta = propostaRes?.data;
@@ -26,24 +27,39 @@ export function AtendimentoProposta({ propostaId }: { propostaId: number }) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '';
 
   useEffect(() => {
-    const socket = io(`${getWsBaseUrl()}/propostas`, { path: '/socket.io', transports: ['websocket', 'polling'] });
+    const socket = io(`${getWsBaseUrl()}/propostas`, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+    });
     socketRef.current = socket;
 
-    socket.emit('join', { propostaId, token: token || undefined });
+    const emitJoin = () => {
+      socket.emit('join', { propostaId, token: token || undefined });
+    };
+
+    if (socket.connected) {
+      emitJoin();
+    } else {
+      socket.on('connect', emitJoin);
+    }
 
     socket.on('joined', (payload: { history?: PropostaChatMessage[] }) => {
       if (payload.history) setMessages(payload.history);
     });
 
     socket.on('chat:message', (payload: { message: PropostaChatMessage }) => {
-      setMessages((prev) => (prev.some((m) => m.id === payload.message.id) ? prev : [...prev, payload.message]));
+      setErrorMsg(null);
+      setMessages((prev) =>
+        prev.some((m) => m.id === payload.message.id) ? prev : [...prev, payload.message],
+      );
     });
 
-    socket.on('hitl:state', () => {
-      /* estado atualizado via invalidateQueries se necessário */
+    socket.on('error', (err: { message?: string }) => {
+      if (err?.message) setErrorMsg(err.message);
     });
 
     return () => {
+      socket.off('connect', emitJoin);
       socket.disconnect();
     };
   }, [propostaId, token]);
@@ -52,6 +68,19 @@ export function AtendimentoProposta({ propostaId }: { propostaId: number }) {
     if (!text.trim()) return;
     const trimmed = text.trim();
     setText('');
+    setErrorMsg(null);
+
+    const optimisticMsg = {
+      id: `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      propostaId,
+      senderType: 'agent',
+      senderName: 'Consultor',
+      message: trimmed,
+      createdAt: new Date().toISOString(),
+    } as unknown as PropostaChatMessage;
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+
     socketRef.current?.emit('chat:message', {
       propostaId,
       message: trimmed,
@@ -100,6 +129,10 @@ export function AtendimentoProposta({ propostaId }: { propostaId: number }) {
           )}
         </div>
       </header>
+
+      {errorMsg && (
+        <p className="mt-2 text-xs text-red-600 text-center">{errorMsg}</p>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="mb-4 max-h-96 space-y-2 overflow-y-auto rounded-lg bg-slate-50 p-4">
